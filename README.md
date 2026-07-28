@@ -135,6 +135,8 @@
 
 ### ⚛ 物理
 
+![](ScreenShot_2026-07-28_215348_104.png)
+
 #### edu-physics — 2D 物理交互教学
 
 **核心原理**：把二维物理场景做成三栏交互教学网页。左栏题面 + 滑块驱动实时物理量读数与守恒定律指示；中栏 KaTeX 分步解析；右栏 Canvas 2D 动态物理画板。
@@ -155,7 +157,7 @@
 
 ### 📐 几何
 
-![](edu-solid-geometry)
+![](edu-solid-geometry.gif)
 
 
 #### edu-plane-geometry — 平面几何交互教学
