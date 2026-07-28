@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>镁条燃烧 · 微观过程 · 交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#a78bfa;--accent2:#f59e0b;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.topbar .title{font-size:15px;font-weight:600}.topbar .subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(167,139,250,.06),transparent)}
+.card{flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--bad)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;min-width:0}
+canvas{background:#06101f;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+.panel{width:340px;flex:none;padding:14px;overflow-y:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(167,139,250,.2);color:#ddd6fe;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent2)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:100px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent2);border-color:var(--accent2);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--accent2)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:240px}}
+</style>
+</head>
+<body>
+<header class="topbar"><span class="title">镁条燃烧</span><span class="subtitle">2Mg+O₂→2MgO · 剧烈白光 · 微观电子转移</span></header>
+<div class="cards">
+  <div class="card"><div class="num">1</div><h4>宏观现象</h4><div class="v">剧烈燃烧<br>耀眼白光</div></div>
+  <div class="card s2"><div class="num">2</div><h4>微观本质</h4><div class="v">Mg 失 2e⁻ 氧化<br>O₂ 得 4e⁻ 还原</div></div>
+  <div class="card s3"><div class="num">3</div><h4>白光成因</h4><div class="v">高温→电子跃迁<br>回落→发光</div></div>
+  <div class="card s4"><div class="num">4</div><h4>产物 MgO</h4><div class="v">离子化合物<br>熔点 2852°C</div></div>
+</div>
+<main>
+  <div class="stage"><canvas id="cv"></canvas></div>
+  <aside class="panel"><h2><span class="badge" id="stepBadge">宏观</span><span id="stepTitle">镁条燃烧现象</span></h2><p class="body" id="stepBody"></p><div class="points" id="stepPoints"></div></aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const statusEl=document.getElementById('status'),speedInp=document.getElementById('speedInp');
+const stepBadge=document.getElementById('stepBadge'),stepTitle=document.getElementById('stepTitle');
+const stepBody=document.getElementById('stepBody'),stepPoints=document.getElementById('stepPoints');
+
+function fit(){const r=cv.parentElement.getBoundingClientRect();cv.width=Math.max(520,Math.min(1100,r.width-12));cv.height=Math.max(400,Math.min(600,r.height-12));}
+window.addEventListener('resize',()=>{fit();draw();});fit();
+
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawText(t,x,y,c,fs,a,b){ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);}
+function glow(c,b,fn){ctx.save();ctx.shadowColor=c;ctx.shadowBlur=b||10;fn();ctx.restore();}
+
+// ===================================================================
+// STEPS
+// ===================================================================
+const STEPS=[
+  // ===== 1. 宏观现象 =====
+  {
+    tag:'宏观',name:'镁条燃烧现象',
+    body:'<p>取一段<strong>镁条</strong>，用砂纸打磨掉表面氧化层（露出银白色金属光泽），用坩埚钳夹持，<strong>点燃</strong>。</p><p>镁条剧烈燃烧，发出<strong>耀眼的强光</strong>（白光），放出大量热，生成<strong>白色粉末</strong>（MgO）。</p>',
+    points:{title:'宏观现象要点',items:['<strong>现象</strong>：剧烈燃烧，发出耀眼白光','<strong>温度</strong>：反应温度可达 3000°C','<strong>产物</strong>：白色粉末 MgO（氧化镁）','<strong>闪光</strong>：光芒极强，不可直视']}
+  },
+  // ===== 2. 化学方程式 =====
+  {
+    tag:'宏观',name:'化学方程式',
+    body:'<p>镁燃烧的<strong>化学方程式</strong>：</p><p><code>2Mg + O₂ → 2MgO</code></p><p>2 个镁原子与 1 个氧分子化合，生成 2 个氧化镁分子。是<strong>化合反应</strong>，也是<strong>氧化还原反应</strong>。</p>',
+    points:{title:'方程式分析',items:['<strong>反应物</strong>：Mg（金属单质）+ O₂（气体）','<strong>产物</strong>：MgO（白色固体粉末）','<strong>反应类型</strong>：化合反应 + 氧化还原','<strong>燃烧条件</strong>：点燃（需达到着火点）']}
+  },
+  // ===== 3. 镁的原子结构 =====
+  {
+    tag:'微观',name:'镁原子结构',
+    body:'<p>镁是<strong>第 12 号元素</strong>，原子序数 12。原子核含 12 个质子、12 个中子，核外<strong>12 个电子</strong>。</p><p>电子排布：<strong>2-8-2</strong>（K 层 2 个，L 层 8 个，M 层 2 个）。<strong>最外层仅 2 个电子</strong>，<strong>极易失去</strong>，表现出较强金属性。</p>',
+    points:{title:'Mg 原子参数',items:['<strong>原子序数</strong>：12','<strong>相对原子质量</strong>：24.31','<strong>电子排布</strong>：2-8-2','<strong>最外层电子</strong>：2 个（极易失去→Mg²⁺）']}
+  },
+  // ===== 4. 氧分子结构 =====
+  {
+    tag:'微观',name:'氧分子结构',
+    body:'<p>氧气（O₂）是<strong>双原子分子</strong>，两个氧原子以<strong>双键（O=O）</strong>结合。</p><p>氧的原子序数 8，电子排布 <strong>2-6</strong>。最外层 6 个电子，<strong>缺 2 个达 8 电子稳定结构</strong>，因此容易得到电子（氧化性）。</p>',
+    points:{title:'O₂ 分子参数',items:['<strong>O 原子序数</strong>：8','<strong>电子排布</strong>：2-6（缺 2e⁻ 达稳定）','<strong>分子结构</strong>：O=O 双键','<strong>性质</strong>：助燃性（支持燃烧）']}
+  },
+  // ===== 5. 电子转移 · 氧化 =====
+  {
+    tag:'电子',name:'Mg 失去电子（氧化）',
+    body:'<p>燃烧时，<strong>Mg 原子失去最外层 2 个电子</strong>，变为<strong>Mg²⁺</strong>：</p><p><code>Mg → Mg²⁺ + 2e⁻</code></p><p>失电子的过程叫做<strong>氧化反应</strong>。Mg 是<strong>还原剂</strong>（本身被氧化）。</p>',
+    points:{title:'氧化反应',items:['<strong>Mg</strong>：Mg → Mg²⁺ + 2e⁻','<strong>化合价升高</strong>：0 → +2','<strong>角色</strong>：还原剂（被氧化）','<strong>结果</strong>：Mg 转为阳离子']}
+  },
+  // ===== 6. 电子转移 · 还原 =====
+  {
+    tag:'电子',name:'O₂ 得到电子（还原）',
+    body:'<p>同时，<strong>O₂ 分子获得电子</strong>：</p><p><code>O₂ + 4e⁻ → 2O²⁻</code></p><p>每个 O 原子得到 2 个电子，成为 <strong>O²⁻</strong>。得电子的过程叫做<strong>还原反应</strong>。O₂ 是<strong>氧化剂</strong>（本身被还原）。</p>',
+    points:{title:'还原反应',items:['<strong>O₂</strong>：O₂ + 4e⁻ → 2O²⁻','<strong>化合价降低</strong>：0 → -2','<strong>角色</strong>：氧化剂（被还原）','<strong>注意</strong>：1 个 O₂ 得 4 个电子']}
+  },
+  // ===== 7. 离子键形成 =====
+  {
+    tag:'电子',name:'形成离子键 MgO',
+    body:'<p>失去了电子的 <strong>Mg²⁺</strong> 与得到了电子的 <strong>O²⁻</strong> 之间通过<strong>静电引力</strong>结合，形成 <strong>离子键</strong>：</p><p><code>Mg²⁺ + O²⁻ → MgO</code></p><p>无数 Mg²⁺ 和 O²⁻ 有规律排列，形成<strong>离子晶体</strong>（NaCl 型）。</p>',
+    points:{title:'离子键与晶体',items:['<strong>化学键</strong>：离子键（静电引力）','<strong>晶体类型</strong>：NaCl 型面心立方','<strong>Mg²⁺:O²⁻</strong> = 1:1','<strong>结果</strong>：白色粉末 MgO']}
+  },
+  // ===== 8. 反应热效应 =====
+  {
+    tag:'能量',name:'强放热反应',
+    body:'<p>镁燃烧是<strong>极其强烈的放热反应</strong>（ΔH = -601.6 kJ/mol）。</p><p>如此大的热量将反应体系加热到 <strong>约 3000°C</strong> 高温！这也是我们能看到<strong>耀眼白光</strong>的根本原因——高温激发了大量电子跃迁。</p>',
+    points:{title:'能量数据',items:['<strong>ΔH</strong>：-601.6 kJ/mol（强放热）','<strong>火焰温度</strong>：约 3000°C','<strong>热源</strong>：化学能→热能','<strong>效果</strong>：高温激发电子→发光']}
+  },
+  // ===== 9. 白光成因 =====
+  {
+    tag:'光学',name:'白光成因：电子跃迁',
+    body:'<p>3000°C 高温使 MgO 中大量<strong>电子被激发到高能级</strong>。电子在<strong>回落</strong>到低能级时，以<strong>光子（hν）</strong>的形式<strong>释放能量</strong>。</p><p>发出的光覆盖<strong>紫外到可见光</strong>的连续波段，各色光混合，人眼感知为<strong>耀眼的白色光芒</strong>。</p>',
+    points:{title:'发光机理',items:['<strong>激发</strong>：热能→电子跃迁到高能级','<strong>回落</strong>：电子回低能级→释放光子','<strong>光谱</strong>：紫外 + 可见光（连续光谱）','<strong>感知</strong>：多色光合→白光']}
+  },
+  // ===== 10. 发射光谱 =====
+  {
+    tag:'光学',name:'镁的发射光谱',
+    body:'<p>镁燃烧发出的光经过分光，可见<strong>特征发射谱线</strong>：</p><p>最强的谱线在 <strong>518 nm（绿光）</strong>附近，此外还有 <strong>285 nm（紫外）</strong> 和 <strong>383 nm（近紫外）</strong> 的强线。</p><p>紫外光不可见，绿光与紫光混合，叠加连续光谱，总体呈<strong>耀眼白光</strong>。</p>',
+    points:{title:'特征谱线',items:['<strong>285 nm</strong>：强 UV（不可见）','<strong>383 nm</strong>：近 UV','<strong>518 nm</strong>：最强绿光（可见）','<strong>总效果</strong>：紫外+绿光+连续谱→白光']}
+  },
+  // ===== 11. 产物 MgO 性质 =====
+  {
+    tag:'产物',name:'氧化镁的性质',
+    body:'<p>MgO（氧化镁）是白色粉末，具有<strong>极高的熔点（2852°C）</strong>和良好的<strong>化学稳定性</strong>。</p><p>MgO 是<strong>碱性氧化物</strong>，能与酸反应：<code>MgO + 2HCl → MgCl₂ + H₂O</code>。不溶于水，但会与水缓慢反应生成 Mg(OH)₂。</p>',
+    points:{title:'MgO 性质',items:['<strong>外观</strong>：白色粉末','<strong>熔点</strong>：2852°C（极高）','<strong>类型</strong>：碱性氧化物','<strong>用途</strong>：耐火材料、医药、涂料']}
+  },
+  // ===== 12. 应用总结 =====
+  {
+    tag:'应用',name:'应用与安全总结',
+    body:'<p><strong>应用</strong>：镁燃烧的强光广泛应用于<strong>闪光摄影</strong>（早期闪光灯）、<strong>照明弹</strong>、<strong>信号弹</strong>、<strong>烟火</strong>中的白光效果。</p><p><strong>安全</strong>：镁燃烧温度极高，<strong>不可用水灭火</strong>（水会分解产生 H₂ 加剧燃烧），应用<strong>干砂</strong>或 D 类灭火器。镁粉在空气中可爆炸！</p>',
+    points:{title:'应用与安全',items:['<strong>闪光摄影</strong>：早期镁粉闪光灯','<strong>军事</strong>：照明弹、信号弹','<strong>灭火</strong>：干砂 / D 类灭火器，严禁用水','<strong>镁粉</strong>：可与空气形成爆炸性混合物']}
+  },
+];
+
+// ===================================================================
+// Scene drawers
+// ===================================================================
+const SCENES = {
+
+  // --- 1. 宏观燃烧场景 ---
+  combustion(t, a){
+    const W=cv.width,H=cv.height;
+    const bright=0.7+0.3*Math.sin(t*2.5);
+    // 背景发光
+    const grad=ctx.createRadialGradient(W/2,H/2-20,0,W/2,H/2-20,W*0.65);
+    grad.addColorStop(0,'rgba(255,255,230,'+(bright*0.12)+')');
+    grad.addColorStop(1,'#06101f');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+    // 镁条
+    const mgX=W/2,mgY=H/2-30;
+    const mgLen=200,mgWid=10;
+    const remain=mgLen*(1-((t*0.04)%0.7));
+    const burnX=mgX+remain/2-5;
+    // 发光火焰
+    glow('rgba(255,255,230,'+(bright*0.9)+')',50,()=>{
+      ctx.fillStyle='rgba(255,255,240,'+(bright*0.95)+')';
+      ctx.beginPath();ctx.arc(burnX,mgY,18+12*Math.sin(t*4),0,7);ctx.fill();
+    });
+    // 镁条
+    const mgGrad=ctx.createLinearGradient(mgX-remain/2,0,mgX+remain/2,0);
+    mgGrad.addColorStop(0,'#c0c8d0');mgGrad.addColorStop(0.6,'#d0d8e0');mgGrad.addColorStop(1,'rgba(255,255,255,0.5)');
+    ctx.fillStyle=mgGrad;ctx.shadowColor='#94a3b8';ctx.shadowBlur=4;
+    roundRect(mgX-remain/2,mgY-mgWid/2,remain,mgWid,4);ctx.fill();ctx.shadowBlur=0;
+    // 火花
+    for(let i=0;i<18;i++){
+      const ang=i*1.23+t*0.7,d=20+60*((i*0.137+t*0.3)%1);
+      const sx=burnX+Math.cos(ang)*d,sy=mgY+Math.sin(ang)*d;
+      const s=1.5+2*((i*0.5+t)%0.5),al=Math.max(0,1-d/80)*bright;
+      ctx.fillStyle='rgba(255,255,220,'+al+')';ctx.shadowColor='rgba(255,255,200,'+(al*0.5)+')';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(sx,sy,s,0,7);ctx.fill();ctx.shadowBlur=0;
+    }
+    // 白烟 MgO
+    for(let i=0;i<10;i++){
+      const age=(t*0.2+i*0.15)%1.5;
+      if(age>0.2){
+        const sx=burnX+(i-5)*14+Math.sin(t+i)*10,sy=mgY-25-age*55;
+        const al=Math.max(0,1-age/1.5)*0.35;
+        ctx.fillStyle='rgba(220,230,240,'+al+')';
+        ctx.beginPath();ctx.arc(sx,sy,7+age*12,0,7);ctx.fill();
+      }
+    }
+    drawText('镁条燃烧发出剧烈白光',W/2,28,'#fff',17);
+    drawText('2Mg + O₂ → 2MgO',W/2,H-50,'#fbbf24',15);
+    drawText('现象：剧烈燃烧 · 耀眼白光 · 生成白色粉末',W/2,H-25,'#9ab0d0',12);
+    // 闪烁
+    if(bright>0.85){ctx.fillStyle='rgba(255,255,230,0.03)';ctx.fillRect(0,0,W,H);}
+  },
+
+  // --- 化学方程式展示 ---
+  equation_scene(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('化学方程式：镁燃烧',W/2,35,'#fff',16);
+    // 中央方程
+    ctx.fillStyle='rgba(167,139,250,0.12)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2.5;
+    roundRect(80,80,W-160,70,14);ctx.fill();ctx.stroke();
+    drawText('2Mg + O₂ → 2MgO',W/2,115,'#fff',24);
+    // 原子守恒框
+    const items=[
+      {label:'Mg：左侧 2 个 → 右侧 2 个',color:'#a78bfa'},
+      {label:'O：左侧 2 个 → 右侧 2 个',color:'#34d399'},
+    ];
+    items.forEach((m,i)=>{
+      const y=175+i*50;
+      ctx.fillStyle=m.color+'22';ctx.strokeStyle=m.color;ctx.lineWidth=1.5;
+      roundRect(W/2-150,y,300,40,10);ctx.fill();ctx.stroke();
+      drawText('✓ '+m.label,W/2,y+20,m.color,15);
+    });
+    drawText('化合反应 · 氧化还原反应 · 原子守恒',W/2,H-35,'#9ab0d0',13);
+  },
+
+  // --- 方程式展示（内置版） ---
+  equation(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('化学方程式',W/2,35,'#fff',16);
+    // 主方程
+    ctx.fillStyle='rgba(167,139,250,0.12)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;
+    roundRect(80,70,W-160,60,12);ctx.fill();ctx.stroke();
+    drawText('2Mg + O₂ → 2MgO',W/2,100,'#fff',22);
+    // 原子守恒
+    const items=[
+      {label:'Mg：左侧 2 个 → 右侧 2 个',color:'#a78bfa'},
+      {label:'O：左侧 2 个 → 右侧 2 个',color:'#34d399'},
+    ];
+    items.forEach((m,i)=>{
+      const y=160+i*45;
+      ctx.fillStyle=m.color+'22';ctx.strokeStyle=m.color;ctx.lineWidth=1.5;
+      roundRect(W/2-140,y,280,35,8);ctx.fill();ctx.stroke();
+      drawText('✓ '+m.label,W/2,y+18,m.color,14);
+    });
+    drawText('化合反应 · 氧化还原反应 · 原子守恒',W/2,H-35,'#9ab0d0',13);
+  },
+
+  // --- 3. Mg 原子结构 ---
+  atom_mg(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('镁原子结构（原子序数 12）',W/2,28,'#fff',16);
+    const cx=W/2,cy=H/2+20;
+    // 原子核
+    ctx.fillStyle='#ef4444';ctx.shadowColor='#ef4444';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.arc(cx,cy,20,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+    ctx.fillText('12p',cx,cy-5);ctx.fillText('12n',cx,cy+8);
+    // 电子层 K L M
+    const shells=[[2,35],[8,70],[2,105]];
+    const colors=['#34d399','#fbbf24','#f87171'];
+    shells.forEach(([n,r],si)=>{
+      ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.stroke();
+      for(let i=0;i<n;i++){
+        const ang=t*0.5+i*2*Math.PI/n;
+        const ex=cx+r*Math.cos(ang),ey=cy+r*Math.sin(ang);
+        ctx.fillStyle=colors[si];ctx.shadowColor=colors[si];ctx.shadowBlur=4;
+        ctx.beginPath();ctx.arc(ex,ey,3.5,0,7);ctx.fill();ctx.shadowBlur=0;
+      }
+    });
+    drawText('K层 2e⁻',cx-30,cy-60,'#34d399',11,'left');
+    drawText('L层 8e⁻',cx+30,cy-90,'#fbbf24',11,'left');
+    drawText('M层 2e⁻（最外层，易失去）',cx+30,cy-120,'#f87171',11,'left');
+    drawText('最外层仅 2 个电子 → 极易失去 → Mg²⁺',W/2,H-25,'#fbbf24',13);
+  },
+
+  // --- 4. O₂ 分子结构 ---
+  atom_o2(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('氧分子结构（O₂）',W/2,28,'#fff',16);
+    const cx=W/2,cy=H/2;
+    // 两个氧原子
+    [-40,40].forEach((dx,i)=>{
+      ctx.fillStyle='#34d399';ctx.shadowColor='#34d399';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(cx+dx,cy,28,0,7);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+      ctx.fillText('O',cx+dx,cy);
+      // 电子层
+      ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(cx+dx,cy,30,0,7);ctx.stroke();
+    });
+    // 双键
+    ctx.strokeStyle='#34d399';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(cx-12,cy-8);ctx.lineTo(cx+12,cy-8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-12,cy+8);ctx.lineTo(cx+12,cy+8);ctx.stroke();
+    drawText('O=O 双键',cx,cy-55,'#34d399',13);
+    // 电子排布
+    ctx.fillStyle='rgba(52,211,153,0.15)';ctx.strokeStyle='#34d399';ctx.lineWidth=1;
+    roundRect(cx-130,cy+45,260,50,8);ctx.fill();ctx.stroke();
+    drawText('电子排布 2-6 ｜ 最外层缺 2 个电子 → 易得电子（氧化性）',cx,cy+70,'#e8eef8',12);
+    drawText('O₂ 是氧化剂：助燃，支持燃烧',W/2,H-25,'#34d399',13);
+  },
+
+  // --- 5. Mg 失电子 ---
+  electron_loss(t, a){
+    const W=cv.width,H=cv.height;
+    const p=Math.min(1,(t*0.3)%2.5);
+    drawText('氧化：Mg 原子失去 2 个电子',W/2,28,'#fff',16);
+
+    const mgX=W/2-80,mgY=H/2;
+    // Mg
+    ctx.fillStyle=p>0.6?'#a78bfa':'#c0c8d0';
+    ctx.shadowColor=p>0.6?'#a78bfa':'transparent';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(mgX,mgY,30,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText(p>0.6?'Mg²⁺':'Mg',mgX,mgY);
+    drawText(p>0.6?'Mg²⁺ + 2e⁻':'最外层 2e⁻',mgX,mgY+55,p>0.6?'#34d399':'#fbbf24',12);
+
+    // 飞出电子
+    for(let i=0;i<2;i++){
+      const ep=Math.max(0,Math.min(1,(p-0.1-i*0.1)/0.5));
+      const ex=mgX+30+ep*100+Math.sin(t*3+i)*8;
+      const ey=mgY+(-1+i*2)*15+Math.sin(t*2+i)*10;
+      ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=12;
+      ctx.beginPath();ctx.arc(ex,ey,5,0,7);ctx.fill();ctx.shadowBlur=0;
+      drawText('e⁻',ex+10,ey,'#fbbf24',11);
+    }
+
+    drawText('Mg → Mg²⁺ + 2e⁻',W/2,H-60,'#f87171',16);
+    drawText('失电子 → 氧化反应（化合价升高 0→+2）',W/2,H-32,'#f87171',12);
+    drawText('Mg 是还原剂（本身被氧化）',W/2,H-14,'#fbbf24',11);
+  },
+
+  // --- 6. O₂ 得电子 ---
+  electron_gain(t, a){
+    const W=cv.width,H=cv.height;
+    const p=Math.min(1,(t*0.3)%2.5);
+    drawText('还原：O₂ 分子获得 4 个电子',W/2,28,'#fff',16);
+
+    const oX=W/2+80,oY=H/2;
+    // O₂ → 2O²⁻
+    for(let i=0;i<2;i++){
+      const dx=-20+i*40;
+      const col=p>0.4?'#34d399':'#6ee7b7';
+      ctx.fillStyle=col;ctx.shadowColor='#34d399';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(oX+dx,oY,25,0,7);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p>0.4?'O²⁻':'O',oX+dx,oY);
+    }
+
+    // 飞入电子
+    for(let i=0;i<4;i++){
+      const ep=Math.max(0,Math.min(1,(p-0.1-i*0.08)/0.5));
+      const ex=oX-60*(1-ep)+Math.sin(t*2+i)*10;
+      const ey=oY+(-15+i*10)+Math.sin(t*2.5+i)*8;
+      ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=10;
+      ctx.beginPath();ctx.arc(ex,ey,4.5,0,7);ctx.fill();ctx.shadowBlur=0;
+      drawText('e⁻',ex+8,ey,'#fbbf24',10);
+    }
+
+    drawText('O₂ + 4e⁻ → 2O²⁻',W/2,H-60,'#34d399',16);
+    drawText('得电子 → 还原反应（化合价降低 0→-2）',W/2,H-32,'#34d399',12);
+    drawText('O₂ 是氧化剂（本身被还原）',W/2,H-14,'#fbbf24',11);
+  },
+
+  // --- 7. 离子键 ---
+  ion_bond(t, a){
+    const W=cv.width,H=cv.height;
+    const p=Math.min(1,(t*0.25)%2.5);
+    drawText('离子键形成：Mg²⁺ + O²⁻ → MgO',W/2,28,'#fff',16);
+
+    const mgX=W/2-80-p*50,mgY=H/2;
+    // Mg²⁺
+    ctx.fillStyle='#a78bfa';ctx.shadowColor='#a78bfa';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(mgX,mgY,18,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+    ctx.fillText('Mg²⁺',mgX,mgY);
+
+    const oX=W/2+80+p*50,oY=H/2;
+    // O²⁻
+    ctx.fillStyle='#34d399';ctx.shadowColor='#34d399';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(oX,oY,24,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.font='bold 9px sans-serif';
+    ctx.fillText('O²⁻',oX,oY);
+
+    // 静电引力标记
+    if(p>0.3){
+      ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(mgX+15,mgY);ctx.lineTo(oX-22,oY);ctx.stroke();ctx.setLineDash([]);
+      drawText('静电引力',(mgX+oX)/2,oY-35,'#fbbf24',11);
+    }
+    if(p>0.7)drawText('✓ 离子键形成！',W/2,oY+60,'#34d399',15);
+
+    drawText('Mg²⁺ + O²⁻ → MgO（离子化合物）',W/2,H-45,'#e8eef8',14);
+    drawText('阴阳离子通过静电引力结合',W/2,H-22,'#9ab0d0',11);
+  },
+
+  // --- 8. 能量 ---
+  energy_diagram(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('反应能量图：强放热反应',W/2,28,'#fff',16);
+
+    const cx=W/2,cy=H/2+30;
+
+    // 坐标轴
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx-180,cy+60);ctx.lineTo(cx+180,cy+60);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-180,cy+60);ctx.lineTo(cx-180,cy-80);ctx.stroke();
+    drawText('反应进程',cx+160,cy+60,'#64748b',11,'right');
+    drawText('能量',cx-195,cy-80,'#64748b',11,'left');
+
+    // 反应物能级（高）
+    ctx.fillStyle='rgba(248,113,113,0.2)';ctx.strokeStyle='#f87171';ctx.lineWidth=2;
+    roundRect(cx-170,cy-60,100,45,6);ctx.fill();ctx.stroke();
+    drawText('反应物 2Mg+O₂',cx-120,cy-37,'#fff',12);
+    drawText('↑ 高能量',cx-60,cy-37,'#f87171',10,'left');
+
+    // 放热箭头
+    ctx.strokeStyle='#fbbf24';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(cx-120,cy-15);
+    ctx.quadraticCurveTo(cx-20,cy+20,cx+60,cy+35);
+    ctx.stroke();
+    drawText('ΔH = -601.6 kJ/mol',cx-50,cy-5,'#fbbf24',12);
+
+    // 产物能级（低）
+    ctx.fillStyle='rgba(52,211,153,0.2)';ctx.strokeStyle='#34d399';ctx.lineWidth=2;
+    roundRect(cx+20,cy+15,120,45,6);ctx.fill();ctx.stroke();
+    drawText('产物 2MgO',cx+80,cy+38,'#fff',12);
+    drawText('↓ 低能量',cx+150,cy+38,'#34d399',10,'left');
+
+    drawText('镁燃烧放出巨大热量，温度可达 3000°C',W/2,H-25,'#fbbf24',13);
+  },
+
+  // --- 9. 白光成因 ---
+  light_emission(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('白光成因：电子跃迁发光',W/2,28,'#fff',16);
+
+    const cx=W/2-40,cy=H/2+5;
+
+    // 能级线
+    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(cx-80,cy+50);ctx.lineTo(cx+80,cy+50);ctx.stroke();
+    drawText('基态 E₀',cx+95,cy+50,'#64748b',12,'left');
+    ctx.beginPath();ctx.moveTo(cx-80,cy-70);ctx.lineTo(cx+80,cy-70);ctx.stroke();
+    drawText('激发态 E₁',cx+95,cy-70,'#64748b',12,'left');
+
+    // 电子循环
+    const ph=t%1.2;
+    let ex,ey;
+    if(ph<0.35){
+      ex=cx-30+60*(ph/0.35);ey=cy+50-120*(ph/0.35);
+      ctx.fillStyle='#fbbf24';
+      drawText('吸收热能',cx+10,cy-10+(ph/0.35)*20,'#f97316',11);
+    }else if(ph<0.5){
+      ex=cx+30;ey=cy-70;
+      ctx.fillStyle='#f97316';
+    }else{
+      const f=(ph-0.5)/0.7;
+      ex=cx+30-60*f;ey=cy-70+120*f;
+      ctx.fillStyle='#fbbf24';
+      // 光子
+      if(f>0.1){
+        const pf=(f-0.1)/0.6;
+        for(let i=0;i<3;i++){
+          const px=cx+80+pf*80+i*18,py=cy+30+Math.sin(t*4+i)*6;
+          const al=Math.max(0,1-Math.abs(pf-i*0.15)*4);
+          ctx.fillStyle='rgba(255,255,200,'+(al*0.8)+')';
+          ctx.shadowColor='rgba(255,255,200,'+al+')';ctx.shadowBlur=18;
+          ctx.beginPath();ctx.arc(px,py,4,0,7);ctx.fill();ctx.shadowBlur=0;
+        }
+        drawText('光子 hν',cx+120+pf*60,cy+30+Math.sin(t*4)*6,'#fbbf24',12);
+        drawText('发出白光！',cx+75,cy+80,'#fbbf24',13);
+      }
+    }
+    ctx.shadowColor='#fbbf24';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(ex,ey,7,0,7);ctx.fill();ctx.shadowBlur=0;
+    drawText('e⁻',ex+12,ey,'#fff',10);
+
+    drawText('高温激发电子 → 跃迁到高能级',W/2,H-45,'#e8eef8',12);
+    drawText('回落到低能级时释放光子 → 可见光（白光）',W/2,H-22,'#9ab0d0',12);
+  },
+
+  // --- 10. 光谱 ---
+  spectrum(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('镁的发射光谱',W/2,28,'#fff',16);
+
+    // 光谱条
+    const sx=70,sy=H/2-20,sw=W-140,sh=50;
+    const sg=ctx.createLinearGradient(sx,0,sx+sw,0);
+    sg.addColorStop(0,'#2d0060');sg.addColorStop(0.08,'#4000a0');
+    sg.addColorStop(0.15,'#0000ff');sg.addColorStop(0.3,'#00aaff');
+    sg.addColorStop(0.4,'#00ee88');sg.addColorStop(0.5,'#55ff00');
+    sg.addColorStop(0.55,'#ddff00');sg.addColorStop(0.6,'#ffee00');
+    sg.addColorStop(0.7,'#ffaa00');sg.addColorStop(0.8,'#ff6600');
+    sg.addColorStop(0.9,'#ff2200');sg.addColorStop(1,'#cc0033');
+    ctx.shadowColor='rgba(255,255,255,0.15)';ctx.shadowBlur=8;
+    roundRect(sx,sy,sw,sh,8);ctx.fillStyle=sg;ctx.fill();ctx.shadowBlur=0;
+
+    // 谱线
+    const lines=[
+      {pos:0.03,h:70,label:'285 nm',desc:'强 UV',col:'#a78bfa'},
+      {pos:0.15,h:55,label:'383 nm',desc:'近 UV',col:'#818cf8'},
+      {pos:0.5,h:65,label:'518 nm',desc:'绿光（最强）',col:'#34d399'},
+    ];
+    lines.forEach(l=>{
+      const lx=sx+sw*l.pos;
+      ctx.strokeStyle=l.col;ctx.lineWidth=2.5;ctx.shadowColor=l.col;ctx.shadowBlur=6;
+      ctx.beginPath();ctx.moveTo(lx,sy-5);ctx.lineTo(lx,sy-l.h);ctx.stroke();ctx.shadowBlur=0;
+      drawText(l.label,lx,sy-l.h-14,l.col,12);
+      drawText(l.desc,lx,sy-l.h+2,'#9ab0d0',10);
+    });
+
+    // 标注
+    ctx.fillStyle='rgba(255,255,255,0.06)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+    roundRect(sx+20,sy+70,sw-40,45,8);ctx.fill();ctx.stroke();
+    drawText('紫外 + 绿光 + 连续光谱 → 混合后人眼感知为耀眼白光',W/2,sy+93,'#e8eef8',13);
+    drawText('镁的强紫外辐射也是其照亮效果特别「刺眼」的原因之一',W/2,H-20,'#9ab0d0',11);
+  },
+
+  // --- 11. MgO 晶体 ---
+  crystal(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('MgO 晶体结构 · 岩盐型（NaCl 型）',W/2,28,'#fff',16);
+    const cx=W/2,cy=H/2+10;
+    const sp=38,rows=5,cols=5;
+    const ox=cx-(cols-1)*sp/2,oy=cy-(rows-1)*sp/2;
+
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const x=ox+c*sp,y=oy+r*sp;
+        const isMg=(r+c)%2===0,rad=isMg?10:14;
+        ctx.fillStyle=isMg?'#a78bfa':'#34d399';
+        ctx.shadowColor=isMg?'#a78bfa':'#34d399';ctx.shadowBlur=4;
+        ctx.beginPath();ctx.arc(x,y,rad,0,7);ctx.fill();ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(isMg?'Mg²⁺':'O²⁻',x,y+1);
+      }
+    }
+    // 图例
+    ctx.fillStyle='#a78bfa';ctx.beginPath();ctx.arc(W/2-70,H-60,8,0,7);ctx.fill();
+    drawText('Mg²⁺',W/2-55,H-60,'#fff',11,'left');
+    ctx.fillStyle='#34d399';ctx.beginPath();ctx.arc(W/2+20,H-60,8,0,7);ctx.fill();
+    drawText('O²⁻',W/2+35,H-60,'#fff',11,'left');
+
+    drawText('熔点 2852°C · 硬度大 · 化学性质稳定',W/2,H-30,'#fbbf24',13);
+  },
+
+  // --- 12. 应用 ---
+  application(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('镁燃烧的应用',W/2,28,'#fff',16);
+    const items=[
+      {icon:'📸',title:'闪光摄影',desc:'早期镁粉闪光灯\n瞬间强光照明',color:'#fbbf24'},
+      {icon:'💡',title:'照明弹',desc:'军事照明\n夜间战场照明',color:'#f97316'},
+      {icon:'🎆',title:'烟火',desc:'白色烟花效果\n镁粉+铝粉',color:'#a78bfa'},
+      {icon:'🧯',title:'安全警示',desc:'严禁水灭\n用干砂处理',color:'#f87171'},
+    ];
+    const cw=Math.min(190,(W-60)/2-8);
+    items.forEach((m,i)=>{
+      const col=i%2,row=Math.floor(i/2);
+      const x=30+col*(cw+10),y=55+row*150;
+      ctx.fillStyle=m.color+'22';ctx.strokeStyle=m.color;ctx.lineWidth=2;
+      roundRect(x,y,cw,130,12);ctx.fill();ctx.stroke();
+      drawText(m.icon||'●',x+cw/2,y+32,m.color,28);
+      drawText(m.title,x+cw/2,y+70,'#fff',15);
+      ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+      (m.desc||'').split('\n').forEach((ln,j)=>ctx.fillText(ln,x+cw/2,y+96+j*16));
+    });
+  },
+};
+
+// ===================================================================
+// Sync & render
+// ===================================================================
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0;
+const STEP_DURATION=3.5;
+
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  stepBadge.textContent=s.tag||'';
+  stepTitle.textContent=s.name||'';
+  stepBody.innerHTML=s.body||'';
+  if(s.points){
+    stepPoints.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+(s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>';
+  }else stepPoints.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+}
+
+const SCENE_OVERRIDES = {
+  1: 'equation_scene',  // 化学方程式
+  2: 'atom_mg',    // 镁原子结构
+  3: 'atom_o2',    // 氧分子结构
+  4: 'electron_loss',  // Mg 失电子
+  5: 'electron_gain',  // O₂ 得电子
+  6: 'ion_bond',       // 离子键
+  7: 'energy_diagram',  // 反应热
+  8: 'light_emission',  // 白光成因
+  9: 'spectrum',        // 光谱
+  10: 'crystal',        // MgO 晶体
+};
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  let sceneKey=SCENE_OVERRIDES[stepIdx];
+  if(!sceneKey){
+    const map={'宏观':'combustion','微观':'atom_mg','O₂':'atom_o2','电子':'electron_loss','得电':'electron_gain','离子':'ion_bond','能量':'energy_diagram','光学':'light_emission','光谱':'spectrum','产物':'crystal','应用':'application'};
+    sceneKey=map[s.tag];
+  }
+  const fn=SCENES[sceneKey];
+  if(fn)fn(t,s.sceneArgs||{});
+  else {drawText('镁条燃烧 · '+s.name,cv.width/2,cv.height/2,'#9ab0d0',16);}
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  stepTime+=dt*speed;
+  if(stepTime>=STEP_DURATION){
+    if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+    else{playing=false;document.getElementById('playBtn').textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;
+  const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// Controls
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+
+// Step bar
+const bar=document.getElementById('stepbar');
+STEPS.forEach(function(s,i){
+  const el=document.createElement('div');
+  el.className='step'+(i===stepIdx?' active':'');
+  el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>8?s.name.slice(0,7)+'…':s.name||'')+'</div>';
+  el.onclick=function(){stepIdx=i;syncStep();draw();};
+  bar.appendChild(el);
+});
+syncStep();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

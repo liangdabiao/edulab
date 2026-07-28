@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>集合逻辑 · 交互教学</title>
+    <script src="https://gcore.jsdelivr.net/npm/tailwindcss@3.4.17/src/standalone-cdn.js"></script>
+    <link rel="stylesheet" href="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <style>
+        body { background-color: #f8fafc; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .katex { font-size: 1.02em; }
+        .truth-table th, .truth-table td { padding: 6px 14px; text-align: center; border: 1px solid #e2e8f0; font-family: monospace; }
+        .truth-table th { background: #f1f5f9; font-weight: 600; color: #1e293b; }
+        .truth-table td.highlight { background: #dbeafe; font-weight: 700; color: #2563eb; }
+        .truth-table tr:hover td { background: #f8fafc; }
+        .gate-canvas { width: 100%; height: 300px; }
+        .venn-element { position: absolute; font-size: 13px; font-weight: 600; color: #1e293b; pointer-events: none; }
+    </style>
+</head>
+<body class="min-h-screen lg:h-screen text-slate-800 lg:overflow-hidden">
+<div class="flex flex-col lg:flex-row gap-3 p-3 min-h-screen lg:h-screen lg:overflow-hidden">
+
+    <!-- ===== 左栏 ===== -->
+    <aside class="w-full lg:w-[340px] flex-shrink-0 flex flex-col gap-3 lg:overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-300 p-5 flex-shrink-0">
+            <h2 id="prob-title" class="text-xl font-bold mb-4 text-slate-900"></h2>
+            <div id="prob-body" class="prose text-slate-600 leading-relaxed space-y-3 text-sm md:text-base"></div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-300 p-5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2 mb-4">
+                <span class="w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
+                <span id="console-title">动态控制台</span>
+            </h3>
+            <div class="space-y-6">
+                <div id="param-block" class="hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <label id="param-label" class="text-sm font-semibold text-slate-600"></label>
+                        <span id="param-val" class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-xs font-mono font-bold border border-blue-100"></span>
+                    </div>
+                    <input type="range" id="param-slider" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none">
+                    <div id="param-ticks" class="flex justify-between text-[11px] text-slate-400 mt-1.5 font-mono"></div>
+                </div>
+                <div id="readouts" class="bg-slate-50 border border-slate-200/60 rounded-xl p-4 space-y-3 text-xs md:text-sm font-mono text-slate-700"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===== 中栏 ===== -->
+    <section id="solution-panel" class="w-full lg:w-[360px] flex-shrink-0 lg:overflow-y-auto bg-white rounded-2xl shadow-sm border border-slate-300 p-5 space-y-5 transition-[width] duration-300">
+        <div id="sol-header" class="flex items-center justify-between gap-2">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
+                <span id="sol-title-text">详细解析</span>
+            </h3>
+            <button id="toggle-solution" type="button" title="收起解析" class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-500 shadow-sm hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-colors cursor-pointer">
+                <svg id="sol-chevron" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span id="sol-vlabel" class="hidden font-bold text-slate-700 text-sm tracking-widest [writing-mode:vertical-rl]">详细解析</span>
+        </div>
+        <div id="solution-body" class="space-y-5"></div>
+    </section>
+
+    <!-- ===== 右栏：逻辑画板 ===== -->
+    <main class="w-full lg:flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-slate-300 p-5 flex flex-col lg:overflow-hidden">
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="canvas-title">集合逻辑 · 交互教学</span>
+            </h3>
+        </div>
+                <!-- Mode selector buttons -->
+        <div class="flex gap-2 mb-3 flex-shrink-0">
+            <button data-mode="venn" class="mode-btn px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors cursor-pointer">文氏图</button>
+            <button data-mode="truthTable" class="mode-btn px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">真值表</button>
+            <button data-mode="logicGate" class="mode-btn px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">逻辑门</button>
+        </div>
+<div id="canvas-container" class="relative flex-grow min-h-[360px] lg:min-h-0 bg-white rounded-xl overflow-hidden shadow-inner flex items-center justify-center">
+            <canvas id="main-canvas" class="absolute inset-0 w-full h-full"></canvas>
+            <div id="venn-overlay" class="absolute inset-0 pointer-events-none"></div>
+            <div id="truth-table-container" class="absolute inset-0 overflow-auto p-4 hidden"></div>
+        </div>
+    </main>
+</div>
+
+<script id="lesson-data" type="application/json">{"lesson": {"language": "zh-CN", "title": "集合逻辑 · 交互教学", "problem": "\n<p>本页展示<strong>集合逻辑</strong>的三种交互可视化方式，可通过上方按钮切换：</p>\n<ul>\n  <li><strong>文氏图</strong> — 集合 A = {1,2,3}，B = {3,4,5}，交集 {3} 高亮</li>\n  <li><strong>真值表</strong> — 命题 p, q 的 4 种组合，计算 p∧q, p∨q, p⊕q, p→q, p↔q 的真值</li>\n  <li><strong>逻辑门</strong> — 基本门电路符号：AND, OR, NOT, NAND, NOR, XOR</li>\n</ul>\n<p>拖动下方滑块可调整测试参数 t。</p>\n", "answer": "\n<p>文氏图：A ∩ B = {3}，A ∪ B = {1,2,3,4,5}</p>\n<p>真值表：合取 p∧q 仅 p=q=1 时为真；析取 p∨q 仅 p=q=0 时为假</p>\n"}, "steps": [{"title": "文氏图 (Venn Diagram)", "content": "\n<p>文氏图用圆形区域表示集合，重叠区域表示交集。</p>\n<p>本例中：</p>\n<ul>\n  <li>集合 <span class=\"math\">A = {1,2,3}</span> (红色圆)</li>\n  <li>集合 <span class=\"math\">B = {3,4,5}</span> (蓝色圆)</li>\n  <li>交集 <span class=\"math\">A ∩ B = {3}</span> (紫红色重叠区域)</li>\n  <li>并集 <span class=\"math\">A ∪ B = {1,2,3,4,5}</span></li>\n</ul>\n"}, {"title": "真值表 (Truth Table)", "content": "\n<p>真值表列出命题变元的所有真值组合，逐行计算复合命题的真值。</p>\n<p>基本联结词：</p>\n<ul>\n  <li>合取 p∧q：仅当 p,q 都为真时为真</li>\n  <li>析取 p∨q：仅当 p,q 都为假时为假</li>\n  <li>异或 p⊕q：p,q 真假不同时为真</li>\n  <li>蕴含 p→q：仅当前真后假时为假</li>\n  <li>双条件 p↔q：p,q 同真同假时为真</li>\n</ul>\n"}, {"title": "逻辑门 (Logic Gates)", "content": "\n<p>逻辑门是数字电路的基本元件，对应于布尔代数中的基本运算。</p>\n<ul>\n  <li><strong>AND 门</strong> — 相当于 p∧q，全 1 出 1</li>\n  <li><strong>OR 门</strong> — 相当于 p∨q，有 1 出 1</li>\n  <li><strong>NOT 门</strong> — 相当于 ¬p，取反</li>\n  <li><strong>NAND 门</strong> — 与非门，AND 的否定</li>\n  <li><strong>NOR 门</strong> — 或非门，OR 的否定</li>\n  <li><strong>XOR 门</strong> — 异或门，相当于 p⊕q</li>\n</ul>\n"}], "board": {"consoleTitle": "逻辑控制台", "logicType": "venn", "venn": {"sets": [{"label": "A", "elements": ["1", "2", "3"]}, {"label": "B", "elements": ["3", "4", "5"]}], "highlight": "interAB"}, "truthTable": {"inputs": [{"name": "p", "label": "p"}, {"name": "q", "label": "q"}], "outputs": [{"name": "conj", "label": "p∧q", "expr": "p ∧ q"}, {"name": "disj", "label": "p∨q", "expr": "p ∨ q"}, {"name": "xor", "label": "p⊕q", "expr": "p ⊕ q"}, {"name": "impl", "label": "p→q", "expr": "p → q"}, {"name": "bicond", "label": "p↔q", "expr": "p ↔ q"}]}, "logicGates": [{"type": "AND", "x": 50, "y": 60, "size": 35, "label": "AND"}, {"type": "OR", "x": 250, "y": 60, "size": 35, "label": "OR"}, {"type": "NOT", "x": 450, "y": 60, "size": 35, "label": "NOT"}, {"type": "NAND", "x": 50, "y": 200, "size": 35, "label": "NAND"}, {"type": "NOR", "x": 250, "y": 200, "size": 35, "label": "NOR"}, {"type": "XOR", "x": 450, "y": 200, "size": 35, "label": "XOR"}], "param": {"name": "t", "label": "参数 t", "min": 0, "max": 10, "step": 1, "value": 3, "ticks": ["0", "5", "10"]}, "readouts": [{"id": "mode", "label": "当前模式", "type": "expr", "expr": "t"}, {"id": "note", "label": "说明", "type": "expr", "expr": "t"}]}}</script>
+
+<script>
+"use strict";
+const DATA = JSON.parse(document.getElementById('lesson-data').textContent);
+const BOARD = DATA.board || {};
+const UI = Object.assign({
+    consoleTitle: "动态控制台", solutionTitle: "详细解析",
+    collapse: "收起解析", expand: "展开解析"
+}, (DATA.lesson && DATA.lesson.ui) || {});
+
+const COLORS = {
+    setA:'#ef4444', setB:'#3b82f6', setC:'#10b981',
+    interAB:'rgba(139,92,246,0.15)', interABC:'rgba(236,72,153,0.15)',
+    gate:'#1e293b', wire:'#64748b', highlight:'#f59e0b'
+};
+const col = c => (c && COLORS[c]) ? COLORS[c] : (c || '#1e293b');
+const logicType = BOARD.logicType || 'venn';
+
+// ===== 真值表求值 =====
+function evalLogic(expr, vars){
+    const env = Object.assign({}, vars);
+    // 替换逻辑运算符
+    let s = expr
+        .replace(/∧/g, '&&').replace(/∨/g, '||').replace(/¬/g, '!')
+        .replace(/⊕/g, '!==')
+        .replace(/→/g, '<=').replace(/↔/g, '===');
+    // Replace variable names
+    for (const k in env) {
+        const re = new RegExp('\\b' + k + '\\b', 'g');
+        s = s.replace(re, env[k] ? 'true' : 'false');
+    }
+    try { return !!eval(s); } catch(e) { return false; }
+}
+
+// ===== 文氏图 =====
+function drawVenn(){
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+    ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    const cx = W/2, cy = H/2;
+    ctx.clearRect(0,0,W,H);
+
+    const venn = BOARD.venn || {sets:[]};
+    const n = venn.sets.length;
+    const r = Math.min(W,H)*0.2;
+
+    // Draw circles
+    const centers = [];
+    if (n >= 1) centers.push([cx, cy]);
+    if (n >= 2) { centers.push([cx - r*0.6, cy]); centers[0] = [cx + r*0.6, cy]; }
+    if (n >= 3) { centers = [[cx, cy - r*0.5], [cx - r*0.6, cy + r*0.4], [cx + r*0.6, cy + r*0.4]]; }
+
+    // Highlight intersection if specified
+    if (venn.highlight) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        // Use clipping for intersection shading
+        const paths = [];
+        centers.forEach((c, i) => {
+            paths.push({cx:c[0], cy:c[1]});
+        });
+        // Simple approach: draw semi-transparent overlays
+        centers.forEach((c, i) => {
+            ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 2*Math.PI);
+            ctx.fillStyle = ['rgba(239,68,68,0.08)','rgba(59,130,246,0.08)','rgba(16,185,129,0.08)'][i]||'rgba(0,0,0,0.03)';
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+
+    // Circle outlines
+    const colors = ['setA','setB','setC'];
+    centers.forEach((c, i) => {
+        ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 2*Math.PI);
+        ctx.strokeStyle = col(colors[i]||'#333');
+        ctx.lineWidth = 2.5; ctx.stroke();
+        // Label
+        if (venn.sets[i]) {
+            ctx.fillStyle = col(colors[i]||'#333');
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText(venn.sets[i].label || ('集' + String.fromCharCode(65+i)), c[0]-r-14, c[1]-r-8);
+        }
+    });
+
+    // Elements
+    const overlay = document.getElementById('venn-overlay');
+    overlay.innerHTML = '';
+    if (venn.sets) {
+        const allEls = {};
+        venn.sets.forEach(s => { if (s.elements) s.elements.forEach(e => { allEls[e] = e; }); });
+        // Position elements approximately
+        let idx = 0;
+        for (const el in allEls) {
+            const angle = (idx / Object.keys(allEls).length) * 2 * Math.PI;
+            const ex = cx + (r*0.4) * Math.cos(angle);
+            const ey = cy + (r*0.4) * Math.sin(angle);
+            const span = document.createElement('span');
+            span.className = 'venn-element';
+            span.textContent = el;
+            span.style.left = (ex - 8) + 'px';
+            span.style.top = (ey - 8) + 'px';
+            overlay.appendChild(span);
+            idx++;
+        }
+    }
+}
+
+// ===== 真值表 =====
+function drawTruthTable(){
+    document.getElementById('truth-table-container').style.display = 'block';
+    document.getElementById('main-canvas').style.display = 'none';
+    const container = document.getElementById('truth-table-container');
+    const tt = BOARD.truthTable || {inputs:[], outputs:[]};
+    const n = tt.inputs.length;
+    const rows = 1 << n;
+
+    let html = '<table class="truth-table mx-auto"><thead><tr>';
+    tt.inputs.forEach(inp => { html += '<th>' + (inp.label || inp.name) + '</th>'; });
+    tt.outputs.forEach(out => { html += '<th class="highlight">' + (out.label || out.expr) + '</th>'; });
+    html += '</tr></thead><tbody>';
+
+    const varMap = {};
+    for (let i = 0; i < rows; i++) {
+        html += '<tr>';
+        const vals = {};
+        tt.inputs.forEach((inp, j) => {
+            const v = !!(i & (1 << (n-1-j)));
+            vals[inp.name] = v;
+            varMap[inp.name] = v;
+            html += '<td>' + (v ? '1' : '0') + '</td>';
+        });
+        tt.outputs.forEach(out => {
+            const result = evalLogic(out.expr, vals);
+            html += '<td class="highlight">' + (result ? '1' : '0') + '</td>';
+        });
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ===== 逻辑门 =====
+function drawLogicGates(){
+    document.getElementById('truth-table-container').style.display = 'none';
+    document.getElementById('main-canvas').style.display = 'block';
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+    ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle = col('gate'); ctx.lineWidth = 2.5; ctx.fillStyle = col('gate');
+
+    const gates = BOARD.logicGates || [];
+    gates.forEach((g, gi) => {
+        const x = g.x || (100 + gi * 200);
+        const y = g.y || H/2;
+        const s = g.size || 40;
+        ctx.strokeStyle = col(g.color || 'gate'); ctx.lineWidth = 2.5;
+
+        switch(g.type) {
+            case 'AND': {
+                ctx.beginPath();
+                ctx.moveTo(x, y-s); ctx.lineTo(x+s, y-s);
+                ctx.quadraticCurveTo(x+s+20, y, x+s, y+s);
+                ctx.lineTo(x, y+s); ctx.closePath(); ctx.stroke();
+                break;
+            }
+            case 'OR': {
+                ctx.beginPath();
+                ctx.moveTo(x, y-s); ctx.quadraticCurveTo(x+s, y-s, x+s+15, y);
+                ctx.quadraticCurveTo(x+s, y+s, x, y+s);
+                ctx.quadraticCurveTo(x+10, y, x, y-s);
+                ctx.stroke();
+                break;
+            }
+            case 'NOT': {
+                ctx.beginPath();
+                ctx.moveTo(x+s, y); ctx.lineTo(x, y-s); ctx.lineTo(x, y+s); ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x+s+8, y, 5, 0, 2*Math.PI); ctx.stroke();
+                break;
+            }
+            case 'NAND': {
+                ctx.beginPath();
+                ctx.moveTo(x, y-s); ctx.lineTo(x+s, y-s);
+                ctx.quadraticCurveTo(x+s+20, y, x+s, y+s);
+                ctx.lineTo(x, y+s); ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x+s+22, y, 5, 0, 2*Math.PI); ctx.stroke();
+                break;
+            }
+            case 'NOR': {
+                ctx.beginPath();
+                ctx.moveTo(x, y-s); ctx.quadraticCurveTo(x+s, y-s, x+s+15, y);
+                ctx.quadraticCurveTo(x+s, y+s, x, y+s);
+                ctx.quadraticCurveTo(x+10, y, x, y-s);
+                ctx.stroke();
+                ctx.beginPath(); ctx.arc(x+s+20, y, 5, 0, 2*Math.PI); ctx.stroke();
+                break;
+            }
+            case 'XOR': {
+                ctx.beginPath();
+                ctx.moveTo(x-8, y-s); ctx.quadraticCurveTo(x+s, y-s, x+s+15, y);
+                ctx.quadraticCurveTo(x+s, y+s, x-8, y+s);
+                ctx.quadraticCurveTo(x+2, y, x-8, y-s);
+                ctx.moveTo(x, y-s); ctx.lineTo(x, y+s);
+                ctx.stroke();
+                break;
+            }
+        }
+        // Label
+        if (g.label) {
+            ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(g.label, x + s/2 + 10, y + s + 20);
+        }
+    });
+}
+
+// ===== 主渲染 =====
+function render(){
+    const lt = BOARD.logicType || 'venn';
+    switch(lt){
+        case 'venn': drawVenn(); break;
+        case 'truthTable': drawTruthTable(); break;
+        case 'logicGate': drawLogicGates(); break;
+    }
+}
+
+// ===== 控制台 DOM =====
+function renderKatex(el){ if(typeof renderMathInElement!=='undefined') renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false}); }
+
+function buildConsole(){
+    document.getElementById('prob-title').textContent = (DATA.lesson&&DATA.lesson.title)||'';
+    document.getElementById('prob-body').innerHTML = (DATA.lesson&&DATA.lesson.problem)||'';
+    document.getElementById('console-title').textContent = BOARD.consoleTitle || UI.consoleTitle;
+    document.getElementById('sol-title-text').textContent = UI.solutionTitle;
+    document.getElementById('sol-vlabel').textContent = UI.solutionTitle;
+
+    const p=BOARD.param;
+    if(p){
+        document.getElementById('param-block').classList.remove('hidden');
+        document.getElementById('param-label').innerHTML = (p.label||p.name)+' :';
+        const s=document.getElementById('param-slider');
+        s.min=p.min; s.max=p.max; s.step=p.step||0.5; s.value=(p.value!==undefined?p.value:p.min);
+        document.getElementById('param-ticks').innerHTML = (p.ticks||[`${p.min}${p.unit||''}`, `${p.max}${p.unit||''}`]).map(t=>`<span>${t}</span>`).join('');
+        s.addEventListener('input', function(){ update(); });
+    }
+
+    const roContainer=document.getElementById('readouts');
+    roContainer.innerHTML = (BOARD.readouts||[]).map(r =>
+        `<div class="flex justify-between items-center">`+
+            `<span class="text-slate-500">${r.label||''}</span>`+
+            `<span id="ro-${r.id}" class="font-semibold text-right"></span>`+
+        `</div>`
+    ).join('');
+
+    if(DATA.steps){
+        document.getElementById('solution-body').innerHTML = DATA.steps.map((s,i) =>
+            `<div class="step border border-slate-200 rounded-xl p-4 bg-white hover:shadow-sm transition-shadow">`+
+                `<h4 class="font-bold text-slate-900 text-sm mb-2">步骤${i+1}：${s.title}</h4>`+
+                `<div class="text-sm text-slate-600 leading-relaxed space-y-2">${s.content}</div>`+
+            `</div>`
+        ).join('');
+    }
+    renderKatex(document.getElementById('prob-body'));
+    renderKatex(document.getElementById('solution-body'));
+}
+
+// ===== 主循环 =====
+function update(){
+    const p=BOARD.param;
+    if(p){
+        const s=document.getElementById('param-slider');
+        const cur=parseFloat(s.value);
+        const dec=p.step<0.1?2:p.step<1?1:0;
+        document.getElementById('param-val').textContent = cur.toFixed(dec)+(p.unit||'');
+    }
+    render();
+    // Update readouts
+    const scene = { env: { p: p ? parseFloat(document.getElementById('param-slider').value) : 0 } };
+    if (BOARD.param && BOARD.param.name) scene.env[BOARD.param.name] = scene.env.p;
+    (BOARD.scalars||[]).forEach(s => { scene.env[s.name] = null; });
+    (BOARD.readouts||[]).forEach(r => {
+        let text = '—';
+        const el = document.getElementById('ro-'+r.id);
+        if (r.type === 'expr') {
+            try {
+                const env = Object.assign({}, scene.env, {});
+                const val = eval(r.expr.replace(/\^/g,'**'));
+                text = isFinite(val) ? val.toFixed(r.digits||2) : '—';
+            } catch(e) {}
+        }
+        if (el) el.textContent = text;
+    });
+}
+
+// ===== 解析面板折叠 =====
+document.getElementById('toggle-solution').addEventListener('click',()=>{
+    const panel=document.getElementById('solution-panel');
+    const body=document.getElementById('solution-body');
+    const header=document.getElementById('sol-header');
+    const chevron=document.getElementById('sol-chevron');
+    const vlabel=document.getElementById('sol-vlabel');
+    const isOpen=!panel.classList.contains('closed');
+    if(isOpen){
+        panel.classList.add('closed'); panel.classList.add('lg:w-14');
+        body.style.display='none'; header.style.display='none';
+        vlabel.classList.remove('hidden');
+        chevron.style.transform='rotate(180deg)';
+    } else {
+        panel.classList.remove('closed'); panel.classList.remove('lg:w-14');
+        body.style.display=''; header.style.display='';
+        vlabel.classList.add('hidden');
+        chevron.style.transform='';
+        setTimeout(render,350);
+    }
+});
+
+// ===== 窗口变化 =====
+window.addEventListener('resize', render);
+
+// ===== 初始化 =====
+window.onload=function(){
+    buildConsole();
+    render();
+};
+</script>
+
+<script>
+// ===== Mode switching =====
+document.querySelectorAll('.mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var mode = this.dataset.mode;
+
+        // Update button styles
+        document.querySelectorAll('.mode-btn').forEach(function(b) {
+            b.classList.remove('bg-indigo-600', 'text-white');
+            b.classList.add('bg-white', 'text-slate-600');
+        });
+        this.classList.remove('bg-white', 'text-slate-600');
+        this.classList.add('bg-indigo-600', 'text-white');
+
+        // Update board mode
+        BOARD.logicType = mode;
+
+        // Toggle visibility
+        var canvas = document.getElementById('main-canvas');
+        var overlay = document.getElementById('venn-overlay');
+        var ttContainer = document.getElementById('truth-table-container');
+
+        if (mode === 'truthTable') {
+            canvas.style.display = 'none';
+            overlay.style.display = 'none';
+            ttContainer.style.display = 'block';
+        } else {
+            canvas.style.display = 'block';
+            overlay.style.display = 'block';
+            ttContainer.style.display = 'none';
+        }
+
+        // Update canvas title
+        var titles = { venn: '文氏图', truthTable: '真值表', logicGate: '逻辑门符号' };
+        document.getElementById('canvas-title').textContent = titles[mode] || '逻辑画板';
+
+        render();
+    });
+});
+</script>
+
+</body>
+</html>

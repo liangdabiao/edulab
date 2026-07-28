@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 物理交互教学</title>
+<script src="https://gcore.jsdelivr.net/npm/tailwindcss@3.4.17/src/standalone-cdn.js"></script>
+<script src="https://gcore.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"></script>
+<script src="https://gcore.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
+<script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+<script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;height:100vh;overflow:hidden}
+#viewport{flex:1;position:relative;min-height:0}
+#viewport canvas{display:block;width:100%!important;height:100%!important}
+#sidebar{width:24rem;overflow-y:auto;background:#1e293b;border-right:1px solid #334155;flex-shrink:0}
+#sidebar::-webkit-scrollbar{width:6px}
+#sidebar::-webkit-scrollbar-track{background:#1e293b}
+#sidebar::-webkit-scrollbar-thumb{background:#475569;border-radius:3px}
+.section{border-bottom:1px solid #334155;padding:1rem 1.25rem}
+.section-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.75rem}
+.param-label{font-size:.875rem;color:#94a3b8;margin-bottom:.25rem}
+.param-label .katex{font-size:1em!important}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:#334155;outline:none;margin:.5rem 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#6366f1;cursor:pointer;border:2px solid #e2e8f0}
+input[type=range]::-webkit-slider-thumb:hover{background:#818cf8}
+.param-ticks{display:flex;justify-content:space-between;font-size:.7rem;color:#64748b;margin-top:.15rem}
+.readout-row{display:flex;justify-content:space-between;align-items:center;padding:.35rem .5rem;border-radius:6px;font-size:.8rem;margin-bottom:2px}
+.readout-row:hover{background:#334155}
+.readout-label{color:#94a3b8}
+.readout-label .katex{font-size:1em!important}
+.readout-value{font-family:'Courier New',monospace;font-weight:600;font-size:.9rem}
+.readout-highlight{background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.25)}
+#constant-block{background:linear-gradient(135deg,#065f46,#047857);border-radius:8px;padding:.75rem;margin-top:.5rem;display:none}
+#constant-block .const-label{color:#6ee7b7;font-size:.7rem;margin-bottom:.2rem}
+#constant-block .const-value{color:#6ee7b7;font-weight:700;font-size:.85rem}
+.step-card{background:#1e293b;border:1px solid #334155;border-radius:8px;margin-bottom:.5rem;overflow:hidden;cursor:pointer;transition:border-color .2s}
+.step-card:hover{border-color:#6366f1}
+.step-card.active{border-color:#6366f1}
+.step-header{display:flex;justify-content:space-between;align-items:center;padding:.75rem 1rem;font-size:.85rem;font-weight:600;color:#e2e8f0}
+.step-body{padding:0 1rem .75rem;font-size:.8rem;color:#cbd5e1;line-height:1.6;display:none}
+.step-body .katex{font-size:1.05em!important}
+.step-body ul{list-style:disc;padding-left:1.2rem;margin:.3rem 0}
+.step-body li{margin:.15rem 0}
+.step-body p{margin:.4rem 0}
+.step-icon{color:#6366f1;font-size:.7rem;transition:transform .2s}
+.step-card.active .step-icon{transform:rotate(180deg)}
+.legend-item{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:#94a3b8;margin-bottom:4px}
+.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+#splash{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0f172a;z-index:10;font-size:1.1rem;color:#94a3b8}
+#controls-overlay{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:.5rem;pointer-events:none}
+#controls-overlay button{pointer-events:auto;background:#1e293b;border:1px solid #334155;color:#cbd5e1;padding:.35rem .75rem;border-radius:6px;font-size:.75rem;cursor:pointer;transition:all .2s}
+#controls-overlay button:hover{background:#334155;color:#e2e8f0}
+</style>
+</head>
+<body>
+
+<!-- data island -->
+<script id="lesson-data" type="application/json">{"lesson": {"language": "zh-CN", "title": "洛伦兹力 F = q(v × B) — 叉积三维可视化", "problem": "\n<p>一个正电荷 $q = +1\\,\\text{C}$ 以速度 $\\vec{v}$ 进入匀强磁场 $\\vec{B}$。</p>\n<p>$v_0 = 5\\,\\text{m/s}$，$B_0 = 2\\,\\text{T}$，磁场方向沿 $z$ 轴正方向。</p>\n<p>滑块控制 $\\vec{v}$ 在 $xy$ 平面内的方向角 $\\theta$，观察洛伦兹力的方向和大小变化。</p>\n<p class=\"mt-2 font-bold text-indigo-300\">拖拽 3D 画布旋转视角，从任意角度观察三个矢量的空间关系！</p>\n", "answer": "$\\vec{F} = q(\\vec{v}\\times\\vec{B})$", "answerLabel": "洛伦兹力公式"}, "steps": [{"title": "洛伦兹力与叉积", "content": "\n<p>洛伦兹力是磁场对运动电荷的作用力：</p>\n<p>$$\\boxed{\\vec{F} = q(\\vec{v} \\times \\vec{B})}$$</p>\n<br/>\n<p>其中 $\\vec{F}$ 的方向由 <strong>右手定则</strong> 确定：</p>\n<ul>\n    <li>四指从 $\\vec{v}$ 方向弯向 $\\vec{B}$ 方向</li>\n    <li>大拇指指向即为 $\\vec{F}$ 方向（正电荷）</li>\n</ul>\n<br/>\n<p>在本例中：</p>\n<ul>\n    <li>$\\vec{v}$ 在 $xy$ 平面内，方向角 $\\theta$ 可调</li>\n    <li>$\\vec{B}$ 沿 $z$ 轴正方向</li>\n    <li>$\\vec{F}$ 在 $xy$ 平面内，垂直于 $\\vec{v}$</li>\n</ul>\n"}, {"title": "叉积的数学计算", "content": "\n<p>叉积 $\\vec{v} \\times \\vec{B}$ 的分量计算：</p>\n<br/>\n<p>$$\\vec{v} \\times \\vec{B} = \\begin{vmatrix}\n\\hat{i} & \\hat{j} & \\hat{k} \\\\\nv_x & v_y & v_z \\\\\nB_x & B_y & B_z\n\\end{vmatrix}$$</p>\n<br/>\n<p>展开得：</p>\n<ul>\n    <li>$F_x = q(v_y B_z - v_z B_y)$</li>\n    <li>$F_y = q(v_z B_x - v_x B_z)$</li>\n    <li>$F_z = q(v_x B_y - v_y B_x)$</li>\n</ul>\n<br/>\n<p>本例中 $\\vec{B} = (0, 0, B_0)$，$\\vec{v} = (v_0\\cos\\theta, v_0\\sin\\theta, 0)$：</p>\n<ul>\n    <li>$F_x = q \\cdot v_0\\sin\\theta \\cdot B_0$</li>\n    <li>$F_y = -q \\cdot v_0\\cos\\theta \\cdot B_0$</li>\n    <li>$F_z = 0$</li>\n</ul>\n"}, {"title": "验证特殊角度", "content": "\n<p>拖动滑块到不同角度，验证以下特殊情形：</p>\n<br/>\n<p><strong>$\\theta = 0^\\circ$</strong>：</p>\n<ul>\n    <li>$\\vec{v} = (5, 0, 0)$，沿 $x$ 轴正方向</li>\n    <li>$\\vec{F} = (0, -10, 0)$，沿 $y$ 轴负方向</li>\n    <li>$|\\vec{F}| = 10\\,\\text{N}$（最大）</li>\n</ul>\n<br/>\n<p><strong>$\\theta = 90^\\circ$</strong>：</p>\n<ul>\n    <li>$\\vec{v} = (0, 5, 0)$，沿 $y$ 轴正方向</li>\n    <li>$\\vec{F} = (10, 0, 0)$，沿 $x$ 轴正方向</li>\n    <li>$|\\vec{F}| = 10\\,\\text{N}$（最大）</li>\n</ul>\n<br/>\n<p><strong>$\\theta = 180^\\circ$</strong>：</p>\n<ul>\n    <li>$\\vec{v} = (-5, 0, 0)$，沿 $x$ 轴负方向</li>\n    <li>$\\vec{F} = (0, 10, 0)$，沿 $y$ 轴正方向</li>\n    <li>$|\\vec{F}| = 10\\,\\text{N}$（最大，方向相反）</li>\n</ul>\n<br/>\n<p><strong>关键观察</strong>：只要 $\\vec{v} \\perp \\vec{B}$，$|\\vec{F}|$ 为最大值 $qv_0B_0 = 10\\,\\text{N}$。</p>\n<p>$\\vec{F}$ 的方向始终垂直于 $\\vec{v}$ 和 $\\vec{B}$ 所在的平面。</p>\n"}, {"title": "右手定则验证", "content": "\n<p>用右手定则验证 $\\vec{F}$ 的方向：</p>\n<br/>\n<p><strong>当 $\\theta = 0^\\circ$</strong>（$\\vec{v}$ 向右）：</p>\n<ul>\n    <li>右手四指从 $+x$（$\\vec{v}$ 方向）弯向 $+z$（$\\vec{B}$ 方向）</li>\n    <li>注意：$\\vec{B}$ 沿 $z$ 轴，从 $xy$ 平面指向 $+z$</li>\n    <li>大拇指指向 $-y$ → 这就是 $\\vec{F}$ 的方向 ✓</li>\n</ul>\n<br/>\n<p><strong>当 $\\theta = 90^\\circ$</strong>（$\\vec{v}$ 向上）：</p>\n<ul>\n    <li>右手四指从 $+y$（$\\vec{v}$ 方向）弯向 $+z$（$\\vec{B}$ 方向）</li>\n    <li>大拇指指向 $-x$ → 不对！我们观察到的 $\\vec{F} = (10, 0, 0)$ 是 $+x$</li>\n</ul>\n<br/>\n<p>注意：叉积 $\\vec{v} \\times \\vec{B}$ 用 <strong>右手</strong>，但手指弯曲方向是从 $\\vec{v}$ 到 $\\vec{B}$（最小角度方向），且 $\\vec{F} = q(\\vec{v} \\times \\vec{B})$，对于正电荷 q > 0，$\\vec{F}$ 与叉积同向。</p>\n"}], "board3d": {"view": {"cameraPos": [6, 4, 8], "target": [0, 0, 0], "showGrid": true, "showAxes": true}, "param": {"name": "t", "label": "速度方向角 $\\theta$ (°)", "min": 0, "max": 360, "step": 1, "value": 45, "unit": "°", "ticks": ["0°", "180°", "360°"]}, "scalars": [{"name": "q", "expr": "1"}, {"name": "v0", "expr": "5"}, {"name": "B0", "expr": "2"}, {"name": "theta", "expr": "t"}, {"name": "vx", "expr": "v0*cos(theta*PI/180)"}, {"name": "vy", "expr": "v0*sin(theta*PI/180)"}, {"name": "vz", "expr": "0"}, {"name": "Bx", "expr": "0"}, {"name": "By", "expr": "0"}, {"name": "Bz", "expr": "B0"}, {"name": "Fx", "expr": "q*(vy*Bz - vz*By)"}, {"name": "Fy", "expr": "q*(vz*Bx - vx*Bz)"}, {"name": "Fz", "expr": "q*(vx*By - vy*Bx)"}, {"name": "F_mag", "expr": "sqrt(Fx*Fx+Fy*Fy+Fz*Fz)"}, {"name": "v_mag", "expr": "sqrt(vx*vx+vy*vy+vz*vz)"}], "objects": [{"id": "charge", "type": "sphere", "position": [0, 0, 0], "radius": 0.35, "color": "#f87171", "label": "电荷"}, {"id": "v_arrow", "type": "arrow", "from": [0, 0, 0], "to": ["vx*1.5", "vy*1.5", 0], "color": "#60a5fa", "headLength": 0.4, "headWidth": 0.2}, {"id": "B_arrow", "type": "arrow", "from": [0, 0, 0], "to": [0, 0, "B0*1.5"], "color": "#34d399", "headLength": 0.4, "headWidth": 0.2}, {"id": "F_arrow", "type": "arrow", "from": [0, 0, 0], "to": ["Fx*0.3", "Fy*0.3", "Fz*0.3"], "color": "#fbbf24", "headLength": 0.35, "headWidth": 0.18}], "trace": {"of": ["Fx*0.3", "Fy*0.3", "Fz*0.3"], "samples": 360, "color": "#c084fc"}, "readouts": [{"id": "theta_deg", "label": "角度 $\\theta$", "type": "expr", "expr": "t", "digits": 0, "color": "#e2e8f0"}, {"id": "v_mag_ro", "label": "$|\\vec{v}|$ (m/s)", "type": "expr", "expr": "v_mag", "digits": 1, "color": "#60a5fa"}, {"id": "B_mag_ro", "label": "$|\\vec{B}|$ (T)", "type": "expr", "expr": "B0", "digits": 1, "color": "#34d399"}, {"id": "F_mag_ro", "label": "$|\\vec{F}|$ (N)", "type": "expr", "expr": "F_mag", "digits": 2, "color": "#fbbf24"}, {"id": "v_dot_B", "label": "$\\vec{v} \\cdot \\vec{B}$", "type": "expr", "expr": "vx*Bx+vy*By+vz*Bz", "digits": 1, "color": "#94a3b8"}, {"id": "Fx_ro", "label": "$F_x$", "type": "expr", "expr": "Fx", "digits": 1, "color": "#f87171"}, {"id": "Fy_ro", "label": "$F_y$", "type": "expr", "expr": "Fy", "digits": 1, "color": "#60a5fa"}, {"id": "Fz_ro", "label": "$F_z$", "type": "expr", "expr": "Fz", "digits": 1, "color": "#34d399"}], "legend": [{"color": "#f87171", "text": "电荷 $q = +1$"}, {"color": "#60a5fa", "text": "$\\vec{v}$（速度）"}, {"color": "#34d399", "text": "$\\vec{B}$（磁场）"}, {"color": "#fbbf24", "text": "$\\vec{F} = q(\\vec{v}\\times\\vec{B})$（洛伦兹力）"}, {"color": "#c084fc", "text": "$\\vec{F}$ 矢量端点轨迹"}]}}</script>
+
+<!-- main layout -->
+<div class="flex h-screen" style="display:flex;height:100vh">
+  <!-- sidebar -->
+  <div id="sidebar">
+    <div class="section">
+      <h2 class="text-base font-bold text-indigo-400" id="problem-title"></h2>
+      <div class="mt-2 text-sm text-slate-300 leading-relaxed" id="problem-text"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">动态控制台</div>
+      <div class="param-label" id="param-label"></div>
+      <input type="range" id="param-slider">
+      <div class="param-ticks" id="param-ticks"></div>
+      <div id="readouts" class="mt-3"></div>
+      <div id="constant-block">
+        <div class="const-label">拖动滑块，下方数值恒为定值</div>
+        <div class="const-value" id="const-value"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">图例</div>
+      <div id="legend"></div>
+    </div>
+  </div>
+
+  <!-- 3D viewport -->
+  <div id="viewport">
+    <div id="splash">加载 Three.js 中...</div>
+    <div id="controls-overlay">
+      <button onclick="resetCamera()">重置视角</button>
+      <button onclick="toggleAutoRotate()">自动旋转</button>
+    </div>
+  </div>
+</div>
+
+<!-- steps panel (collapsible overlay) -->
+<div id="steps-panel" style="position:fixed;bottom:0;right:0;width:28rem;max-height:50vh;background:#1e293b;border:1px solid #334155;border-radius:12px 0 0 0;z-index:20;overflow:hidden;transition:transform .3s;box-shadow:-4px 0 20px rgba(0,0,0,.4)">
+  <div id="steps-toggle" style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 1rem;cursor:pointer;background:#334155;font-size:.8rem;font-weight:600;color:#e2e8f0">
+    <span>详细解析</span>
+    <span id="steps-icon" style="transition:transform .3s">▼</span>
+  </div>
+  <div id="steps-body" style="overflow-y:auto;padding:.75rem 1rem 1rem;max-height:calc(50vh - 2.5rem);display:none"></div>
+</div>
+
+<script>
+// ===== Parse lesson data =====
+const DATA = JSON.parse(document.getElementById('lesson-data').textContent);
+const L = DATA.lesson || {};
+const S = DATA.steps || [];
+const B = DATA.board3d || {};
+
+// ===== KaTeX render helper =====
+function renderMath(container){
+  if(window.renderMathInElement) renderMathInElement(container, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}]});
+}
+
+// ===== Sidebar: problem =====
+document.getElementById('problem-title').textContent = L.title || '';
+const probDiv = document.getElementById('problem-text');
+if(L.problem){ probDiv.innerHTML = L.problem; renderMath(probDiv); }
+
+// ===== Expression engine (same as board.html) =====
+const MATHENV = {sqrt:Math.sqrt,cbrt:Math.cbrt,abs:Math.abs,sin:Math.sin,cos:Math.cos,tan:Math.tan,
+  asin:Math.asin,acos:Math.acos,atan:Math.atan,atan2:Math.atan2,exp:Math.exp,log:Math.log,
+  pow:Math.pow,min:Math.min,max:Math.max,sign:Math.sign,floor:Math.floor,ceil:Math.ceil,hypot:Math.hypot,PI:Math.PI};
+const _exprCache={};
+function evalExpr(expr, env){
+  if(typeof expr!=='string') return expr;
+  const scope=Object.assign({}, MATHENV, env);
+  const names=Object.keys(scope);
+  const key=expr+'|'+names.join(',');
+  let fn=_exprCache[key];
+  if(!fn){ try{ fn=Function(...names,'"use strict";return ('+expr.replace(/\^/g,'**')+');'); }
+           catch(e){ fn=()=>NaN; } _exprCache[key]=fn; }
+  try{ const v=fn(...names.map(n=>scope[n])); return (typeof v==='number')?v:NaN; }catch(e){ return NaN; }
+}
+const resolveVal=(v,env)=> (typeof v==='string')? evalExpr(v,env) : v;
+
+function buildEnv(pval){
+  const env={ p: pval };
+  if(B.param && B.param.name && /^[A-Za-z_$][\w$]*$/.test(B.param.name)) env[B.param.name]=pval;
+  (B.scalars||[]).forEach(s=>{ env[s.name]=evalExpr(s.expr, env); });
+  return env;
+}
+
+// ===== Readouts =====
+function fmt(v,d){
+  if(v===null||v===undefined||!isFinite(v)) return '—';
+  let s=v.toFixed(d!=null?d:2);
+  if(s==='-'+Number(0).toFixed(d)) s=Number(0).toFixed(d);
+  return s;
+}
+function computeReadouts(env){
+  const out=[];
+  (B.readouts||[]).forEach(r=>{
+    let text='—', scalar=null;
+    try{
+      if(r.type==='expr'){
+        scalar=evalExpr(r.expr, env);
+        text=fmt(scalar, r.digits!=null?r.digits:2);
+      }
+    }catch(e){ text='—'; }
+    out.push({id:r.id, label:r.label, text, scalar, highlight:!!r.highlight, color:r.color});
+  });
+  return out;
+}
+function renderReadouts(env){
+  const container=document.getElementById('readouts');
+  const ro=computeReadouts(env);
+  container.innerHTML=ro.map(r=>{
+    const hl=r.highlight?' readout-highlight':'';
+    const color=r.color?` style="color:${r.color}"`:'';
+    return `<div class="readout-row${hl}"><span class="readout-label">${r.label}</span><span class="readout-value"${color}>${r.text}</span></div>`;
+  }).join('');
+  renderMath(container);
+
+  // constant indicator
+  const cb=document.getElementById('constant-block');
+  if(B.constant){
+    const found=ro.find(x=>x.id===B.constant.of);
+    if(found && found.scalar!==null){
+      cb.style.display='block';
+      document.getElementById('const-value').innerHTML=B.constant.label;
+      renderMath(document.getElementById('constant-block'));
+    } else { cb.style.display='none'; }
+  } else { cb.style.display='none'; }
+}
+
+// ===== Legend =====
+(function(){
+  const lg=document.getElementById('legend');
+  if(B.legend && B.legend.length){
+    lg.innerHTML=B.legend.map(x=>{
+      const color=x.color||'#6366f1';
+      return `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div><span>${x.text||''}</span></div>`;
+    }).join('');
+    renderMath(lg);
+  } else { lg.innerHTML=''; }
+})();
+
+// ===== Param slider =====
+const pDef = B.param || {};
+const paramName = pDef.name || 't';
+const paramMin = pDef.min!=null ? pDef.min : 0;
+const paramMax = pDef.max!=null ? pDef.max : 1;
+const paramStep = pDef.step!=null ? pDef.step : 0.05;
+const paramDefault = pDef.value!=null ? pDef.value : paramMin;
+const paramStandard = pDef.standard!=null ? pDef.standard : paramDefault;
+const paramUnit = pDef.unit || '';
+
+const slider = document.getElementById('param-slider');
+const labelDiv = document.getElementById('param-label');
+const ticksDiv = document.getElementById('param-ticks');
+
+slider.min = paramMin;
+slider.max = paramMax;
+slider.step = paramStep;
+slider.value = paramDefault;
+
+if(pDef.label){ labelDiv.innerHTML = pDef.label; renderMath(labelDiv); }
+
+if(pDef.ticks && pDef.ticks.length>=2){
+  ticksDiv.innerHTML = pDef.ticks.map((t,i)=>`<span>${t}${i===0||i===pDef.ticks.length-1?(paramUnit||''):''}</span>`).join('');
+} else {
+  ticksDiv.innerHTML = `<span>${paramMin}${paramUnit}</span><span>${(paramMin+paramMax)/2}${paramUnit}</span><span>${paramMax}${paramUnit}</span>`;
+}
+
+// ===== Three.js setup =====
+const viewport = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f172a);
+scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+
+const camera = new THREE.PerspectiveCamera(45, viewport.clientWidth/viewport.clientHeight, 0.1, 100);
+const camPos = (B.view && B.view.cameraPos) || [5, 4, 8];
+const camTarget = (B.view && B.view.target) || [0, 0, 0];
+camera.position.set(camPos[0], camPos[1], camPos[2]);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+viewport.insertBefore(renderer.domElement, viewport.firstChild);
+document.getElementById('splash').style.display='none';
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1;
+controls.maxDistance = 30;
+controls.update();
+
+// Lights
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+dirLight.position.set(5, 10, 7);
+dirLight.castShadow = true;
+scene.add(dirLight);
+const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.3);
+fillLight.position.set(-5, -3, -5);
+scene.add(fillLight);
+
+// Grid
+if(B.view && B.view.showGrid !== false){
+  const grid = new THREE.GridHelper(16, 16, 0x475569, 0x334155);
+  scene.add(grid);
+}
+// Axes
+if(B.view && B.view.showAxes !== false){
+  const axesLen = 2.5;
+  const makeAxis = (dir, color, label) => {
+    const pts = [new THREE.Vector3(0,0,0), new THREE.Vector3(dir[0]*axesLen, dir[1]*axesLen, dir[2]*axesLen)];
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    const l = new THREE.Line(g, new THREE.LineBasicMaterial({color, linewidth:2}));
+    scene.add(l);
+  };
+  makeAxis([1,0,0], 0xf87171);
+  makeAxis([0,1,0], 0x34d399);
+  makeAxis([0,0,1], 0x60a5fa);
+}
+
+// autoRotate state
+let autoRotate = false;
+function toggleAutoRotate(){ autoRotate=!autoRotate; controls.autoRotate=autoRotate; controls.autoRotateSpeed=2; }
+function resetCamera(){
+  controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
+  camera.position.set(camPos[0], camPos[1], camPos[2]);
+  controls.update();
+}
+
+// ===== 3D Object system =====
+const sceneObjects = []; // Three.js objects to clear on rebuild
+
+// Color mapping
+const COLORS = {
+  curve:'#fbbf24', line:'#2dd4bf', aux:'#64748b', ptA:'#f87171', ptB:'#60a5fa',
+  point:'#94a3b8', given:'#a78bfa', fixed:'#34d399', vecA:'#f87171', vecB:'#60a5fa',
+  vec:'#fbbf24', locus:'#c084fc', area:'rgba(45,212,191,0.16)'
+};
+function col(c){ return COLORS[c] || c || '#6366f1'; }
+
+function resolvePos(pos, env){
+  if(!pos) return [0,0,0];
+  const x = resolveVal(pos[0], env);
+  const y = resolveVal(pos[1], env);
+  const z = resolveVal(pos[2]!==undefined ? pos[2] : 0, env);
+  return [x,y,z];
+}
+
+function buildScene3D(pval){
+  // Clear previous objects
+  sceneObjects.forEach(o => { scene.remove(o); if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); });
+  sceneObjects.length = 0;
+
+  const env = buildEnv(pval);
+
+  // Process each object
+  (B.objects||[]).forEach(obj => {
+    try {
+      switch(obj.type){
+        case 'sphere': {
+          const pos = resolvePos(obj.position, env);
+          const radius = resolveVal(obj.radius, env) || 0.3;
+          const geo = new THREE.SphereGeometry(Math.abs(radius), 28, 28);
+          const mat = new THREE.MeshStandardMaterial({
+            color: col(obj.color) || 0xf87171,
+            roughness: 0.3,
+            metalness: 0.05
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(pos[0], pos[1], pos[2]);
+          mesh.castShadow = true;
+          scene.add(mesh);
+          sceneObjects.push(mesh);
+
+          // Outline
+          const outlineMat = new THREE.MeshBasicMaterial({
+            color: 0x334155,
+            side: THREE.BackSide,
+          });
+          const outline = new THREE.Mesh(geo.clone(), outlineMat);
+          outline.position.copy(mesh.position);
+          outline.scale.set(1.06, 1.06, 1.06);
+          scene.add(outline);
+          sceneObjects.push(outline);
+          break;
+        }
+        case 'arrow': {
+          const from = resolvePos(obj.from, env);
+          const to = resolvePos(obj.to, env);
+          const dir = new THREE.Vector3(to[0]-from[0], to[1]-from[1], to[2]-from[2]);
+          const len = dir.length();
+          if(len > 0.001){
+            dir.normalize();
+            const headLen = obj.headLength!=null ? obj.headLength : Math.min(len*0.3, 0.4);
+            const headWid = obj.headWidth!=null ? obj.headWidth : headLen*0.5;
+            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(from[0],from[1],from[2]), len, col(obj.color), headLen, headWid);
+            scene.add(arrow);
+            sceneObjects.push(arrow);
+          }
+          break;
+        }
+        case 'curve': {
+          const tMin = obj.tMin!=null ? obj.tMin : 0;
+          const tMax = obj.tMax!=null ? obj.tMax : 1;
+          const segs = obj.segments || 100;
+          const pts = [];
+          for(let i=0; i<=segs; i++){
+            const t = tMin + (tMax - tMin) * i / segs;
+            const e = buildEnv(t);
+            const x = resolveVal(obj.expr.x, e);
+            const y = resolveVal(obj.expr.y, e);
+            const z = resolveVal(obj.expr.z, e);
+            if(isFinite(x) && isFinite(y) && isFinite(z)) pts.push(new THREE.Vector3(x,y,z));
+          }
+          if(pts.length > 1){
+            const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            const mat = new THREE.LineBasicMaterial({ color: col(obj.color) || 0xc084fc });
+            const line = new THREE.Line(geo, mat);
+            scene.add(line);
+            sceneObjects.push(line);
+          }
+          break;
+        }
+      }
+    } catch(e) { /* skip invalid object */ }
+  });
+
+  // Trace trajectory
+  if(B.trace && B.param){
+    const tr = B.trace;
+    const samples = tr.samples || 160;
+    const tracePts = [];
+    for(let i=0; i<=samples; i++){
+      const v = paramMin + (paramMax - paramMin) * i / samples;
+      const e = buildEnv(v);
+      const pos = resolvePos(tr.of, e);
+      if(isFinite(pos[0]) && isFinite(pos[1]) && isFinite(pos[2])) tracePts.push(new THREE.Vector3(pos[0], pos[1], pos[2]));
+    }
+    if(tracePts.length > 1){
+      const geo = new THREE.BufferGeometry().setFromPoints(tracePts);
+      // Use dashed line for trace
+      const mat = new THREE.LineDashedMaterial({ color: col(tr.color) || 0xc084fc, dashSize: 0.08, gapSize: 0.06, linewidth: 1 });
+      const line = new THREE.Line(geo, mat);
+      line.computeLineDistances();
+      scene.add(line);
+      sceneObjects.push(line);
+    }
+  }
+
+  // Update readouts
+  renderReadouts(env);
+}
+
+// ===== Slider event =====
+slider.addEventListener('input', function(){
+  const v = parseFloat(this.value);
+  buildScene3D(v);
+});
+
+// ===== Resize =====
+function onResize(){
+  const w = viewport.clientWidth;
+  const h = viewport.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+
+// ===== Animation loop =====
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// ===== Steps =====
+(function(){
+  const panel = document.getElementById('steps-body');
+  const toggle = document.getElementById('steps-toggle');
+  const icon = document.getElementById('steps-icon');
+  let visible = false;
+  toggle.addEventListener('click', ()=>{
+    visible = !visible;
+    panel.style.display = visible ? 'block' : 'none';
+    icon.style.transform = visible ? 'rotate(180deg)' : '';
+  });
+  if(S.length){
+    panel.innerHTML = S.map((step, i) => {
+      const active = i===0 ? 'active' : '';
+      return `<div class="step-card ${active}">
+        <div class="step-header" onclick="toggleStep(this)">${step.title||'步骤'+(i+1)}<span class="step-icon">▼</span></div>
+        <div class="step-body" style="display:${i===0?'block':'none'}">${step.content||''}</div>
+      </div>`;
+    }).join('');
+    renderMath(panel);
+  } else {
+    toggle.style.display = 'none';
+  }
+})();
+window.toggleStep = function(header){
+  const card = header.parentElement;
+  const body = card.querySelector('.step-body');
+  const wasActive = card.classList.contains('active');
+  card.classList.toggle('active');
+  body.style.display = wasActive ? 'none' : 'block';
+};
+
+// ===== Init =====
+buildScene3D(parseFloat(slider.value));
+onResize();
+</script>
+</body>
+</html>

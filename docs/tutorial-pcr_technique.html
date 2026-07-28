@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="pageTitle">IT 交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#6366f1;--accent2:#06b6d4;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.topbar .title{font-size:15px;font-weight:600}.topbar .subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(99,102,241,.06),transparent)}
+.card{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--warn)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;min-width:0;position:relative}
+canvas{background:#0f172a;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+#codeOverlay{position:absolute;top:10px;right:14px;background:rgba(15,23,42,0.92);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-family:'Consolas','Monaco','Courier New',monospace;font-size:12px;line-height:1.6;max-width:340px;display:none;overflow:auto;max-height:calc(100% - 40px)}
+#codeOverlay .line{color:#94a3b8;white-space:pre}.codeOverlay .highlight{background:rgba(251,191,36,0.2);border-left:3px solid var(--warn);padding-left:6px;display:block}
+.code-keyword{color:#c084fc}.code-builtin{color:#67e8f9}.code-string{color:#34d399}.code-number{color:#fbbf24}.code-comment{color:#64748b;font-style:italic}.code-op{color:#f87171}
+.panel{width:340px;flex:none;padding:14px;overflow-y:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(99,102,241,.2);color:#c7d2fe;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent2)}
+#paramArea{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;display:none}
+#paramArea label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+#paramArea input[type=range]{width:100%;accent-color:var(--accent2);height:6px;border-radius:3px;background:var(--line);outline:none;cursor:pointer}
+#paramArea .readout{font-size:12px;color:var(--ink);font-weight:600;text-align:right;margin-top:2px}
+#paramArea .stat-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;padding:2px 0;border-top:1px solid rgba(255,255,255,.05)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:90px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent2);border-color:var(--accent2);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent2);cursor:pointer;border:2px solid var(--ink)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:200px}.cards .card{min-width:100px}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<div class="cards" id="cards"></div>
+<main>
+  <div class="stage">
+    <canvas id="cv"></canvas>
+    <div id="codeOverlay"></div>
+  </div>
+  <aside class="panel">
+    <h2><span class="badge" id="stepBadge">概念</span><span id="stepTitle">步骤标题</span></h2>
+    <p class="body" id="stepBody"></p>
+    <div class="points" id="stepPoints"></div>
+    <div id="paramArea">
+      <label id="paramLabel">参数</label>
+      <input type="range" id="paramSlider" min="0" max="1" step="0.01" value="0">
+      <div class="readout" id="paramReadout">0</div>
+      <div id="paramStats"></div>
+    </div>
+  </aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+// ===================================================================
+// 0) Data
+// ===================================================================
+const _DATA = {"meta": {"title": "PCR技术", "subtitle": "聚合酶链式反应 · 引物 · Taq酶 · 指数扩增", "module": "biotech", "accent": "red"}, "cards": [{"num": 1, "title": "PCR定义", "body": "体外扩增<br>特定DNA片段"}, {"num": 2, "title": "三步骤", "body": "变性·退火·延伸<br>循环重复"}, {"num": 3, "title": "指数扩增", "body": "2ⁿ倍增长<br>快速高效"}, {"num": 4, "title": "应用", "body": "诊断·法医<br>基因工程"}], "steps": [{"tag": "概念", "name": "PCR技术概述", "body": "<p><strong>PCR</strong>（聚合酶链式反应）是一种在体外快速扩增特定DNA片段的技术。由Kary Mullis于1983年发明，获诺贝尔化学奖。</p><p>核心要素：<br>• <strong>模板DNA</strong> — 待扩增的DNA<br>• <strong>引物</strong> — 确定扩增起始位置<br>• <strong>Taq DNA聚合酶</strong> — 耐高温的DNA合成酶<br>• <strong>dNTP</strong> — 四种脱氧核苷酸原料</p>", "points": {"title": "PCR三要素", "items": ["模板DNA：待扩增的目标序列", "引物：人工合成的短DNA片段", "Taq酶：耐高温DNA聚合酶", "dNTP：A、T、G、C原料"]}, "scene": "concept_cards", "sceneArgs": {"title": "PCR核心要素", "items": [{"icon": "🧬", "label": "模板DNA", "desc": "待扩增的\n目标片段", "color": "#6366f1"}, {"icon": "📍", "label": "引物", "desc": "确定扩增\n起始位置", "color": "#fbbf24"}, {"icon": "🔥", "label": "Taq聚合酶", "desc": "耐高温\n94°C不变性", "color": "#f87171"}, {"icon": "🧪", "label": "dNTP", "desc": "四种原料\nA/T/G/C", "color": "#34d399"}]}}, {"tag": "过程", "name": "变性 — 双链分离", "body": "<p><strong>变性</strong>（94-98°C）：加热使DNA双链间的氢键断裂，双螺旋解旋成为两条单链，作为后续复制的模板。</p>", "points": {"title": "变性要点", "items": ["温度：94-98°C", "氢键断裂", "双链→两条单链", "DNA骨架不断裂"]}, "scene": "pcr_process", "sceneArgs": {"active": "denaturation", "progress": 0.5, "cycles": 1}}, {"tag": "过程", "name": "退火 — 引物结合", "body": "<p><strong>退火</strong>（50-65°C）：降温后，引物与模板DNA的互补序列结合。引物决定了扩增的起始点和长度。</p>", "points": {"title": "退火要点", "items": ["温度：50-65°C", "引物与模板互补结合", "引物决定扩增特异性", "退火温度影响特异性"]}, "scene": "pcr_process", "sceneArgs": {"active": "annealing", "progress": 0.5, "cycles": 1}}, {"tag": "过程", "name": "延伸 — DNA合成", "body": "<p><strong>延伸</strong>（72°C）：Taq DNA聚合酶从引物3'端开始，沿模板链方向（5'→3'）合成新的DNA链。延伸速度约每分钟1000个碱基。</p>", "points": {"title": "延伸要点", "items": ["温度：72°C（最适温度）", "Taq酶催化DNA合成", "方向：5'→3'延伸", "合成速度约1000 bp/min"]}, "scene": "pcr_process", "sceneArgs": {"active": "extension", "progress": 0.5, "cycles": 1}}, {"tag": "演示", "name": "PCR指数扩增", "body": "<p>每个PCR循环使DNA数量翻倍：<br>• 循环1：2条→4条<br>• 循环2：4条→8条<br>• 循环3：8条→16条<br>• ...经过30个循环，DNA扩增约10⁹倍！</p><p>这就是PCR技术如此强大的原因——指数级扩增。</p>", "points": {"title": "指数扩增", "items": ["每循环DNA量翻倍", "N个循环=2^N倍", "30个循环≈10⁹倍", "快速获得大量DNA"]}, "scene": "pcr_process", "sceneArgs": {"cycles": 3, "active": "denaturation", "progress": 0}}, {"tag": "概念", "name": "PCR的应用", "body": "<p>PCR技术在多个领域有广泛应用：<br><br>• <strong>医学诊断</strong>：检测病原体DNA，如新冠病毒<br>• <strong>法医学</strong>：DNA指纹鉴定，亲子鉴定<br>• <strong>基因工程</strong>：扩增目的基因用于克隆<br>• <strong>研究</strong>：测序、突变分析、基因表达分析</p>", "points": {"title": "PCR应用", "items": ["临床诊断：快速检测病原体", "法医鉴定：DNA指纹分析", "基因克隆：扩增目的基因", "科学研究：测序与分析"]}, "scene": "concept_cards", "sceneArgs": {"title": "PCR应用领域", "items": [{"icon": "🏥", "label": "医学诊断", "desc": "病毒检测\n疾病筛查", "color": "#f87171"}, {"icon": "🔍", "label": "法医鉴定", "desc": "DNA指纹\n亲子鉴定", "color": "#6366f1"}, {"icon": "🧬", "label": "基因工程", "desc": "目的基因\n克隆扩增", "color": "#34d399"}, {"icon": "🔬", "label": "科学研究", "desc": "基因测序\n突变分析", "color": "#06b6d4"}]}}, {"tag": "总结", "name": "要点回顾", "body": "<p>PCR是分子生物学最基础也最重要的技术之一。理解变性→退火→延伸三步骤循环和指数扩增原理是关键。</p>", "points": {"title": "本课要点", "items": ["PCR三步骤：变性、退火、延伸", "Taq酶耐高温是关键", "指数扩增实现DNA大量复制", "广泛应用：诊断、法医、研究"]}, "scene": "concept_cards", "sceneArgs": {"title": "本课总结", "items": [{"icon": "🔥", "label": "变性 94°C", "desc": "双链解旋\n成单链模板", "color": "#f87171"}, {"icon": "❄️", "label": "退火 55°C", "desc": "引物结合\n确定起点", "color": "#fb923c"}, {"icon": "🌡️", "label": "延伸 72°C", "desc": "Taq酶\n合成DNA", "color": "#34d399"}, {"icon": "📈", "label": "指数增长", "desc": "2^N扩增\n快速高效", "color": "#6366f1"}]}}]};
+const ACCENT = _DATA.meta?.accent || 'indigo';
+const ACCENT_MAP = {
+  amber:'#f59e0b',violet:'#a78bfa',emerald:'#34d399',cyan:'#06b6d4',
+  indigo:'#6366f1',sky:'#0ea5e9',red:'#ef4444',green:'#22c55e',
+  orange:'#f97316',slate:'#64748b',pink:'#ec4899'
+};
+document.documentElement.style.setProperty('--accent', ACCENT_MAP[ACCENT] || '#6366f1');
+document.documentElement.style.setProperty('--accent2', ACCENT_MAP[ACCENT]==='#06b6d4'?'#6366f1':'#06b6d4');
+document.getElementById('pageTitle').textContent = _DATA.meta.title + ' · 交互课程';
+document.getElementById('topbar').innerHTML = '<span class="title">'+_DATA.meta.title+'</span><span class="subtitle">'+_DATA.meta.subtitle+'</span>';
+
+// Cards
+const cardsEl = document.getElementById('cards');
+if(_DATA.cards && _DATA.cards.length){
+  _DATA.cards.forEach(function(c,i){
+    const d=document.createElement('div');d.className='card'+(i>0?' s'+(i+1):'');
+    d.innerHTML='<div class="num">'+c.num+'</div><h4>'+c.title+'</h4><div class="v">'+c.body+'</div>';
+    cardsEl.appendChild(d);
+  });
+}else cardsEl.style.display='none';
+
+// Canvas & refs
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const statusEl=document.getElementById('status'),speedInp=document.getElementById('speedInp');
+const stepBadge=document.getElementById('stepBadge'),stepTitle=document.getElementById('stepTitle');
+const stepBody=document.getElementById('stepBody'),stepPoints=document.getElementById('stepPoints');
+const codeOverlay=document.getElementById('codeOverlay');
+const paramArea=document.getElementById('paramArea'),paramSlider=document.getElementById('paramSlider');
+const paramLabel=document.getElementById('paramLabel'),paramReadout=document.getElementById('paramReadout');
+const paramStats=document.getElementById('paramStats');
+
+function fit(){
+  const r=cv.parentElement.getBoundingClientRect();
+  cv.width=Math.max(460,Math.min(1000,r.width-12));
+  cv.height=Math.max(380,Math.min(600,r.height-12));
+}
+window.addEventListener('resize',function(){fit();draw();});fit();
+
+// ===================================================================
+// Helpers
+// ===================================================================
+function drawText(t,x,y,c,fs,a,b){
+  ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';
+  ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function glow(c,b,fn){ctx.save();ctx.shadowColor=c;ctx.shadowBlur=b||10;fn();ctx.restore();}
+
+// ===================================================================
+// 1) Code overlay
+// ===================================================================
+function showCode(lines,hl){
+  const el=codeOverlay;
+  if(!lines||!lines.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=lines.map(function(l,i){
+    const cls=(i+1)===hl?' class="highlight"':'';
+    return '<span'+cls+'><span class="line">'+escHtml(l)+'</span></span>';
+  }).join('');
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function hideCode(){codeOverlay.style.display='none';}
+
+// ===================================================================
+// 2) Scene drawers
+// ===================================================================
+const SCENES = {};
+
+// --- array_bars: 静态柱状数组 ---
+SCENES.array_bars = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const title=args.title||'数组';
+  drawText(title,W/2,25,'#fff',15);
+  if(!data.length)return;
+  const n=data.length,max=Math.max(...data);
+  const gap=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gap*(n-1))/n);
+  const baseY=H-50;
+  data.forEach(function(v,i){
+    const bh=(v/max)*(H-90);
+    const x=30+i*(barW+gap);
+    const y=baseY-bh;
+    ctx.fillStyle=args.colors&&args.colors[i]?args.colors[i]:'#6366f1';
+    ctx.fillRect(x,y,barW,bh);
+    drawText(v+'',x+barW/2,y-8,'#e8eef8',11);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',10);
+  });
+  drawText('索引',W/2,baseY+30,'#64748b',10);
+};
+
+// --- sort_bars: 排序动画核心 ---
+SCENES.sort_bars = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const progress=args.progress||0;
+  const p=Math.min(1,Math.max(0,progress));
+  drawText(args.title||'排序过程',W/2,25,'#fff',15);
+  if(!data.length)return;
+
+  // 计算快照
+  const n=data.length;
+  const totalSteps=n*(n-1)/2;
+  const stepIdx2=Math.floor(p*totalSteps);
+  const arr=[...data];
+  // 模拟排序，记录每一步的交换状态
+  let compI=-1,compJ=-1,swapI=-1,swapJ=-1,sortedUpTo=n;
+  let stepCount=0;
+  for(let i=0;i<n-1;i++){
+    for(let j=0;j<n-1-i;j++){
+      if(stepCount===stepIdx2){
+        compI=j;compJ=j+1;
+        if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];swapI=j;swapJ=j+1;}
+      }
+      if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];}
+      stepCount++;
+      if(stepCount>stepIdx2)break;
+    }
+    if(stepCount>stepIdx2){sortedUpTo=i;break;}
+    sortedUpTo=i+1;
+  }
+  // 如果是完整排序后的状态
+  if(stepIdx2>=totalSteps){arr.sort((a,b)=>a-b);sortedUpTo=n;compI=-1;compJ=-1;}
+
+  const max=Math.max(...data);
+  const gap=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gap*(n-1))/n);
+  const baseY=H-50;
+  arr.forEach(function(v,i){
+    const bh=(v/max)*(H-90);
+    const x=30+i*(barW+gap);
+    const y=baseY-bh;
+    // 颜色
+    let col;
+    if(i===compI||i===compJ)col='#fbbf24';       // 比较中（黄）
+    else if(i===swapI||i===swapJ)col='#f87171';   // 交换中（红）
+    else if(i>=n-sortedUpTo)col='#34d399';         // 已排序（绿）
+    else col='#6366f1';                            // 未排序（紫）
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=col==='#6366f1'?0:6;
+    roundRect(x,y,barW,bh,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(v+'',x+barW/2,y-6,'#e8eef8',10);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',9);
+  });
+  // 状态说明
+  const statusLine=stepIdx2>=totalSteps?'✓ 排序完成！':(swapI>=0?'↔ 交换 '+data[swapI]+' 和 '+data[swapJ]:(compI>=0?'⇄ 比较 '+arr[compI]+' 和 '+arr[compJ]:'准备'));
+  drawText(statusLine,W/2,H-12,stepIdx2>=totalSteps?'#34d399':'#fbbf24',12);
+};
+
+// --- search_visual: 查找动画 ---
+SCENES.search_visual = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const target=args.target!==undefined?args.target:null;
+  const p=Math.min(1,Math.max(0,args.progress||0));
+  const type=args.type||'linear';
+  drawText((type==='binary'?'二分':'线性')+'查找 · 目标: '+target,W/2,25,'#fff',15);
+  if(!data.length)return;
+
+  const n=data.length;
+  const sorted=[...data].sort((a,b)=>a-b);
+  const gap=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gap*(n-1))/n);
+  const baseY=H-50;
+  let foundIdx=-1,checked=[],lo=0,hi=n-1,mid=-1;
+
+  if(type==='binary'){
+    const steps=Math.ceil(Math.log2(n))||1;
+    const stepIdx2=Math.min(Math.floor(p*steps),steps-1);
+    let cl=0,cr=n-1;
+    for(let s=0;s<steps;s++){
+      const cm=Math.floor((cl+cr)/2);
+      if(s<stepIdx2){
+        checked.push(cm);
+        if(sorted[cm]===target){foundIdx=cm;break;}
+        if(sorted[cm]<target)cl=cm+1;else cr=cm-1;
+      }else{
+        lo=cl;hi=cr;mid=cm;
+        // 标记所有未检查的为未检查状态
+        break;
+      }
+    }
+  }else{
+    const steps=n;
+    const stepIdx2=Math.min(Math.floor(p*steps),steps-1);
+    for(let i=0;i<=stepIdx2;i++){
+      checked.push(i);
+      if(sorted[i]===target){foundIdx=i;break;}
+    }
+  }
+
+  sorted.forEach(function(v,i){
+    const bh=(v/Math.max(...data))*(H-90);
+    const x=30+i*(barW+gap);
+    const y=baseY-bh;
+    let col;
+    if(i===foundIdx)col='#34d399';
+    else if(i===mid&&type==='binary')col='#fbbf24';
+    else if(checked.includes(i))col='#f87171';
+    else if(type==='binary'&&(i<lo||i>hi))col='#1e293b';
+    else col='#6366f1';
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=col==='#6366f1'||col==='#1e293b'?0:6;
+    roundRect(x,y,barW,bh,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(v+'',x+barW/2,y-6,'#e8eef8',10);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',9);
+  });
+  const found=foundIdx>=0;
+  drawText(found?'✓ 找到 '+target+' 在索引 '+foundIdx:(checked.length>=n||hi<lo?'✗ '+target+' 不存在':'查找中...'),W/2,H-12,found?'#34d399':'#fbbf24',12);
+};
+
+// --- flowchart: 流程图（增强版）---
+SCENES.flowchart = function(t,args){
+  const W=cv.width,H=cv.height;
+  const nodes=args.nodes||[];
+  const edges=args.edges||[];
+  const active=args.active!==undefined?args.active:-1;
+  const edgeLabels=args.edgeLabels||{};
+  drawText(args.title||'算法流程图',W/2,22,'#fff',15);
+  if(!nodes.length)return;
+
+  const isAct=function(ni){return active<0||ni===active;};
+
+  // 1) Draw edges first (behind nodes)
+  edges.forEach(function(e){
+    const from=nodes[e[0]],to=nodes[e[1]];
+    if(!from||!to)return;
+    const fx=from.x,fy=from.y,fw=from.w,fh=from.h;
+    const tx=to.x,ty=to.y,tw=to.w,th=to.h;
+    const fcx=fx+fw/2,fcy=fy+fh/2;
+    const tcx=tx+tw/2,tcy=ty+th/2;
+    const dy=tcy-fcy,dx=tcx-fcx;
+    const col=isAct(e[1])?'#34d399':'#475569';
+    const lw=isAct(e[1])?2.5:1.5;
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.fillStyle=col;
+    const edgeLabel = e.length>2 ? e[2] : (e.label || '');
+
+    let pts=[]; // 路径点序列
+
+    if(Math.abs(dy)<=5){
+      // 水平连接
+      pts.push([fcx,fcy],[tcx,tcy]);
+    }else if(dy>0){
+      // 向下：目标在正下方 → 直连；目标偏左→左出；偏右→右出
+      if(dx<-fw/2-20){
+        const ex=from.x;
+        const bendY=(fy+fh+ty)/2;
+        pts.push([ex,fcy],[ex,bendY],[tcx,bendY],[tcx,ty]);
+      }else if(dx>tw/2+20){
+        const ex=from.x+fw;
+        const bendY=(fy+fh+ty)/2;
+        pts.push([ex,fcy],[ex,bendY],[tcx,bendY],[tcx,ty]);
+      }else{
+        pts.push([fcx,fy+fh],[tcx,ty]);
+      }
+    }else{
+      // 向上（回环）
+      const side = dx>0?'right':'left';
+      const ex = side==='right'? from.x+fw+30 : from.x-30;
+      const ey = (fy+ty+fh)/2;
+      if(side==='right'){
+        pts.push([from.x+fw,fcy],[from.x+fw+30,ey],[tx+tw+30,ey],[tx+tw,tcy]);
+      }else{
+        pts.push([from.x,fcy],[from.x-30,ey],[tx-30,ey],[tx,tcy]);
+      }
+    }
+
+    // 绘制路径
+    if(pts.length===2){
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);ctx.stroke();
+    }else if(pts.length===4){
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+      ctx.lineTo(pts[1][0],pts[1][1]);
+      ctx.lineTo(pts[2][0],pts[2][1]);
+      ctx.lineTo(pts[3][0],pts[3][1]);
+      ctx.stroke();
+    }
+
+    // 箭头头（在最后一段路径末尾）
+    const last=pts[pts.length-1],prev=pts[pts.length-2];
+    const ang=Math.atan2(last[1]-prev[1],last[0]-prev[0]);
+    const aLen=8,aAng=0.5;
+    ctx.beginPath();
+    ctx.moveTo(last[0],last[1]);
+    ctx.lineTo(last[0]-aLen*Math.cos(ang-aAng),last[1]-aLen*Math.sin(ang-aAng));
+    ctx.lineTo(last[0]-aLen*Math.cos(ang+aAng),last[1]-aLen*Math.sin(ang+aAng));
+    ctx.closePath();ctx.fill();
+
+    // Edge label（如"是/否"）
+    if(edgeLabel){
+      const midIdx=Math.floor(pts.length/2);
+      const mp=pts[midIdx];
+      drawText(edgeLabel,mp[0]+(pts[midIdx-1][0]===mp[0]?12:-12),
+               mp[1]+(pts[midIdx-1][1]===mp[1]?-8:8),
+               isAct(e[1])?'#34d399':'#94a3b8',11,
+               pts[midIdx-1][0]===mp[0]?'center':'center');
+    }
+  });
+
+  // 2) Draw nodes (on top of edges)
+  nodes.forEach(function(n){
+    const col=n.color||(isAct(n.id)?'#6366f1':'#334155');
+    const x=n.x||0,y=n.y||0,w=n.w||140,h=n.h||44;
+
+    // Shadow
+    if(isAct(n.id)){
+      ctx.shadowColor=col;ctx.shadowBlur=12;
+    }
+
+    // Fill
+    ctx.fillStyle=isAct(n.id)?col+'55':'rgba(30,41,59,0.6)';
+    ctx.strokeStyle=isAct(n.id)?col:'#475569';
+    ctx.lineWidth=isAct(n.id)?2.5:1.5;
+
+    if(n.type==='decision'){
+      ctx.beginPath();
+      ctx.moveTo(x,y+h/2);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h/2);ctx.lineTo(x+w/2,y+h);
+      ctx.closePath();ctx.fill();ctx.stroke();
+    }else if(n.type==='io'){
+      // 平行四边形（输入/输出）
+      const offset=12;
+      ctx.beginPath();
+      ctx.moveTo(x+offset,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w-offset,y+h);ctx.lineTo(x,y+h);
+      ctx.closePath();ctx.fill();ctx.stroke();
+    }else{
+      const r=n.type==='startend'?(h/2):6;
+      roundRect(x,y,w,h,r);ctx.fill();ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+
+    // Label text
+    const lines=(n.label||'').split('\n');
+    lines.forEach(function(ln,i){
+      drawText(ln,x+w/2,y+h/2+(i-(lines.length-1)/2)*16,
+               isAct(n.id)?'#fff':'#94a3b8',isAct(n.id)?13:11);
+    });
+  });
+};
+
+// --- concept_cards: 概念卡片 ---
+SCENES.concept_cards = function(t,args){
+  const W=cv.width,H=cv.height;
+  const items=args.items||[];
+  drawText(args.title||'核心概念',W/2,30,'#fff',16);
+  const n=items.length;const cw=Math.min(180,(W-80)/n-10);
+  items.forEach(function(m,i){
+    const x=40+i*(cw+10),y=70;
+    ctx.fillStyle=(m.color||'#6366f1')+'22';ctx.strokeStyle=m.color||'#6366f1';ctx.lineWidth=2;
+    roundRect(x,y,cw,Math.min(H-140,200),12);ctx.fill();ctx.stroke();
+    drawText(m.icon||'●',x+cw/2,y+35,m.color||'#fff',26);
+    drawText(m.label||'',x+cw/2,y+75,'#fff',14);
+    ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+    (m.desc||'').split('\n').forEach(function(ln,j){ctx.fillText(ln,x+cw/2,y+98+j*16);});
+  });
+};
+
+// --- complexity_chart: 复杂度对比表 ---
+SCENES.complexity_chart = function(t,args){
+  const W=cv.width,H=cv.height;
+  const items=args.items||[];
+  drawText(args.title||'算法复杂度对比',W/2,30,'#fff',16);
+  const headers=['算法','最好','最坏','平均','空间','稳定'];
+  const colW=[140,80,80,80,70,50];
+  const totalW=colW.reduce(function(a,b){return a+b;},0);
+  const sx=(W-totalW)/2,sy=60;
+  // header
+  headers.forEach(function(h,i){
+    ctx.fillStyle='#334155';ctx.strokeStyle='var(--line)';ctx.lineWidth=1;
+    const x=sx+colW.slice(0,i).reduce(function(a,b){return a+b;},0);
+    ctx.fillRect(x,sy,colW[i],32);ctx.strokeRect(x,sy,colW[i],32);
+    drawText(h,x+colW[i]/2,sy+16,'#e8eef8',11);
+  });
+  // rows
+  items.forEach(function(m,i){
+    const rowY=sy+32+2+i*32;
+    const vals=[m.name,m.best||'-',m.worst||'-',m.avg||'-',m.space||'-',m.stable?'✓':'✗'];
+    vals.forEach(function(v,j){
+      const x=sx+colW.slice(0,j).reduce(function(a,b){return a+b;},0);
+      ctx.fillStyle='rgba(255,255,255,0.03)';ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+      ctx.fillRect(x,rowY,colW[j],32);ctx.strokeRect(x,rowY,colW[j],32);
+      const c=j===5?(v==='✓'?'#34d399':'#f87171'):(j===0?'#fff':'#94a3b8');
+      drawText(v,x+colW[j]/2,rowY+16,c,11);
+    });
+  });
+};
+
+// --- comparison: 对比展示 ---
+SCENES.comparison = function(t,args){
+  const W=cv.width,H=cv.height;
+  drawText(args.title||'对比',W/2,30,'#fff',16);
+  const left=args.left||{},right=args.right||{};
+  const cw=Math.min(280,(W-80)/2-10);
+  [left,right].forEach(function(side,si){
+    const x=30+si*(cw+20),y=65;
+    ctx.fillStyle=(side.color||(si===0?'#f87171':'#34d399'))+'22';
+    ctx.strokeStyle=side.color||(si===0?'#f87171':'#34d399');
+    ctx.lineWidth=2;
+    roundRect(x,y,cw,Math.min(H-130,200),12);ctx.fill();ctx.stroke();
+    drawText(side.title||'',x+cw/2,y+25,'#fff',15);
+    (side.items||[]).forEach(function(it,j){
+      drawText('• '+it,x+cw/2,y+55+j*22,'#9ab0d0',12);
+    });
+  });
+};
+
+// --- block_diagram: 框图 ---
+SCENES.block_diagram = function(t,args){
+  const W=cv.width,H=cv.height;
+  drawText(args.title||'结构框图',W/2,25,'#fff',15);
+  const blocks=args.blocks||[];
+  blocks.forEach(function(b){
+    ctx.fillStyle=(b.color||'#6366f1')+'33';
+    ctx.strokeStyle=b.color||'#6366f1';ctx.lineWidth=2;
+    const r=b.r||6;
+    roundRect(b.x,b.y,b.w||120,b.h||50,r);ctx.fill();ctx.stroke();
+    drawText(b.label||'',b.x+(b.w||120)/2,b.y+(b.h||50)/2,'#fff',13);
+  });
+  const arrows=args.arrows||[];
+  arrows.forEach(function(a){
+    ctx.strokeStyle=a.color||'#475569';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(a.x1,a.y1);ctx.lineTo(a.x2,a.y2);ctx.stroke();
+    // arrowhead
+    const ang=Math.atan2(a.y2-a.y1,a.x2-a.x1);
+    ctx.beginPath();ctx.moveTo(a.x2,a.y2);
+    ctx.lineTo(a.x2-8*Math.cos(ang-0.4),a.y2-8*Math.sin(ang-0.4));
+    ctx.lineTo(a.x2-8*Math.cos(ang+0.4),a.y2-8*Math.sin(ang+0.4));
+    ctx.closePath();ctx.fill();
+    if(a.label)drawText(a.label,(a.x1+a.x2)/2,(a.y1+a.y2)/2-8,a.color||'#9ab0d0',10);
+  });
+};
+
+// --- data_table: 数据表 ---
+SCENES.data_table = function(t,args){
+  const W=cv.width,H=cv.height;
+  const headers=args.headers||[],rows=args.rows||[];
+  const highlight=args.highlight||[];
+  drawText(args.title||'数据表',W/2,22,'#fff',15);
+  if(!headers.length)return;
+  const colW=Math.min(120,(W-60)/headers.length);
+  const totalW=colW*headers.length;
+  const sx=(W-totalW)/2,sy=40;
+  ctx.strokeStyle='#475569';ctx.lineWidth=1;
+  headers.forEach(function(h,i){
+    ctx.fillStyle=highlight.includes(-1)?'#6366f144':'#334155';
+    ctx.fillRect(sx+i*colW,sy,colW,32);
+    ctx.strokeRect(sx+i*colW,sy,colW,32);
+    drawText(h,sx+i*colW+colW/2,sy+16,'#e8eef8',12);
+  });
+  rows.forEach(function(r,ri){
+    const ry=sy+34+ri*28;
+    const hl=highlight.includes(ri);
+    ctx.fillStyle=hl?'#6366f133':'rgba(255,255,255,0.02)';
+    ctx.fillRect(sx,ry,totalW,28);
+    r.forEach(function(c,ci){
+      ctx.strokeStyle='rgba(71,85,105,0.4)';
+      ctx.strokeRect(sx+ci*colW,ry,colW,28);
+      drawText(c,sx+ci*colW+colW/2,ry+14,hl?'#fbbf24':'#94a3b8',11);
+    });
+  });
+};
+
+// --- chart: 统计图（柱状/折线/饼图）---
+SCENES.chart = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[],labels=args.labels||[];
+  const colors=args.colors||['#6366f1','#fbbf24','#f87171','#34d399','#06b6d4','#a855f7'];
+  drawText(args.title||'统计图',W/2,22,'#fff',15);
+  if(!data.length)return;
+  if(args.type==='pie'){
+    const total=data.reduce(function(a,b){return a+b;},0);
+    const cx=W/2,cy=H/2+10,r=Math.min(W,H)/2-40;
+    let ang=-Math.PI/2;
+    data.forEach(function(v,i){
+      const a=(v/total)*Math.PI*2;
+      ctx.fillStyle=colors[i%colors.length];
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,ang,ang+a);ctx.closePath();ctx.fill();
+      if(labels[i]){
+        const la=ang+a/2;
+        drawText(labels[i],cx+(r+16)*Math.cos(la),cy+(r+16)*Math.sin(la),'#e8eef8',10);
+      }
+      ang+=a;
+    });
+  }else{
+    const pad={l:50,r:20,t:40,b:40};
+    const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+    const max=Math.max.apply(null,data);
+    const barW=Math.min(40,cw/data.length-8);
+    data.forEach(function(v,i){
+      const x=pad.l+i*(cw/data.length)+4;
+      const bh=(v/max)*ch*0.85;
+      const y=pad.t+ch-bh;
+      ctx.fillStyle=colors[i%colors.length];
+      if(args.type==='line'){
+        ctx.beginPath();ctx.arc(x+barW/2,y,4,0,Math.PI*2);ctx.fill();
+        if(i>0){
+          const px=pad.l+(i-1)*(cw/data.length)+4+barW/2;
+          const py=pad.t+ch-(data[i-1]/max)*ch*0.85;
+          ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x+barW/2,y);ctx.strokeStyle=colors[i%colors.length];ctx.lineWidth=2;ctx.stroke();
+        }
+      }else{
+        ctx.fillRect(x,y,barW,bh);
+      }
+      if(labels[i])drawText(labels[i],x+barW/2,pad.t+ch+12,'#9ab0d0',9);
+      drawText(v,x+barW/2,y-6,'#e8eef8',9);
+    });
+  }
+};
+
+// --- neural_net: 神经网络图 ---
+SCENES.neural_net = function(t,args){
+  const W=cv.width,H=cv.height;
+  const layers=args.layers||[];
+  drawText(args.title||'神经网络结构',W/2,22,'#fff',15);
+  if(!layers.length)return;
+  const highlight=args.highlight||[];
+  const layerGap=(W-80)/(layers.length+1);
+  const maxNeurons=Math.max.apply(null,layers);
+  const neuronR=Math.min(20,Math.min(layerGap*0.35,((H-80)/maxNeurons)*0.35));
+  // Draw connections
+  ctx.strokeStyle='rgba(148,163,184,0.15)';ctx.lineWidth=1;
+  for(let li=0;li<layers.length-1;li++){
+    const lx=40+layerGap*(li+1),nx=40+layerGap*(li+2);
+    const nLeft=layers[li],nRight=layers[li+1];
+    for(let ni=0;ni<nLeft;ni++){
+      const ly=H/2+(ni-(nLeft-1)/2)*(neuronR*2.5);
+      for(let nj=0;nj<nRight;nj++){
+        const ny=H/2+(nj-(nRight-1)/2)*(neuronR*2.5);
+        ctx.beginPath();ctx.moveTo(lx+neuronR,ly);ctx.lineTo(nx-neuronR,ny);ctx.stroke();
+      }
+    }
+  }
+  // Draw neurons
+  layers.forEach(function(n,li){
+    const x=40+layerGap*(li+1);
+    for(let ni=0;ni<n;ni++){
+      const y=H/2+(ni-(n-1)/2)*(neuronR*2.5);
+      const hl=highlight.length&&highlight[0]===li&&highlight[1]===ni;
+      ctx.beginPath();ctx.arc(x,y,neuronR,0,Math.PI*2);
+      ctx.fillStyle=hl?'#fbbf24':(args.inputLayer===li?'#6366f1':'#334155');
+      ctx.strokeStyle=hl?'#fbbf24':(args.inputLayer===li?'#6366f1':'#475569');
+      ctx.lineWidth=hl?3:1.5;ctx.fill();ctx.stroke();
+    }
+    if(layers.length<=7)drawText('层'+(li+1)+' ('+n+')',x,H-20,'#9ab0d0',10);
+  });
+};
+
+// --- cell_diagram: 细胞结构图 ---
+SCENES.cell_diagram = function(t,args){
+  const W=cv.width,H=cv.height;
+  const type=args.type||'animal';
+  const highlight=args.highlight||[];
+  const showLabels=args.labels!==false;
+  drawText(args.title||(type==='plant'?'植物细胞结构':'动物细胞结构'),W/2,22,'#fff',15);
+  const cx=W/2,cy=H/2+8;
+  function isHL(name){return highlight.length===0||highlight.includes(name);}
+  function drOrg(name,drawFn,color){
+    if(isHL(name)){
+      ctx.save();ctx.shadowColor=color;ctx.shadowBlur=15;drawFn();ctx.restore();
+    }else drawFn();
+  }
+  // 1) Cell boundary
+  if(type==='plant'){
+    ctx.strokeStyle='#34d399';ctx.lineWidth=3.5;
+    roundRect(cx-145,cy-110,290,230,35);ctx.stroke();
+    ctx.fillStyle='rgba(52,211,153,0.04)';roundRect(cx-145,cy-110,290,230,35);ctx.fill();
+    ctx.strokeStyle='rgba(52,211,153,0.25)';ctx.lineWidth=1.5;
+    roundRect(cx-138,cy-103,276,216,32);ctx.stroke();
+  }else{
+    ctx.beginPath();ctx.ellipse(cx,cy,140,108,0,0,Math.PI*2);
+    ctx.strokeStyle='#34d399';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.fillStyle='rgba(52,211,153,0.04)';ctx.fill();
+  }
+  // 2) Nucleus
+  drOrg('nucleus',function(){
+    ctx.beginPath();ctx.arc(cx-25,cy-15,28,0,Math.PI*2);
+    ctx.fillStyle='rgba(167,139,250,0.2)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(cx-25,cy-10,8,0,Math.PI*2);ctx.fillStyle='rgba(167,139,250,0.4)';ctx.fill();
+  },'#a78bfa');
+  if(showLabels)drawText('细胞核',cx-25,cy-48,'#a78bfa',10);
+  // 3) Mitochondria
+  drOrg('mitochondria',function(){
+    [[cx+75,cy-30,35,18],[cx+40,cy+60,30,15],[cx-70,cy+50,32,16]].forEach(function(m){
+      ctx.beginPath();ctx.ellipse(m[0],m[1],m[2],m[3],0,0,Math.PI*2);
+      ctx.fillStyle='rgba(251,146,60,0.2)';ctx.strokeStyle='#fb923c';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+      for(var ci=-m[2]*0.5;ci<m[2]*0.5;ci+=8){
+        ctx.beginPath();ctx.moveTo(m[0]+ci,m[1]-m[3]*0.6);
+        ctx.lineTo(m[0]+ci+4,m[1]+m[3]*0.6);ctx.strokeStyle='rgba(251,146,60,0.4)';ctx.lineWidth=1;ctx.stroke();
+      }
+    });
+  },'#fb923c');
+  if(showLabels)drawText('线粒体',cx+85,cy-50,'#fb923c',10);
+  // 4) ER
+  drOrg('er',function(){
+    var erX=cx+50,erY=cy-40;
+    for(var ei=0;ei<4;ei++){
+      ctx.beginPath();ctx.ellipse(erX-10,erY+ei*10,35,4,0.3,0,Math.PI*2);
+      ctx.strokeStyle='rgba(52,211,153,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+      for(var ri=0;ri<5;ri++){ctx.beginPath();ctx.arc(erX-25+ri*12,erY+ei*10-3,2,0,Math.PI*2);ctx.fillStyle='rgba(192,132,252,0.6)';ctx.fill();}
+    }
+  },'#34d399');
+  if(showLabels)drawText('内质网',cx+85,cy-60,'#34d399',10);
+  // 5) Golgi
+  drOrg('golgi',function(){
+    var gx=cx-70,gy=cy-35;
+    for(var gi=0;gi<4;gi++){
+      ctx.beginPath();ctx.ellipse(gx,gy+gi*8,22,4,0,0,Math.PI*2);
+      ctx.strokeStyle='rgba(96,165,250,0.5)';ctx.lineWidth=1.8;ctx.stroke();
+    }
+  },'#60a5fa');
+  if(showLabels)drawText('高尔基体',cx-105,cy-45,'#60a5fa',10);
+  // 6) Lysosomes
+  drOrg('lysosomes',function(){
+    [[cx+10,cy+50],[cx-30,cy+70]].forEach(function(p){
+      ctx.beginPath();ctx.arc(p[0],p[1],8,0,Math.PI*2);
+      ctx.fillStyle='rgba(192,132,252,0.25)';ctx.strokeStyle='#c084fc';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+    });
+  },'#c084fc');
+  if(showLabels)drawText('溶酶体',cx+25,cy+60,'#c084fc',10);
+  // 7) Ribosomes
+  drOrg('ribosomes',function(){
+    [[cx-50,cy+25],[cx+30,cy-5],[cx-15,cy-45],[cx+65,cy+35],[cx-80,cy-20]].forEach(function(p){
+      ctx.beginPath();ctx.arc(p[0],p[1],3,0,Math.PI*2);ctx.fillStyle='rgba(192,132,252,0.5)';ctx.fill();
+    });
+  },'#c084fc');
+  // 8) Vacuole
+  drOrg('vacuole',function(){
+    if(type==='plant'){
+      ctx.beginPath();ctx.ellipse(cx+25,cy+30,55,35,0,0,Math.PI*2);
+      ctx.fillStyle='rgba(34,211,238,0.08)';ctx.strokeStyle='#22d3ee';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+    }else{
+      ctx.beginPath();ctx.arc(cx+30,cy+35,12,0,Math.PI*2);
+      ctx.fillStyle='rgba(34,211,238,0.1)';ctx.strokeStyle='#22d3ee';ctx.lineWidth=1;ctx.fill();ctx.stroke();
+    }
+  },'#22d3ee');
+  if(showLabels)drawText(type==='plant'?'液泡':'小泡',cx+55,cy+50,'#22d3ee',10);
+  // 9) Chloroplasts (plant only)
+  if(type==='plant'){
+    drOrg('chloroplast',function(){
+      [[cx-65,cy+30,28,16],[cx+70,cy+5,26,14]].forEach(function(cp){
+        ctx.beginPath();ctx.ellipse(cp[0],cp[1],cp[2],cp[3],0,0,Math.PI*2);
+        ctx.fillStyle='rgba(52,211,153,0.2)';ctx.strokeStyle='#34d399';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+        for(var ti=-6;ti<=6;ti+=4){
+          ctx.fillStyle='rgba(52,211,153,0.4)';ctx.fillRect(cp[0]-8,cp[1]+ti,16,2);
+        }
+      });
+    },'#34d399');
+    if(showLabels)drawText('叶绿体',cx-90,cy+45,'#34d399',10);
+  }
+  if(showLabels)drawText(type==='plant'?'植物细胞（有细胞壁、叶绿体、大液泡）':'动物细胞（无细胞壁、无叶绿体）',W/2,H-15,'#64748b',11);
+};
+
+// --- membrane_transport: 膜运输 ---
+SCENES.membrane_transport = function(t,args){
+  const W=cv.width,H=cv.height;
+  const type=args.type||'diffusion';
+  const progress=args.progress||0;
+  drawText(args.title||'细胞膜运输',W/2,20,'#fff',14);
+  const memY=H/2;
+  ctx.fillStyle='rgba(99,102,241,0.12)';ctx.strokeStyle='rgba(99,102,241,0.3)';ctx.lineWidth=1.5;
+  ctx.fillRect(10,memY-8,W-20,6);ctx.strokeRect(10,memY-8,W-20,6);
+  ctx.fillRect(10,memY+2,W-20,6);ctx.strokeRect(10,memY+2,W-20,6);
+  for(var px=18;px<W-18;px+=16){
+    ctx.beginPath();ctx.arc(px,memY-8,3.5,0,Math.PI*2);ctx.fillStyle='#6366f1';ctx.fill();
+    ctx.beginPath();ctx.arc(px,memY+8,3.5,0,Math.PI*2);ctx.fillStyle='#6366f1';ctx.fill();
+  }
+  var protX=W*0.3;
+  if(type==='facilitated'||type==='active'||type==='osmosis'){
+    ctx.fillStyle='rgba(52,211,153,0.25)';ctx.strokeStyle='#34d399';ctx.lineWidth=2;
+    roundRect(protX-14,memY-32,28,64,6);ctx.fill();ctx.stroke();
+    if(type==='osmosis'){
+      ctx.fillStyle='rgba(34,211,238,0.3)';ctx.strokeStyle='#22d3ee';ctx.lineWidth=1.5;
+      roundRect(protX-10,memY-28,20,56,4);ctx.fill();ctx.stroke();
+    }
+    if(type==='active'){
+      drawText('ATP',protX,memY-42,'#fbbf24',9);
+      ctx.beginPath();ctx.arc(protX,memY-42,12,0,Math.PI*2);ctx.strokeStyle='#fbbf24';ctx.lineWidth=1;ctx.stroke();
+    }
+  }
+  var nMol=Math.floor(6+progress*8);
+  for(var mi=0;mi<nMol;mi++){
+    var mx,my;
+    if(type==='facilitated'||type==='active'||type==='osmosis'){
+      mx=protX-8+Math.random()*16;
+      my=memY-25+(progress*0.8+mi*0.03)*50;
+    }else{
+      mx=20+Math.random()*(W-40);
+      my=(memY-50)+(mi/(nMol+2))*(memY-40)+Math.sin(t+mi)*5;
+    }
+    ctx.beginPath();ctx.arc(mx,my,4,0,Math.PI*2);
+    ctx.fillStyle=type==='osmosis'?'#22d3ee':'#fbbf24';ctx.fill();
+  }
+  drawText('细胞外',W*0.15,memY-55,'#f87171',12);
+  drawText('细胞内',W*0.15,memY+65,'#34d399',12);
+  if(type==='diffusion')drawText('→ 顺浓度梯度',W/2,memY+50,'#9ab0d0',11);
+  else if(type==='active')drawText('→ 逆浓度梯度 (消耗ATP)',W/2,memY+50,'#fbbf24',11);
+  else if(type==='facilitated')drawText('→ 借助通道蛋白',W/2,memY+50,'#9ab0d0',11);
+  else if(type==='osmosis')drawText('→ 水分子通过水通道蛋白',W/2,memY+50,'#22d3ee',11);
+  drawText('高浓度',W*0.85,memY-50,'#f87171',11);
+  drawText('低浓度',W*0.85,memY+60,'#34d399',11);
+};
+
+// --- dna_helix: DNA双螺旋 ---
+SCENES.dna_helix = function(t,args){
+  const W=cv.width,H=cv.height;
+  const showBases=args.showBases!==false;
+  const seq=args.sequence||'ATGCGTACG';
+  const hlRegion=args.highlightRegion||null;
+  drawText(args.title||'DNA 双螺旋结构',W/2,20,'#fff',15);
+  const cx=W/2,cy=H/2+5;
+  const amp=Math.min(W,H)*0.2;
+  const period=28;
+  const len=Math.min(W*0.7,360);
+  const startX=cx-len/2,endX=cx+len/2;
+  const nBases=Math.floor(len/period);
+  for(var x=startX;x<endX;x+=2){
+    var phase=(x-startX)/period;
+    var y1=cy+amp*Math.sin(phase+t*0.4);
+    var y2=cy-amp*Math.sin(phase+t*0.4);
+    ctx.fillStyle='rgba(6,182,212,'+(0.3+0.3*Math.sin(phase+t*0.4+1))+')';
+    ctx.fillRect(x,y1,2,2);
+    ctx.fillStyle='rgba(6,182,212,'+(0.15+0.2*Math.sin(phase+t*0.4))+')';
+    ctx.fillRect(x,y2,2,2);
+  }
+  var baseColors={'A':'#ef4444','T':'#3b82f6','G':'#22c55e','C':'#f59e0b'};
+  for(var bi=0;bi<nBases;bi++){
+    var bx=startX+bi*period+period/2;
+    var ph=(bx-startX)/period;
+    var by1=cy+amp*Math.sin(ph+t*0.4);
+    var by2=cy-amp*Math.sin(ph+t*0.4);
+    var baseChar=seq[bi%seq.length]||'A';
+    var pairChar=baseChar==='A'?'T':(baseChar==='T'?'A':(baseChar==='G'?'C':'G'));
+    var col=baseColors[baseChar]||'#6366f1';
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(bx,by1);ctx.lineTo(bx,by2);ctx.stroke();
+    ctx.setLineDash([2,3]);ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(bx,by1+(by2-by1)*0.3);ctx.lineTo(bx,by1+(by2-by1)*0.7);ctx.stroke();
+    ctx.setLineDash([]);
+    if(showBases){
+      drawText(baseChar,bx-12,by1,'#e8eef8',9,'center');
+      drawText(pairChar,bx+12,by2,'#e8eef8',9,'center');
+    }
+  }
+  drawText('5\'',startX-15,cy-amp,'#06b6d4',11);drawText('3\'',endX+10,cy-amp,'#06b6d4',11);
+  drawText('3\'',startX-15,cy+amp,'#06b6d4',11);drawText('5\'',endX+10,cy+amp,'#06b6d4',11);
+  if(hlRegion){
+    var hx=startX+hlRegion[0]*period;
+    var hw=(hlRegion[1]-hlRegion[0])*period;
+    ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.strokeRect(hx-5,cy-amp-10,hw+10,amp*2+20);ctx.setLineDash([]);
+    drawText('基因区域',hx+hw/2,cy-amp-20,'#fbbf24',11);
+  }
+  if(showBases){
+    drawText('A:腺嘌呤  T:胸腺嘧啶  G:鸟嘌呤  C:胞嘧啶',W/2,H-15,'#64748b',10);
+  }
+};
+
+// --- mitosis_meiosis: 细胞分裂 ---
+SCENES.mitosis_meiosis = function(t,args){
+  const W=cv.width,H=cv.height;
+  const type=args.type||'mitosis';
+  const activeIdx=args.active!==undefined?args.active:-1;
+  drawText(args.title||(type==='mitosis'?'有丝分裂':'减数分裂'),W/2,16,'#fff',14);
+  var phases,cols,rows;
+  if(type==='mitosis'){
+    phases=[{n:'前期',d:'染色体凝缩\n核膜消失'},{n:'中期',d:'排列在赤道板'},{n:'后期',d:'着丝粒分裂\n姐妹染色单体分离'},{n:'末期',d:'核膜重建\n细胞质分裂'}];
+    cols=2;rows=2;
+  }else{
+    phases=[{n:'前期I',d:'同源染色体\n联会·交叉互换'},{n:'中期I',d:'排列赤道板'},{n:'后期I',d:'同源染色体分离'},{n:'末期I',d:'形成两个次级\n性母细胞'},
+            {n:'前期II',d:'染色体散乱'},{n:'中期II',d:'排列赤道板'},{n:'后期II',d:'着丝粒分裂'},{n:'末期II',d:'形成四个\n子细胞'}];
+    cols=4;rows=2;
+  }
+  var cw=(W-20)/cols,ch=(H-50)/rows;
+  phases.forEach(function(p,idx){
+    var col=idx%cols,row=Math.floor(idx/cols);
+    var x=10+col*cw,y=30+row*ch;
+    var isActive=activeIdx<0||activeIdx===idx;
+    var cellCX=x+cw/2,cellCY=y+ch/2;
+    var cellR=Math.min(cw,ch)*0.3;
+    ctx.strokeStyle=isActive?'#34d399':'#334155';
+    ctx.lineWidth=isActive?2:1;
+    ctx.fillStyle=isActive?'rgba(52,211,153,0.04)':'rgba(30,41,59,0.3)';
+    ctx.beginPath();ctx.arc(cellCX,cellCY,cellR,0,Math.PI*2);ctx.fill();ctx.stroke();
+    if(type==='mitosis'){
+      if(idx===0){
+        for(var ci=-1;ci<=1;ci+=0.5){
+          var cx2=cellCX+ci*cellR*0.3,cy2=cellCY;
+          ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(cx2,cy2-12);ctx.lineTo(cx2,cy2+12);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(cx2-4,cy2-8);ctx.lineTo(cx2+4,cy2-8);ctx.stroke();
+          drawText('X',cx2,cy2,'#a78bfa',8);
+        }
+      }else if(idx===1){
+        ctx.strokeStyle='rgba(251,191,36,0.3)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+        ctx.beginPath();ctx.moveTo(x+5,cellCY);ctx.lineTo(x+cw-5,cellCY);ctx.stroke();ctx.setLineDash([]);
+        for(var ci=-2;ci<=2;ci++){
+          ctx.fillStyle='#a78bfa';
+          ctx.fillRect(cellCX+ci*15-3,cellCY-8,6,16);
+        }
+      }else if(idx===2){
+        for(var ci=-2;ci<=2;ci++){
+          ctx.fillStyle='#a78bfa';
+          ctx.fillRect(cellCX+ci*12-3,cellCY-20-5*Math.sin(ci),4,10);
+          ctx.fillRect(cellCX+ci*12-3,cellCY+10+5*Math.sin(ci),4,10);
+        }
+      }else if(idx===3){
+        ctx.strokeStyle='rgba(167,139,250,0.4)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(cellCX-15,cellCY,12,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.arc(cellCX+15,cellCY,12,0,Math.PI*2);ctx.stroke();
+        ctx.strokeStyle='#f87171';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(cellCX,cellCY-cellR*0.4);ctx.lineTo(cellCX,cellCY+cellR*0.4);ctx.stroke();
+      }
+    }else{
+      ctx.fillStyle='#a78bfa';
+      var offset=(idx%2===0?0:5);
+      if(idx<4){
+        ctx.fillRect(cellCX-8+offset,cellCY-3,16,6);
+        ctx.fillRect(cellCX+3+offset,cellCY-6,10,12);
+      }else{
+        ctx.fillRect(cellCX-5,cellCY-10,6,20);
+        ctx.fillRect(cellCX+3,cellCY-10,6,20);
+      }
+    }
+    ctx.fillStyle='#e8eef8';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText(p.n,cellCX,y+5);
+    ctx.fillStyle='#64748b';ctx.font='8px sans-serif';
+    (p.d||'').split('\n').forEach(function(ln,li){
+      ctx.fillText(ln,cellCX,cellCY+cellR+10+li*10);
+    });
+    if(isActive&&activeIdx>=0){ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.strokeRect(x,y,cw,ch);}
+  });
+};
+
+// --- punnett_square: 遗传图解 ---
+SCENES.punnett_square = function(t,args){
+  const W=cv.width,H=cv.height;
+  const p1=args.parent1||['A','a'];
+  const p2=args.parent2||['A','a'];
+  const highlight=args.highlight||[];
+  const showPhenotype=args.showPhenotype;
+  drawText(args.title||'孟德尔遗传',W/2,20,'#fff',15);
+  var n=p1.length;
+  var cellW=Math.min(80,(W-60)/(n+1)),cellH=Math.min(55,(H-90)/(n+1));
+  var gridW=cellW*(n+1),gridH=cellH*(n+1);
+  var sx=(W-gridW)/2,sy=(H-gridH)/2+10;
+  ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
+  for(var gi=0;gi<=n+1;gi++){
+    ctx.beginPath();ctx.moveTo(sx+gi*cellW,sy);ctx.lineTo(sx+gi*cellW,sy+gridH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sx,sy+gi*cellH);ctx.lineTo(sx+gridW,sy+gi*cellH);ctx.stroke();
+  }
+  ctx.fillStyle='#334155';ctx.fillRect(sx,sy,cellW,cellH);
+  for(var ci=0;ci<n;ci++){
+    var cx=sx+(ci+1)*cellW;
+    ctx.fillStyle='rgba(52,211,153,0.15)';ctx.fillRect(cx,sy,cellW,cellH);
+    drawText(p1[ci],cx+cellW/2,sy+cellH/2,'#34d399',15);
+  }
+  for(var ri=0;ri<n;ri++){
+    var ry=sy+(ri+1)*cellH;
+    ctx.fillStyle='rgba(52,211,153,0.15)';ctx.fillRect(sx,ry,cellW,cellH);
+    drawText(p2[ri],sx+cellW/2,ry+cellH/2,'#34d399',15);
+  }
+  var domCount=0,recCount=0,hetCount=0;
+  for(var ri=0;ri<n;ri++){
+    for(var ci=0;ci<n;ci++){
+      var cx=sx+(ci+1)*cellW,cy=sy+(ri+1)*cellH;
+      var a1=p1[ci],a2=p2[ri];
+      var g=(a1>='A'&&a1<='Z'?a1:a2)+(a2>='A'&&a2<='Z'?a2:a1);
+      var isDom=a1===a1.toUpperCase()&&a2===a2.toUpperCase();
+      var isHet=a1!==a2;
+      var isHL=highlight.length===0||highlight.some(function(h){return h[0]===ri&&h[1]===ci;});
+      if(isDom){ctx.fillStyle='rgba(52,211,153,0.2)';domCount++;}
+      else if(isHet){ctx.fillStyle='rgba(52,211,153,0.08)';hetCount++;}
+      else{ctx.fillStyle='rgba(107,114,128,0.2)';recCount++;}
+      ctx.fillRect(cx,cy,cellW,cellH);
+      if(isHL&&highlight.length>0){
+        ctx.save();ctx.shadowColor='#fbbf24';ctx.shadowBlur=10;
+        ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.strokeRect(cx+2,cy+2,cellW-4,cellH-4);
+        ctx.restore();
+      }
+      var fs=cellW>50?14:11;
+      drawText(g,cx+cellW/2,cy+cellH/2,isDom?'#34d399':isHet?'#fbbf24':'#6b7280',fs);
+    }
+  }
+  if(showPhenotype&&n===2){
+    var total=domCount+hetCount+recCount;
+    drawText('表型比  显性:'+(domCount+hetCount)+' : 隐性:'+recCount,W/2,sy+gridH+25,'#fbbf24',13);
+  }
+};
+
+// --- food_web: 食物网 / 能量金字塔 ---
+SCENES.food_web = function(t,args){
+  const W=cv.width,H=cv.height;
+  const mode=args.mode||'pyramid';
+  const species=args.species||[];
+  if(mode==='pyramid'){
+    drawText(args.title||'能量金字塔',W/2,15,'#fff',15);
+    var levels=[{n:'生产者',col:'#34d399',w:0.9},{n:'初级消费者',col:'#60a5fa',w:0.7},{n:'次级消费者',col:'#fb923c',w:0.5},{n:'三级消费者',col:'#ef4444',w:0.3}];
+    if(species.length)levels=species;
+    var pyrH=H*0.65,pyrW=W*0.55;
+    var baseY=H*0.15;
+    levels.forEach(function(lv,li){
+      var frac=1-li*0.2;
+      if(species.length&&lv.w)frac=lv.w;
+      var lw=pyrW*frac;
+      var lh=pyrH/levels.length;
+      var lx=(W-lw)/2,ly=baseY+(levels.length-1-li)*lh;
+      ctx.fillStyle=(lv.col||'#6366f1')+'33';
+      ctx.strokeStyle=lv.col||'#6366f1';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+lw,ly);
+      ctx.lineTo(lx+lw,ly+lh);ctx.lineTo(lx,ly+lh);ctx.closePath();ctx.fill();ctx.stroke();
+      drawText(lv.n||lv.name||'',W/2,ly+lh/2,'#fff',14);
+      if(lv.energy)drawText(lv.energy+' kcal',W/2,ly+lh/2+18,'#94a3b8',10);
+    });
+    drawText('10% 能量传递效率',W/2,H-15,'#64748b',11);
+  }else{
+    drawText(args.title||'食物网',W/2,15,'#fff',15);
+    var nodes=args.nodes||[];
+    var edges=args.edges||[];
+    var hl=args.highlight||[];
+    if(!nodes.length){
+      nodes=[{id:0,label:'草',y:0.85,col:'#34d399'},{id:1,label:'昆虫',y:0.65,col:'#60a5fa'},{id:2,label:'青蛙',y:0.45,col:'#fb923c'},{id:3,label:'蛇',y:0.25,col:'#ef4444'}];
+    }
+    var nx=function(ni){return W*(0.2+ni*0.6/((nodes.length-1)||1));};
+    var ny=function(nd){return H*0.85-nd.y*H*0.7;};
+    edges.forEach(function(e){
+      var from=nodes[e[0]],to=nodes[e[1]];
+      if(!from||!to)return;
+      var x1=nx(e[0]),y1=ny(from),x2=nx(e[1]),y2=ny(to);
+      ctx.strokeStyle='rgba(148,163,184,0.3)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      var ang=Math.atan2(y2-y1,x2-x1);
+      ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-7*Math.cos(ang-0.4),y2-7*Math.sin(ang-0.4));
+      ctx.lineTo(x2-7*Math.cos(ang+0.4),y2+7*Math.sin(ang+0.4));ctx.closePath();ctx.fillStyle='rgba(148,163,184,0.3)';ctx.fill();
+    });
+    nodes.forEach(function(n,ni){
+      var x=nx(ni),y=ny(n);
+      var col=n.col||'#6366f1';
+      var isHL=hl.includes(ni);
+      ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);
+      ctx.fillStyle=col+(isHL?'66':'33');ctx.strokeStyle=isHL?'#fbbf24':col;
+      ctx.lineWidth=isHL?3:2;ctx.fill();ctx.stroke();
+      drawText(n.label||'',x,y,'#fff',11);
+    });
+  }
+};
+
+// --- physiology: 生理系统 ---
+SCENES.physiology = function(t,args){
+  const W=cv.width,H=cv.height;
+  const system=args.system||'heart';
+  const hl=args.highlight||[];
+  const flow=args.flowArrows!==false;
+  function isHL(name){return hl.length===0||hl.includes(name);}
+  const cx=W/2,cy=H/2+8;
+  if(system==='heart'){
+    drawText('心脏结构',W/2,15,'#fff',15);
+    ctx.beginPath();ctx.ellipse(cx,cy,90,75,0,0,Math.PI*2);
+    ctx.fillStyle='rgba(239,68,68,0.06)';ctx.strokeStyle='#f87171';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx,cy-55);ctx.lineTo(cx,cy+55);ctx.stroke();
+    function drChamber(x,y,w,h,col,label){
+      ctx.fillStyle=col+'44';ctx.strokeStyle=col;ctx.lineWidth=1.5;
+      roundRect(x,y,w,h,4);ctx.fill();ctx.stroke();
+      drawText(label,x+w/2,y+h/2,'#fff',10);
+    }
+    drChamber(cx-40,cy-45,30,25,'#3b82f6','右心房');
+    drChamber(cx+10,cy-45,30,25,'#ef4444','左心房');
+    drChamber(cx-40,cy-10,30,40,'#3b82f6','右心室');
+    drChamber(cx+10,cy-10,30,40,'#ef4444','左心室');
+    ctx.strokeStyle='#f87171';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx+25,cy-45);ctx.lineTo(cx+60,cy-70);ctx.stroke();
+    drawText('主动脉',cx+70,cy-70,'#f87171',10);
+    ctx.strokeStyle='#3b82f6';
+    ctx.beginPath();ctx.moveTo(cx-25,cy-45);ctx.lineTo(cx-60,cy-70);ctx.stroke();
+    drawText('腔静脉',cx-70,cy-70,'#3b82f6',10);
+    if(flow){
+      ctx.fillStyle='rgba(251,191,36,0.5)';
+      [[cx-25,cy-32,cx-25,cy-10],[cx+25,cy-10,cx+25,cy-32],[cx-25,cy+15,cx-25,cy+40],[cx+25,cy+40,cx+25,cy+15]].forEach(function(a){
+        ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(a[2],a[3]);ctx.strokeStyle='#fbbf24';ctx.lineWidth=1;ctx.stroke();
+      });
+    }
+  }else if(system==='lungs'){
+    drawText('呼吸系统',W/2,15,'#fff',15);
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(cx,20);ctx.lineTo(cx,cy-20);ctx.stroke();
+    for(var ri=0;ri<5;ri++){ctx.strokeRect(cx-8,30+ri*12,16,4);}
+    ctx.beginPath();ctx.moveTo(cx,cy-20);ctx.lineTo(cx-50,cy+10);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,cy-20);ctx.lineTo(cx+50,cy+10);ctx.stroke();
+    ctx.fillStyle='rgba(251,207,232,0.15)';ctx.strokeStyle='#fbcfe8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(cx-55,cy+30,40,55,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.ellipse(cx+55,cy+30,40,55,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    [[cx-55,cy+20],[cx+55,cy+35]].forEach(function(lp){
+      for(var ai=0;ai<6;ai++){
+        ctx.beginPath();ctx.arc(lp[0]+Math.cos(ai)*12,lp[1]+Math.sin(ai)*10,5,0,Math.PI*2);
+        ctx.fillStyle='rgba(251,207,232,0.2)';ctx.fill();
+        ctx.strokeStyle='rgba(251,207,232,0.3)';ctx.lineWidth=1;ctx.stroke();
+      }
+    });
+    drawText('气管',cx,10,'#94a3b8',11);
+    drawText('左肺',cx-55,cy+75,'#fbcfe8',11);
+    drawText('右肺',cx+55,cy+75,'#fbcfe8',11);
+  }else if(system==='brain'){
+    drawText('神经系统（脑结构）',W/2,15,'#fff',15);
+    ctx.fillStyle='rgba(167,139,250,0.15)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(cx,cy-20,90,50,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    for(var fi=0;fi<8;fi++){
+      ctx.strokeStyle='rgba(167,139,250,0.2)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(cx-60+fi*17,cy-25,15,0.5,Math.PI-0.5);ctx.stroke();
+    }
+    drawText('大脑',cx,cy-15,'#a78bfa',12);
+    ctx.fillStyle='rgba(96,165,250,0.15)';ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(cx+20,cy+35,40,20,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    drawText('小脑',cx+20,cy+38,'#60a5fa',11);
+    ctx.fillStyle='rgba(251,146,60,0.15)';ctx.strokeStyle='#fb923c';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(cx,cy+55,12,14,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    drawText('脑干',cx,cy+65,'#fb923c',11);
+  }else if(system==='kidney'){
+    drawText('泌尿系统（肾单位）',W/2,15,'#fff',15);
+    ctx.beginPath();ctx.ellipse(cx,cy,60,80,0,0,Math.PI*2);
+    ctx.fillStyle='rgba(251,146,60,0.08)';ctx.strokeStyle='#fb923c';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(251,146,60,0.08)';ctx.strokeStyle='rgba(251,146,60,0.3)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.ellipse(cx,cy-10,45,55,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    drawText('肾皮质',cx-10,cy-55,'#fb923c',10);
+    for(var pi=0;pi<5;pi++){
+      ctx.fillStyle='rgba(251,146,60,0.06)';ctx.strokeStyle='rgba(251,146,60,0.2)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cx-25+pi*12,cy-5);ctx.lineTo(cx-30+pi*12,cy+50);ctx.lineTo(cx-20+pi*12,cy+50);ctx.closePath();ctx.fill();ctx.stroke();
+    }
+    drawText('肾锥体',cx-10,cy+40,'#fb923c',10);
+    ctx.strokeStyle='rgba(251,146,60,0.4)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,cy+70);ctx.lineTo(cx,cy+90);ctx.stroke();
+    drawText('输尿管',cx+15,cy+85,'#fb923c',10);
+  }else if(system==='digestive'){
+    drawText('消化系统',W/2,15,'#fff',15);
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,20);ctx.lineTo(cx,cy-30);ctx.stroke();
+    drawText('食道',cx+15,cy-40,'#94a3b8',11);
+    ctx.fillStyle='rgba(251,146,60,0.12)';ctx.strokeStyle='#fb923c';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(cx-10,cy-5,30,35,0.3,0,Math.PI*2);ctx.fill();ctx.stroke();
+    drawText('胃',cx-10,cy-5,'#fb923c',12);
+    ctx.strokeStyle='rgba(52,211,153,0.4)';ctx.lineWidth=1.5;
+    for(var si=0;si<10;si++){
+      ctx.beginPath();ctx.arc(cx+40+Math.sin(si*0.8)*15,cy-20+si*5,12,0,Math.PI*1.5);ctx.stroke();
+    }
+    drawText('小肠',cx+50,cy+35,'#34d399',11);
+    ctx.strokeStyle='rgba(251,191,36,0.4)';ctx.lineWidth=2;
+    ctx.strokeRect(cx+10,cy-10,55,30);
+    ctx.strokeRect(cx+10,cy-10,20,60);
+    drawText('大肠',cx+40,cy-15,'#fbbf24',11);
+    ctx.fillStyle='rgba(239,68,68,0.1)';ctx.strokeStyle='#ef4444';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.ellipse(cx-50,cy-30,30,18,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    drawText('肝脏',cx-50,cy-28,'#ef4444',11);
+  }
+};
+
+// --- pcr_process: PCR过程 ---
+SCENES.pcr_process = function(t,args){
+  const W=cv.width,H=cv.height;
+  const active=args.active||'denaturation';
+  const progress=args.progress||0;
+  const cycles=args.cycles||1;
+  drawText('PCR · 聚合酶链式反应',W/2,15,'#fff',15);
+  if(cycles<=1){
+    var stepsData=[
+      {key:'denaturation',name:'变性 94°C',col:'#ef4444',x:W*0.17},
+      {key:'annealing',name:'退火 55°C',col:'#fb923c',x:W*0.5},
+      {key:'extension',name:'延伸 72°C',col:'#34d399',x:W*0.83}
+    ];
+    var boxY=cy=H/2-10,boxW=130,boxH=80;
+    stepsData.forEach(function(sd){
+      var bx=sd.x-boxW/2;
+      var isAct=active===sd.key;
+      ctx.fillStyle=sd.col+(isAct?'44':'22');
+      ctx.strokeStyle=isAct?sd.col:'#475569';ctx.lineWidth=isAct?3:1.5;
+      roundRect(bx,boxY,boxW,boxH,10);ctx.fill();ctx.stroke();
+      drawText(sd.name,sd.x,boxY+boxH/2-8,'#fff',12);
+      drawText(pcr_label(sd.key),sd.x,boxY+boxH/2+12,'#94a3b8',10);
+      if(isAct&&active==='denaturation'){
+        var sep=progress*15;
+        ctx.strokeStyle='#06b6d4';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(bx+20,boxY+20-sep);ctx.quadraticCurveTo(bx+60,boxY+10-sep,bx+110,boxY+20-sep);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(bx+20,boxY+60+sep);ctx.quadraticCurveTo(bx+60,boxY+70+sep,bx+110,boxY+60+sep);ctx.stroke();
+      }
+      if(isAct&&active==='annealing'){
+        var primY=boxY+40-progress*10;
+        ctx.fillStyle='#fbbf24';
+        ctx.fillRect(bx+30,primY,20,6);
+        ctx.fillRect(bx+80,primY+20,20,6);
+        drawText('引物',bx+40,primY-8,'#fbbf24',9);
+      }
+      if(isAct&&active==='extension'){
+        ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+        ctx.beginPath();ctx.moveTo(bx+50,boxY+30);ctx.lineTo(bx+50+progress*50,boxY+30);ctx.stroke();
+        ctx.setLineDash([]);
+        drawText('Taq聚合酶',bx+30,boxY+50,'#fbbf24',9);
+      }
+    });
+    [{from:0,to:1},{from:1,to:2},{from:2,to:0}].forEach(function(link){
+      var f=stepsData[link.from],t=stepsData[link.to];
+      var x1=f.x+boxW/2,y1=boxY+boxH/2;
+      var x2=t.x-boxW/2-5,y2=boxY+boxH/2;
+      ctx.strokeStyle='#475569';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      ctx.fillStyle='#475569';
+      var ang=Math.atan2(y2-y1,x2-x1);
+      ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-6*Math.cos(ang-0.5),y2-6*Math.sin(ang-0.5));
+      ctx.lineTo(x2-6*Math.cos(ang+0.5),y2+6*Math.sin(ang+0.5));ctx.closePath();ctx.fill();
+    });
+    drawText('95°C → 55°C → 72°C 循环',W/2,H-20,'#64748b',10);
+  }else{
+    drawText('PCR 指数扩增 · '+cycles+' 个循环',W/2,32,'#fff',14);
+    var strandCount=2;
+    for(var ci=0;ci<cycles;ci++){
+      var cx0=30+ci*(W-60)/cycles;
+      var cy0=70;
+      for(var si=0;si<strandCount;si++){
+        var sx=cx0+si*6;
+        ctx.strokeStyle='#06b6d4';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(sx,cy0+si*3);ctx.quadraticCurveTo(sx+15,cy0+si*3-15+ci*5,sx+30,cy0+si*3);ctx.stroke();
+        ctx.strokeStyle='rgba(6,182,212,0.5)';
+        ctx.beginPath();ctx.moveTo(sx,cy0+si*3+30);ctx.quadraticCurveTo(sx+15,cy0+si*3+45-ci*5,sx+30,cy0+si*3+30);ctx.stroke();
+      }
+      drawText('×'+strandCount,cx0+15,cy0+40,'#fbbf24',12);
+      strandCount*=2;
+    }
+    drawText('循环1→2条→循环2→4条→循环3→8条…指数增长',W/2,H-15,'#64748b',10);
+  }
+  function pcr_label(k){return k==='denaturation'?'DNA双链解旋':k==='annealing'?'引物结合':'DNA合成';}
+};
+const STEPS=_DATA.steps||[];
+const STEP_DURATION=3.5;
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0,paramVal=0;
+
+function getSceneArgs(s){
+  const a=JSON.parse(JSON.stringify(s.sceneArgs||{}));
+  if(a.param&&a.param.name){a.progress=paramVal;}
+  return a;
+}
+
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  stepBadge.textContent=s.tag||'';
+  stepTitle.textContent=s.name||'';
+  stepBody.innerHTML=s.body||'';
+  if(s.points){
+    stepPoints.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+(s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>';
+  }else stepPoints.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+
+  // Param area
+  const sa=s.sceneArgs||{};
+  if(sa.param){
+    paramArea.style.display='block';
+    paramLabel.textContent=sa.param.name;
+    paramSlider.min=sa.param.min||0;
+    paramSlider.max=sa.param.max||1;
+    paramSlider.step=sa.param.step||0.01;
+    paramSlider.value=sa.param.value!==undefined?sa.param.value:0;
+    paramVal=parseFloat(paramSlider.value);
+    paramReadout.textContent=paramVal;
+    if(sa.readouts){
+      paramStats.innerHTML=sa.readouts.map(function(r){return '<div class="stat-row"><span>'+r.label+'</span><span>'+r.value+'</span></div>';}).join('');
+    }else paramStats.innerHTML='';
+  }else{
+    paramArea.style.display='none';
+    paramVal=0;
+  }
+
+  // Code
+  if(sa.code)showCode(sa.code.lines,sa.code.highlightLine);
+  else hideCode();
+  draw();
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sceneFn=SCENES[s.scene];
+  if(sceneFn)sceneFn(t,getSceneArgs(s));
+  else{drawText('场景: '+s.scene,cv.width/2,cv.height/2-10,'#9ab0d0',16);drawText(s.name||'',cv.width/2,cv.height/2+20,'#fff',14);}
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sa=s.sceneArgs||{};
+  if(sa.param){
+    // 交互模式：param 驱动
+    const sliderVal=parseFloat(paramSlider.value);
+    if(sliderVal<paramSlider.max){
+      const inc=parseFloat(paramSlider.step)*speed*dt*3;
+      paramSlider.value=Math.min(paramSlider.max,parseFloat(paramSlider.value)+inc);
+      paramVal=parseFloat(paramSlider.value);
+      paramReadout.textContent=paramVal.toFixed(2);
+    }else if(stepIdx<STEPS.length-1){
+      stepIdx++;syncStep();
+    }else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }else{
+    // 自动播放模式
+    stepTime+=dt*speed;
+    if(stepTime>=STEP_DURATION){
+      if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+      else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+    }
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// ===================================================================
+// 4) Controls
+// ===================================================================
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+paramSlider.oninput=function(){paramVal=parseFloat(this.value);paramReadout.textContent=paramVal;draw();};
+
+// Step bar
+const bar=document.getElementById('stepbar');
+STEPS.forEach(function(s,i){
+  const el=document.createElement('div');
+  el.className='step'+(i===stepIdx?' active':'');
+  el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>8?s.name.slice(0,7)+'…':s.name||'')+'</div>';
+  el.onclick=function(){stepIdx=i;syncStep();draw();};
+  bar.appendChild(el);
+});
+syncStep();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>铁生锈的微观电化学过程 - 3D 交互演示</title>
+<script src="https://gcore.jsdelivr.net/npm/tailwindcss@3.4.17/src/standalone-cdn.js"></script>
+<script src="https://gcore.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"></script>
+<script src="https://gcore.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
+<script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+<style>
+:root { --accent: #d97706; --accent-soft: rgba(217,119,6,0.25); }
+* { margin:0; padding:0; box-sizing:border-box; }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:#f1f5f9; }
+::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+body { font-family:system-ui,-apple-system,sans-serif; background:#f1f5f9; color:#1e293b; overflow:hidden; height:100vh; }
+#app { display:flex; height:100vh; }
+#viewport { flex:1; position:relative; overflow:hidden; }
+#panel { width:420px; flex-shrink:0; background:#fff; border-left:1px solid #e2e8f0; display:flex; flex-direction:column; overflow-y:auto; }
+.hd { padding:18px 22px; border-bottom:1px solid #e2e8f0; background:#fafafa; }
+.hd h1 { font-size:17px; font-weight:700; line-height:1.3; }
+.hd .sub { font-size:12px; color:var(--accent); margin-top:1px; }
+.eq-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; margin-top:10px; font-size:14px; overflow-x:auto; }
+.stp { padding:14px 22px; border-bottom:1px solid #e2e8f0; }
+.sdots { display:flex; gap:5px; margin-bottom:12px; }
+.sdot { flex:1; height:4px; border-radius:2px; background:#e2e8f0; transition:all .4s; cursor:pointer; }
+.sdot.act { background:var(--accent); }
+.sdot.done { background:#fbbf24; }
+.stitle { font-size:14px; font-weight:600; margin-bottom:5px; display:flex; align-items:center; gap:8px; }
+.stitle .num { width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sdesc { font-size:13px; line-height:1.7; color:#475569; min-height:66px; }
+.ctrls { padding:12px 22px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border-radius:8px; border:none; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; }
+.btn-pri { background:var(--accent); color:#fff; }
+.btn-pri:hover { filter:brightness(1.1); }
+.btn-sec { background:#e2e8f0; color:#475569; }
+.btn-sec:hover { background:#cbd5e1; }
+.spd { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.spd label { font-size:10px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.spd input { width:56px; accent-color:var(--accent); }
+.prg { padding:0 22px 6px; }
+.prg-hdr { display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; font-weight:600; margin-bottom:1px; text-transform:uppercase; letter-spacing:.5px; }
+.prg input { width:100%; accent-color:var(--accent); cursor:pointer; }
+.cc { padding:8px 22px; display:flex; flex-wrap:wrap; gap:6px; }
+.chip { display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:12px; font-size:11px; font-weight:600; border:1px solid #e2e8f0; background:#f8fafc; }
+.chip .dot { width:8px; height:8px; border-radius:50%; }
+.ft { padding:10px 22px; border-top:1px solid #e2e8f0; font-size:10px; color:#94a3b8; margin-top:auto; display:flex; justify-content:space-between; }
+.lgd { position:absolute; top:14px; left:14px; display:flex; gap:6px; flex-wrap:wrap; }
+.lgd span { background:rgba(255,255,255,.88); backdrop-filter:blur(4px); border:1px solid #e2e8f0; border-radius:6px; padding:2px 8px; font-size:10px; font-weight:600; }
+.hnt { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.85); backdrop-filter:blur(4px); border:1px solid #e2e8f0; border-radius:8px; padding:4px 12px; font-size:10px; color:#94a3b8; pointer-events:none; user-select:none; white-space:nowrap; }
+@media (max-width:768px) { #panel { width:100%; position:fixed; bottom:0; left:0; height:45vh; border-left:none; border-top:1px solid #e2e8f0; } #viewport { height:55vh; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="viewport">
+    <div id="three-container" style="width:100%;height:100%"></div>
+    <div class="lgd">
+      <span style="color:#94a3b8">● Fe</span>
+      <span style="color:#ef4444">● O</span>
+      <span style="color:#94a3b8;border-color:#cbd5e1">● H</span>
+      <span style="color:#3b82f6">● e⁻</span>
+    </div>
+    <div class="hnt">拖拽旋转 · 滚轮缩放 · 右键平移</div>
+  </div>
+  <div id="panel">
+    <div class="hd">
+      <h1>铁生锈 · 微观电化学过程</h1>
+      <div class="sub">Fe 在 O₂ / H₂O 中逐步腐蚀的分子机理</div>
+      <div class="eq-box" id="eq-display"></div>
+    </div>
+    <div class="stp">
+      <div class="sdots" id="sdots"></div>
+      <div class="stitle"><span class="num" id="snum">1</span><span id="stitle">铁溶解（阳极过程）</span></div>
+      <div class="sdesc" id="sdesc">加载中...</div>
+    </div>
+    <div class="ctrls">
+      <button class="btn btn-sec" id="prev-btn">◀ 上一步</button>
+      <button class="btn btn-pri" id="play-btn">▶ 自动演示</button>
+      <button class="btn btn-sec" id="next-btn">下一步 ▶</button>
+      <button class="btn btn-sec" id="reset-btn" title="复位">⟲</button>
+      <div class="spd">
+        <label>速度</label>
+        <input type="range" id="spd-slider" min="1" max="5" value="3" step="0.5">
+      </div>
+    </div>
+    <div class="prg">
+      <div class="prg-hdr"><span>反应进度</span><span id="pct">0%</span></div>
+      <input type="range" id="pg-slider" min="0" max="1000" value="0">
+    </div>
+    <div class="cc" id="cc"></div>
+    <div class="ft">
+      <span>4Fe + 3O₂ + 2H₂O → 2Fe₂O₃·H₂O</span>
+      <span id="sstep">1 / 4</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================== DATA ========================
+var STEPS = [
+  { title:'铁溶解（阳极过程）', eq:'\\text{Fe} \\rightarrow \\text{Fe}^{2+} + 2\\text{e}^-',
+    desc:'铁表面的铁原子失去 2 个 <b style="color:#3b82f6">电子 (e⁻)</b>，变成 <b style="color:#f97316">Fe²⁺ 离子</b>进入溶液。电子通过铁基体传导到阴极区。铁表面出现凹坑（点蚀），这是腐蚀的起始步。'},
+  { title:'氧气还原（阴极过程）', eq:'\\text{O}_2 + 2\\text{H}_2\\text{O} + 4\\text{e}^- \\rightarrow 4\\text{OH}^-',
+    desc:'在铁表面另一区域，<b style="color:#ef4444">氧气 (O₂)</b> 与 <b style="color:#06b6d4">水 (H₂O)</b> 吸收从铁传导来的电子，生成 <b style="color:#22c55e">氢氧根离子 (OH⁻)</b>。OH⁻ 通过溶液向 Fe²⁺ 方向扩散。'},
+  { title:'氢氧化亚铁生成', eq:'\\text{Fe}^{2+} + 2\\text{OH}^- \\rightarrow \\text{Fe(\\text{OH})}_2',
+    desc:'<b style="color:#f97316">Fe²⁺</b> 与 <b style="color:#22c55e">OH⁻</b> 在溶液中相遇，生成 <b style="color:#65a30d">Fe(OH)₂</b>（淡绿色絮状沉淀）。它不稳定，被水中溶解氧继续氧化为 <b style="color:#d97706">Fe(OH)₃</b>（黄褐色）。'},
+  { title:'铁锈形成', eq:'2\\text{Fe(\\text{OH})}_3 \\rightarrow \\text{Fe}_2\\text{O}_3\\cdot\\text{xH}_2\\text{O} + (3-\\text{x})\\text{H}_2\\text{O}',
+    desc:'Fe(OH)₃ 脱水缩合，生成 <b style="color:#b85c38">铁锈 (Fe₂O₃·xH₂O)</b>。铁锈疏松多孔、无保护性，水分和 O₂ 可继续渗透，导致铁持续向内腐蚀。这就是铁为何会"锈透"。'},
+];
+
+var CONS = [
+  { el:'Fe', color:'#f97316', n:4 },
+  { el:'O', color:'#ef4444', n:6 },
+  { el:'H', color:'#94a3b8', n:4 },
+];
+
+// ======================== THREE.JS ========================
+var ctr = document.getElementById('three-container');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf1f5f9);
+scene.fog = new THREE.FogExp2(0xf1f5f9, 0.016);
+
+var camera = new THREE.PerspectiveCamera(38, ctr.clientWidth/ctr.clientHeight, 0.1, 60);
+camera.position.set(2, 5, 17);
+camera.lookAt(0, 0.3, 0);
+
+var renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(ctr.clientWidth, ctr.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+ctr.appendChild(renderer.domElement);
+
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxDistance = 30;
+controls.minDistance = 4;
+controls.target.set(0, 0.3, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+var DL = new THREE.DirectionalLight(0xffffff, 0.95);
+DL.position.set(6, 14, 10); DL.castShadow = true;
+DL.shadow.mapSize.set(2048, 2048); DL.shadow.bias = -0.001;
+scene.add(DL);
+var DL2=new THREE.DirectionalLight(0x93c5fd, 0.3); DL2.position.set(-8,-4,-6); scene.add(DL2);
+
+var grid = new THREE.GridHelper(28, 28, 0xcbd5e1, 0xe2e8f0);
+grid.position.y = -3.5;
+scene.add(grid);
+var fl = new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.ShadowMaterial({ opacity:0.06 }));
+fl.rotation.x = -Math.PI / 2;
+fl.position.y = -3.45;
+fl.receiveShadow = true;
+scene.add(fl);
+
+// ======================== HELPERS ========================
+var gCache = {};
+function sg(r) { var k=r.toFixed(3); return gCache[k]||(gCache[k]=new THREE.SphereGeometry(r,26,26)); }
+var cg = new THREE.CylinderGeometry(1,1,1,8);
+
+function bc(p1, p2, color, r) {
+  r=r||0.05; var d=new THREE.Vector3().copy(p2).sub(p1), l=d.length();
+  if(l<0.01) return null;
+  var mid=new THREE.Vector3().copy(p1).add(d.clone().multiplyScalar(0.5));
+  var mat=new THREE.MeshStandardMaterial({ color:color||0x94a3b8, roughness:0.5, metalness:0.1 });
+  var m=new THREE.Mesh(cg, mat);
+  m.scale.set(r, l, r); m.position.copy(mid);
+  m.lookAt(p2); m.rotateX(Math.PI/2);
+  m.castShadow=true; return m;
+}
+
+function makeW(p) {
+  var g=new THREE.Group();
+  var om=new THREE.MeshStandardMaterial({color:0xef4444,roughness:0.3,metalness:0.1});
+  var hm=new THREE.MeshStandardMaterial({color:0xf1f5f9,roughness:0.4});
+  var o=new THREE.Mesh(sg(0.40), om); o.castShadow=true; g.add(o);
+  var a=104.5*Math.PI/180, d=0.92;
+  [[Math.sin(a/2)*d,Math.cos(a/2)*d,0],[-Math.sin(a/2)*d,Math.cos(a/2)*d,0]].forEach(function(pp){
+    var h=new THREE.Mesh(sg(0.24), hm); h.position.set(pp[0],pp[1],pp[2]); h.castShadow=true;
+    g.add(h);
+    var cyl=bc(new THREE.Vector3(0,0,0), new THREE.Vector3(pp[0],pp[1],pp[2]), 0x94a3b8, 0.035);
+    if(cyl) g.add(cyl);
+  });
+  g.position.copy(p); return g;
+}
+
+function makeO2(p) {
+  var g=new THREE.Group(), om=new THREE.MeshStandardMaterial({color:0xef4444,roughness:0.3,metalness:0.1});
+  [new THREE.Vector3(-0.55,0,0),new THREE.Vector3(0.55,0,0)].forEach(function(v){
+    var m=new THREE.Mesh(sg(0.40), om); m.position.copy(v); m.castShadow=true; g.add(m);
+  });
+  var c1=bc(new THREE.Vector3(-0.55,0,0), new THREE.Vector3(0.55,0,0), 0x94a3b8, 0.055);
+  var c2=bc(new THREE.Vector3(-0.55,0.05,0), new THREE.Vector3(0.55,0.05,0), 0x94a3b8, 0.035);
+  if(c1)g.add(c1); if(c2)g.add(c2);
+  g.position.copy(p); return g;
+}
+
+function makeFe(p) {
+  var m=new THREE.Mesh(sg(0.55), new THREE.MeshStandardMaterial({color:0x94a3b8,roughness:0.2,metalness:0.7}));
+  m.position.copy(p); m.castShadow=true; m.receiveShadow=true; return m;
+}
+
+function makeFe2(p) {
+  var mat=new THREE.MeshStandardMaterial({color:0xf97316,roughness:0.3,metalness:0.2,emissive:0xf97316,emissiveIntensity:0.06,transparent:true,opacity:1});
+  var m=new THREE.Mesh(sg(0.48), mat); m.position.copy(p); m.castShadow=true; return m;
+}
+
+function makeOH(p) {
+  var g=new THREE.Group();
+  var om=new THREE.MeshStandardMaterial({color:0xef4444,roughness:0.3});
+  var hm=new THREE.MeshStandardMaterial({color:0xf1f5f9,roughness:0.4});
+  var o=new THREE.Mesh(sg(0.40), om); o.castShadow=true; g.add(o);
+  var h=new THREE.Mesh(sg(0.24), hm); h.position.set(0,0.92,0); h.castShadow=true; g.add(h);
+  var cyl=bc(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0.92,0), 0x94a3b8, 0.035);
+  if(cyl)g.add(cyl);
+  g.position.copy(p); return g;
+}
+
+function makeE(p) {
+  var m=new THREE.Mesh(sg(0.10), new THREE.MeshStandardMaterial({color:0x3b82f6,emissive:0x60a5fa,emissiveIntensity:0.8,transparent:true,opacity:0.9}));
+  m.position.copy(p); return m;
+}
+
+function makeRust(p, sz) {
+  sz=sz||1; var g=new THREE.Group();
+  var cs=[0xb85c38,0xa0522d,0x8b4513,0xcd853f,0xbc5a2c];
+  for(var i=0;i<6+Math.floor(Math.random()*5);i++){
+    var mat=new THREE.MeshStandardMaterial({color:cs[i%cs.length],roughness:0.9,metalness:0});
+    var r=(0.18+Math.random()*0.3)*sz;
+    var s=new THREE.Mesh(sg(r), mat);
+    s.position.set((Math.random()-0.5)*0.7*sz, (Math.random()-0.5)*0.5*sz, (Math.random()-0.5)*0.5*sz);
+    s.castShadow=true; g.add(s);
+  }
+  g.position.copy(p); return g;
+}
+
+function makeFeOH2(p) {
+  var g=new THREE.Group();
+  var mat=new THREE.MeshStandardMaterial({color:0x65a30d,roughness:0.7,metalness:0,transparent:true,opacity:0.75});
+  for(var i=0;i<6;i++){
+    var r=0.12+Math.random()*0.18;
+    var s=new THREE.Mesh(sg(r), mat);
+    s.position.set((Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5);
+    s.castShadow=true; g.add(s);
+  }
+  g.position.copy(p); return g;
+}
+
+// ======================== BUILD SCENE ========================
+var lattices=[];   // {mesh,orig,ix,iy,iz}
+var waters=[];     // {group,orig}
+var o2s=[];        // {group,orig}
+var rusts=[];      // {group,pos,scale,basePos}
+var labels=[];     // sprites
+
+var LS=1.25;
+for(var ix=0;ix<4;ix++) for(var iy=0;iy<3;iy++) for(var iz=0;iz<2;iz++){
+  var x=-6.5+ix*LS, y=-1.2+iy*LS, z=-0.5+iz*LS;
+  var m=makeFe(new THREE.Vector3(x,y,z)); scene.add(m);
+  lattices.push({mesh:m, orig:new THREE.Vector3(x,y,z), ix:ix, iy:iy, iz:iz});
+}
+
+var wps=[new THREE.Vector3(-0.5,3.8,1.0), new THREE.Vector3(1.0,4.2,-0.6), new THREE.Vector3(2.3,3.2,0.8),
+  new THREE.Vector3(-2.0,3.5,-0.3), new THREE.Vector3(3.5,3.8,0.2), new THREE.Vector3(4.8,3.0,-0.5)];
+wps.forEach(function(p){ var w=makeW(p); scene.add(w); waters.push({group:w,orig:p.clone()}); });
+
+var ops=[new THREE.Vector3(5.5,2.8,0.3), new THREE.Vector3(7.0,2.0,-0.2), new THREE.Vector3(8.0,3.5,0.0)];
+ops.forEach(function(p){ var o=makeO2(p); scene.add(o); o2s.push({group:o,orig:p.clone()}); });
+
+for(var i=0;i<10;i++){
+  var p=new THREE.Vector3(2.0+Math.random()*3.5, -0.5+Math.random()*0.8, (Math.random()-0.5)*1.0);
+  var r=makeRust(p, 0.5+Math.random()*0.4);
+  r.visible=false; scene.add(r);
+  rusts.push({group:r, pos:p.clone(), scale:0.5+Math.random()*0.4, basePos:p.clone()});
+}
+
+// ======================== DYNAMIC OBJECTS ========================
+var fe2s=[]; for(var i=0;i<3;i++){ var m=makeFe2(new THREE.Vector3(-9,-9,-9)); scene.add(m); fe2s.push(m); }
+var ohs=[]; for(var i=0;i<6;i++){ var m=makeOH(new THREE.Vector3(-9,-9,-9)); scene.add(m); ohs.push(m); }
+var els=[]; for(var i=0;i<12;i++){ var m=makeE(new THREE.Vector3(-9,-9,-9)); scene.add(m); els.push(m); }
+var fh2s=[]; for(var i=0;i<4;i++){ var m=makeFeOH2(new THREE.Vector3(-9,-9,-9)); m.visible=false; scene.add(m); fh2s.push(m); }
+
+function mkLbl(txt, pos, clr, sz){
+  var c=document.createElement('canvas'); c.width=256; c.height=72;
+  var cx=c.getContext('2d'); sz=sz||30;
+  cx.clearRect(0,0,c.width,c.height);
+  cx.font='bold '+sz+'px system-ui,sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.shadowColor='rgba(0,0,0,0.3)'; cx.shadowBlur=5;
+  cx.fillStyle=clr||'#1e293b'; cx.fillText(txt,128,36);
+  cx.shadowBlur=0; cx.fillText(txt,128,36);
+  var tex=new THREE.CanvasTexture(c); tex.needsUpdate=true;
+  var spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false,sizeAttenuation:true}));
+  spr.position.copy(pos); spr.scale.set(2.2,0.7,1);
+  scene.add(spr); return spr;
+}
+
+var lblData=[
+  ['铁晶格 (Fe)', new THREE.Vector3(-6.5,-0.8,2.0), '#94a3b8', 32],
+  ['Fe²⁺', new THREE.Vector3(-5.5,2.8,2.2), '#f97316', 30],
+  ['H₂O', new THREE.Vector3(0.5,5.0,1.8), '#06b6d4', 28],
+  ['O₂', new THREE.Vector3(6.5,4.5,1.8), '#ef4444', 28],
+  ['铁锈 (Fe₂O₃·xH₂O)', new THREE.Vector3(4.5,1.8,1.8), '#b85c38', 28],
+];
+lblData.forEach(function(d){ var s=mkLbl(d[0],d[1],d[2],d[3]); s.visible=true; labels.push(s); });
+
+// Charge label
+var c2p=mkLbl('2+', new THREE.Vector3(-9,-9,-9), '#f97316', 28);
+c2p.visible=false; c2p.scale.set(1.0,0.4,1);
+
+// ======================== ANIMATION ENGINE ========================
+var progress=0, targetProgress=0, curStep=0, isPlaying=false, playTimer=null, speed=1;
+var S1=0.25, S2=0.50, S3=0.75;
+
+function ease(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function lv3(a,b,t){ return new THREE.Vector3(lerp(a.x,b.x,t), lerp(a.y,b.y,t), lerp(a.z,b.z,t)); }
+
+function updateScene(t){
+  lattices.forEach(function(l){
+    l.mesh.position.copy(l.orig); l.mesh.material.color.setHex(0x94a3b8);
+    l.mesh.material.emissiveIntensity=0; l.mesh.scale.setScalar(1); l.mesh.visible=true;
+  });
+  waters.forEach(function(w){ w.group.position.copy(w.orig); w.group.visible=true; w.group.scale.setScalar(1); });
+  o2s.forEach(function(o){ o.group.position.copy(o.orig); o.group.visible=true; o.group.scale.setScalar(1); });
+  rusts.forEach(function(r){ r.group.visible=false; });
+  fe2s.forEach(function(m){ m.visible=false; m.material.emissiveIntensity=0.06; m.material.transparent=true; m.material.opacity=1; });
+  ohs.forEach(function(m){ m.visible=false; });
+  els.forEach(function(e){ e.visible=false; });
+  fh2s.forEach(function(f){ f.visible=false; });
+  c2p.visible=false;
+
+  // ---- Step 1: Fe dissolution (0 to 0.25) ----
+  if(t>0 && t<=S1){
+    var st=t/S1;
+    var idx=17; // front-center surface Fe
+    if(idx<lattices.length){
+      var fe=lattices[idx];
+      fe.mesh.material.color.setHex(0xf97316);
+      fe.mesh.material.emissive=new THREE.Color(0xf97316);
+      fe.mesh.material.emissiveIntensity=0.2+0.3*Math.sin(st*25);
+      fe.mesh.position.x=fe.orig.x+0.04*Math.sin(st*35);
+      fe.mesh.position.y=fe.orig.y+0.025*Math.sin(st*28);
+      if(st>0.12){
+        var vp=Math.min(1,(st-0.12)/0.25);
+        fe.mesh.scale.setScalar(1-vp*0.9);
+        fe.mesh.visible=vp<0.95;
+        var ion=fe2s[0]; ion.visible=true;
+        var sp=fe.orig.clone(), ep=new THREE.Vector3(-4.0,2.8,0);
+        var mt=ease(Math.min(1,(st-0.18)/0.55));
+        ion.position.copy(lv3(sp,ep,mt));
+        c2p.visible=mt>0.15;
+        c2p.position.copy(ion.position.clone().add(new THREE.Vector3(0,0.65,0)));
+      }
+      if(st>0.08 && st<0.45){
+        for(var i=0;i<6&&i<els.length;i++){
+          var e=els[i]; e.visible=true;
+          var et=((st-0.08)/0.37+i*0.12)%1;
+          var ang=et*Math.PI*5+i*1.2, rad=0.4+et*1.8;
+          e.position.set(fe.orig.x+Math.cos(ang)*rad, fe.orig.y+Math.sin(ang*0.6)*rad+0.3, Math.sin(ang*0.4)*0.4);
+        }
+      }
+    }
+  }
+
+  // ---- Step 2: O2 reduction (0.25 to 0.50) ----
+  if(t>S1 && t<=S2){
+    var st=(t-S1)/(S2-S1);
+    var ion=fe2s[0]; ion.visible=true; ion.position.set(-4.0,2.8,0);
+    c2p.visible=true; c2p.position.set(-4.0,3.5,0);
+    // O2 moves in and reacts
+    var o2=o2s[0]; var os=o2.orig.clone(), oe=new THREE.Vector3(2.8,1.2,0);
+    var ot=ease(Math.min(1,st*1.6));
+    o2.group.position.copy(lv3(os,oe,ot));
+    // waters move down
+    waters.forEach(function(w,i){
+      if(i<2){
+        var ws=w.orig.clone(), we=new THREE.Vector3(1.5+i*0.7,0.6,i%2?0.3:-0.3);
+        w.group.position.copy(lv3(ws,we,ease(Math.min(1,Math.max(0,(st-0.08)*2.5)))));
+      }
+    });
+    // electrons flow
+    if(st>0.08 && st<0.65){
+      for(var i=0;i<4&&i<els.length;i++){
+        var e=els[i]; e.visible=true;
+        var et=((st-0.08)/0.57+i*0.18)%1;
+        var from=new THREE.Vector3(-3.5,2.2,0), to=new THREE.Vector3(2.2,1.2,0);
+        var p=lv3(from,to,et);
+        p.x+=Math.sin(et*12+i)*0.3; p.y+=Math.cos(et*9+i*0.5)*0.2;
+        e.position.copy(p);
+      }
+    }
+    // OH- appear
+    for(var i=0;i<3&&i<ohs.length;i++){
+      var oh=ohs[i]; oh.visible=st>0.25;
+      if(st>0.25){
+        var ot2=ease(Math.min(1,(st-0.25)/0.45));
+        var os2=new THREE.Vector3(2.2,0.3+i*0.2,i%2?0.3:-0.3);
+        var oe2=new THREE.Vector3(0.8-i*0.5,0.6+i*0.15,i%2?0.2:-0.2);
+        oh.position.copy(lv3(os2,oe2,ot2));
+      }
+    }
+    // O2 break
+    if(st>0.45){
+      var bt=(st-0.45)/0.3; o2.group.scale.set(1+bt*2,1-bt*0.3,1);
+      if(bt>0.5) o2.group.visible=false;
+    }
+  }
+
+  // ---- Step 3: Fe(OH)2 formation (0.50 to 0.75) ----
+  if(t>S2 && t<=S3){
+    var st=(t-S2)/(S3-S2);
+    var ion=fe2s[0]; ion.visible=true;
+    var fsp=new THREE.Vector3(-4.0,2.8,0), fep=new THREE.Vector3(-0.3,0.6,0);
+    var ft=ease(Math.min(1,st*1.8));
+    ion.position.copy(lv3(fsp,fep,ft));
+    c2p.visible=st<0.5;
+    c2p.position.copy(ion.position.clone().add(new THREE.Vector3(0,0.65,0)));
+    // OH- move toward Fe2+
+    ohs.forEach(function(oh,i){
+      if(i<3){ oh.visible=true;
+        var os=new THREE.Vector3(0.8-i*0.5,0.6+i*0.15,i%2?0.2:-0.2);
+        var oe=new THREE.Vector3(-0.1-i*0.2,0.3+i*0.2,i%2?0.15:-0.15);
+        oh.position.copy(lv3(os,oe,ease(Math.min(1,st*1.5))));
+      }
+    });
+    // more Fe2+ and OH-
+    if(st>0.15){
+      var ion2=fe2s[1]; ion2.visible=true;
+      ion2.position.copy(lv3(new THREE.Vector3(-4.5,3.2,-0.5), new THREE.Vector3(-0.1,0.1,-0.2), ease(Math.min(1,(st-0.15)/0.55))));
+      for(var i=3;i<6&&i<ohs.length;i++){
+        var oh=ohs[i]; oh.visible=true;
+        oh.position.copy(lv3(new THREE.Vector3(1.5-(i-3)*0.4,1.0,i%2?0.4:-0.4), new THREE.Vector3(0.2-(i-3)*0.15,-0.05,i%2?0.15:-0.15), ease(Math.min(1,(st-0.2)/0.5))));
+      }
+    }
+    // Fe(OH)2 precipitate
+    if(st>0.35){
+      fh2s.forEach(function(f,i){
+        f.visible=true; var ft2=ease(Math.min(1,(st-0.35+i*0.08)/0.4));
+        f.position.set(-0.3+i*0.4,-0.4-i*0.1,i%2?0.15:-0.15);
+        f.scale.setScalar(0.15+ft2*0.85);
+      });
+    }
+    if(st>0.7){ var fade=(st-0.7)/0.3;
+      fe2s[0].material.transparent=true; fe2s[0].material.opacity=1-fade;
+      if(st>0.85) fe2s[0].visible=false;
+      c2p.visible=false;
+    }
+  }
+
+  // ---- Step 4: Rust formation (0.75 to 1.0) ----
+  if(t>S3){
+    var st=(t-S3)/(1-S3);
+    fh2s.forEach(function(f,i){ f.visible=st<0.4; });
+    rusts.forEach(function(r,i){
+      var dl=i*0.07;
+      if(st>dl){ r.group.visible=true; var gt=ease(Math.min(1,(st-dl)/0.35));
+        r.group.position.set(r.basePos.x, r.basePos.y+(1-gt)*2, r.basePos.z);
+        r.group.scale.setScalar(gt*r.scale);
+      }
+    });
+    // more Fe dissolving (ongoing corrosion)
+    if(st>0.2 && st<0.65){
+      var ion3=fe2s[2]; ion3.visible=true;
+      var cyc=(st-0.2)/0.45%1;
+      ion3.position.set(-5.5+cyc*3, 1.8+Math.sin(cyc*Math.PI)*0.4, 0);
+    }
+    // Lattice darkening near rust
+    if(st>0.5){
+      lattices.forEach(function(l,i){
+        if(i>10 && i<22 && i!==17){
+          var dk=(st-0.5)/0.5*0.18;
+          l.mesh.material.color.setRGB(0.58-dk, 0.64-dk*0.7, 0.72-dk*0.5);
+        }
+      });
+    }
+  }
+}
+
+// ======================== UI ========================
+function renderEq(el, eq){
+  try{ katex.render(eq, el, {displayMode:false,throwOnError:false}); }
+  catch(e){ el.textContent=eq; }
+}
+
+function updateUI(si){
+  var s=STEPS[si];
+  document.getElementById('snum').textContent=s.num;
+  document.getElementById('stitle').textContent=s.title;
+  document.getElementById('sdesc').innerHTML=s.desc;
+  document.getElementById('sstep').textContent=(si+1)+' / '+STEPS.length;
+  renderEq(document.getElementById('eq-display'), s.eq);
+  var dots=document.querySelectorAll('.sdot');
+  dots.forEach(function(d,i){
+    d.classList.toggle('act',i===si);
+    d.classList.toggle('done',i<si);
+  });
+  document.getElementById('cc').innerHTML=CONS.map(function(c){
+    return '<span class="chip"><span class="dot" style="background:'+c.color+'"></span> '+c.el+': '+c.n+'</span>';
+  }).join('');
+}
+
+function setProgress(v){
+  progress=Math.max(0,Math.min(1,v));
+  document.getElementById('pg-slider').value=Math.round(progress*1000);
+  document.getElementById('pct').textContent=Math.round(progress*100)+'%';
+  var si=progress>=S3?3:progress>=S2?2:progress>=S1?1:0;
+  if(si!==curStep){ curStep=si; updateUI(si); }
+  updateScene(progress);
+}
+
+function goStep(idx){
+  var marks=[0,S1,S2,S3];
+  targetProgress=marks[Math.min(idx,marks.length-1)];
+  var sp=progress, dur=350, st=performance.now();
+  (function anim(now){
+    var el=now-st, t=Math.min(1,el/dur);
+    setProgress(lerp(sp,targetProgress,ease(t)));
+    if(t<1) requestAnimationFrame(anim);
+  })();
+}
+
+function togglePlay(){
+  isPlaying=!isPlaying;
+  document.getElementById('play-btn').innerHTML=isPlaying?'⏸ 暂停':'▶ 自动演示';
+  if(isPlaying){
+    if(progress>=0.99) setProgress(0), targetProgress=0;
+    playTimer=setInterval(function(){
+      targetProgress=Math.min(1,targetProgress+0.004*speed);
+      setProgress(targetProgress);
+      if(targetProgress>=1){ isPlaying=false;
+        document.getElementById('play-btn').innerHTML='▶ 自动演示';
+        clearInterval(playTimer);
+      }
+    },50);
+  } else { clearInterval(playTimer); }
+}
+
+function init(){
+  var dc=document.getElementById('sdots');
+  STEPS.forEach(function(s,i){
+    var d=document.createElement('div'); d.className='sdot'+(i===0?' act':'');
+    d.title=s.title; d.addEventListener('click',function(){ goStep(i); });
+    dc.appendChild(d);
+  });
+  document.getElementById('prev-btn').addEventListener('click',function(){ goStep(Math.max(0,curStep-1)); });
+  document.getElementById('next-btn').addEventListener('click',function(){ goStep(Math.min(STEPS.length-1,curStep+1)); });
+  document.getElementById('play-btn').addEventListener('click',togglePlay);
+  document.getElementById('reset-btn').addEventListener('click',function(){ if(isPlaying)togglePlay(); setProgress(0); targetProgress=0; });
+  document.getElementById('pg-slider').addEventListener('input',function(e){
+    if(isPlaying)togglePlay(); targetProgress=parseInt(e.target.value)/1000; setProgress(targetProgress);
+  });
+  document.getElementById('spd-slider').addEventListener('input',function(e){ speed=parseFloat(e.target.value); });
+  updateUI(0); setProgress(0);
+  window.addEventListener('resize',function(){
+    var w=ctr.clientWidth, h=ctr.clientHeight;
+    camera.aspect=w/h; camera.updateProjectionMatrix();
+    renderer.setSize(w,h);
+  });
+  (function render(){ controls.update(); renderer.render(scene,camera); requestAnimationFrame(render); })();
+}
+
+init();
+</script>
+</body>
+</html>

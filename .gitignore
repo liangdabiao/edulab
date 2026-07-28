@@ -1,0 +1,22 @@
+.worktrees/
+.private-journal/
+.claude/
+.DS_Store
+node_modules/
+inspo
+triage/
+plan/
+output/
+.idea/
+.vscode/
+*.log
+*.tmp
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/

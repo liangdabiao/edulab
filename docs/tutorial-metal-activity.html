@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="pageTitle">化学交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#a78bfa;--accent2:#06b6d4;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.back{color:var(--accent);text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;white-space:nowrap;background:rgba(167,139,250,.06)}
+.back:hover{background:rgba(167,139,250,.14)}
+.title{font-size:15px;font-weight:600}.subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(167,139,250,.06),transparent)}
+.card{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--bad)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;min-width:0}
+canvas{background:#06101f;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+.panel{width:340px;flex:none;padding:14px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(167,139,250,.2);color:#ddd6fe;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px;color:var(--ink)}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:80px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent);border-color:var(--accent);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--accent)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:200px}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<div class="cards" id="cards"></div>
+<main>
+  <div class="stage"><canvas id="cv"></canvas></div>
+  <aside class="panel"><h2 id="panelTitle"></h2><p class="body" id="panelBody"></p><div class="points" id="panelPoints"></div></aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+// ===================================================================
+// 0) Data (injected by Python generator)
+// ===================================================================
+const _DATA = {"meta": {"title": "金属活动性顺序", "subtitle": "K Ca Na Mg Al Zn Fe Sn Pb (H) Cu Hg Ag Pt Au", "language": "zh-CN", "accent": "emerald"}, "cards": [{"num": 1, "title": "活动性顺序", "body": "K Ca Na Mg Al<br>Zn Fe Sn Pb (H)<br>Cu Hg Ag Pt Au"}, {"num": 2, "title": "规律", "body": "左→右减弱<br>前置换后"}, {"num": 3, "title": "与酸反应", "body": "H 前金属置换 H₂<br>H 后不反应"}, {"num": 4, "title": "与盐反应", "body": "前金属置换后金属<br>需可溶性盐"}], "steps": [{"tag": "基础", "name": "金属活动性顺序表", "body": "<p><strong>金属活动性顺序</strong>（由强到弱）：</p><p><code>K Ca Na Mg Al Zn Fe Sn Pb (H) Cu Hg Ag Pt Au</code></p><p>位置越<strong>靠左</strong>，金属活动性越<strong>强</strong>，越易失去电子变成阳离子。</p>", "points": {"title": "记忆口诀", "items": ["<strong>口诀</strong>：钾钙钠镁铝，锌铁锡铅（氢），铜汞银铂金", "<strong>K > Ca > Na</strong>：前三名极其活泼", "<strong>（H）</strong>：氢是非金属，作为参照标准", "<strong>Au</strong>：最不活泼，自然界以单质存在"]}, "scene": "activity_series", "sceneArgs": {"series": [{"el": "K", "active": true}, {"el": "Ca", "active": true}, {"el": "Na", "active": true}, {"el": "Mg", "active": true}, {"el": "Al", "active": true}, {"el": "Zn", "active": true}, {"el": "Fe", "active": true}, {"el": "Sn", "active": true}, {"el": "Pb", "active": true}, {"el": "(H)", "active": false}, {"el": "Cu", "active": false}, {"el": "Hg", "active": false}, {"el": "Ag", "active": false}, {"el": "Pt", "active": false}, {"el": "Au", "active": false}]}}, {"tag": "规律", "name": "金属与酸反应", "body": "<p><strong>H 前金属</strong>（K~Pb）能置换出酸中的氢，放出 H₂：</p><p><code>Zn + H₂SO₄ → ZnSO₄ + H₂↑</code></p><p><strong>H 后金属</strong>（Cu~Au）不能与酸反应产生 H₂。</p><p>反应剧烈程度：金属越靠左反应越剧烈。</p>", "points": {"title": "典型反应", "items": ["<strong>Mg + 2HCl → MgCl₂ + H₂↑</strong>（剧烈）", "<strong>Zn + 2HCl → ZnCl₂ + H₂↑</strong>（适中）", "<strong>Fe + 2HCl → FeCl₂ + H₂↑</strong>（缓慢）", "<strong>Cu + HCl → 不反应</strong>（H 后）"]}, "scene": "beaker_reaction", "sceneArgs": {"metal": "Zn", "acid": "HCl", "product": "ZnCl₂", "gas": "H₂", "intensity": "medium"}}, {"tag": "规律", "name": "金属与盐溶液反应", "body": "<p>活动性<strong>较强</strong>的金属能将活动性<strong>较弱</strong>的金属从它的盐溶液中<strong>置换</strong>出来。</p><p><strong>Fe + CuSO₄ → FeSO₄ + Cu</strong></p><p>现象：铁钉表面析出<strong>红色铜</strong>，溶液由蓝色渐变为浅绿色。</p>", "points": {"title": "判断规则", "items": ["<strong>条件</strong>：前置换后（金属活动性）", "<strong>盐须可溶</strong>：盐必须溶于水", "<strong>K/Ca/Na 例外</strong>：过于活泼，先与水反应", "<strong>Fe 变 Fe²⁺</strong>：不是 Fe³⁺"]}, "scene": "beaker_reaction", "sceneArgs": {"metal": "Fe", "solution": "CuSO₄", "product": "FeSO₄", "precipitate": "Cu", "intensity": "slow"}}]};
+const ACCENT = _DATA.meta?.accent || 'violet';
+const ACCENT_MAP = {
+  amber:'#f59e0b',violet:'#a78bfa',emerald:'#34d399',cyan:'#06b6d4',
+  indigo:'#6366f1',sky:'#0ea5e9',red:'#ef4444',green:'#22c55e',
+  orange:'#f97316',slate:'#64748b',pink:'#ec4899'
+};
+document.documentElement.style.setProperty('--accent', ACCENT_MAP[ACCENT] || '#a78bfa');
+document.documentElement.style.setProperty('--accent2', ACCENT_MAP[ACCENT]==='#06b6d4'?'#a78bfa':'#06b6d4');
+document.getElementById('pageTitle').textContent=_DATA.meta.title+' · 交互课程';
+document.getElementById('topbar').innerHTML='<span class="title">'+_DATA.meta.title+'</span><span class="subtitle">'+_DATA.meta.subtitle+'</span>';
+
+// Cards
+const cardsEl=document.getElementById('cards');
+if(_DATA.cards&&_DATA.cards.length){
+  _DATA.cards.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='card'+(i>0?' s'+(i+1):'');
+    d.innerHTML='<div class="num">'+c.num+'</div><h4>'+c.title+'</h4><div class="v">'+c.body+'</div>';
+    cardsEl.appendChild(d);
+  });
+}else cardsEl.style.display='none';
+
+// Canvas
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),statusEl=document.getElementById('status');
+const STEPS=_DATA.steps||[];
+const STEP_DURATION=3.5;
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0;
+
+function fit(){
+  const r=cv.parentElement.getBoundingClientRect();
+  cv.width=Math.max(460,Math.min(1000,r.width-12));
+  cv.height=Math.max(380,Math.min(600,r.height-12));
+}
+window.addEventListener('resize',()=>{fit();draw();});fit();
+
+// ===================================================================
+// 1) Drawing helpers
+// ===================================================================
+function drawText(t,x,y,c,fs,a,b){
+  ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';
+  ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function glow(color,blur,fn){
+  ctx.save();ctx.shadowColor=color;ctx.shadowBlur=blur||10;fn();ctx.restore();
+}
+
+// ===================================================================
+// 2) Built-in scene draw functions
+// ===================================================================
+const SCENES = {
+  // --- Concept (4-panel card display) ---
+  concept(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    drawText(a.title||'核心概念',W/2,35,'#fff',16);
+    const items=a.items||[];const n=items.length;
+    const cw=Math.min(180,(W-80)/n-10);
+    items.forEach((m,i)=>{
+      const x=40+i*(cw+10);const y=75;
+      ctx.fillStyle=(m.color||'#a78bfa')+'22';ctx.strokeStyle=m.color||'#a78bfa';ctx.lineWidth=2;
+      roundRect(x,y,cw,Math.min(H-140,220),12);ctx.fill();ctx.stroke();
+      drawText(m.label,x+cw/2,y+40,m.color||'#fff',20);
+      const lines=(m.desc||'').split('\n');
+      lines.forEach((ln,j)=>drawText(ln,x+cw/2,y+80+j*20,'#e8eef8',13));
+    });
+  },
+
+  // --- Valences grid ---
+  valences(t,args){
+    const W=cv.width,H=cv.height;const els=(args&&args.elements)||[];
+    drawText('常见元素化合价',W/2,30,'#fff',16);
+    const cols=Math.min(4,Math.ceil(els.length/2));
+    const cw=Math.min(160,(W-60)/cols-6);const ch=Math.min(80,(H-140)/Math.ceil(els.length/cols)-4);
+    els.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=30+col*(cw+6),y=60+row*(ch+4);
+      ctx.fillStyle=m.color||'#a78bfa';ctx.beginPath();ctx.arc(x+30,y+ch/2,22,0,7);ctx.fill();
+      drawText(m.el,x+30,y+ch/2,'#fff',16);
+      drawText(m.v,x+60,y+ch/2-8,m.color||'#fbbf24',14,'left');
+      drawText(m.example||'',x+60,y+ch/2+12,'#9ab0d0',11,'left');
+      ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+      ctx.strokeRect(x,y,cw,ch);
+    });
+  },
+
+  // --- Steps diagram (flow chart) ---
+  steps_diagram(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    const steps=a.steps||[];const active=a.active;
+    drawText('配平五步法',W/2,30,'#fff',16);
+    const n=steps.length;const gap=Math.min(140,(W-40)/n-8);
+    const sx=(W-(n*gap+20))/2;
+    steps.forEach((s,i)=>{
+      const x=sx+i*(gap+20)+10,y=H/2-40;
+      const isActive=active<0||i===active;
+      ctx.fillStyle=isActive?'rgba(167,139,250,0.25)':'rgba(100,116,139,0.12)';
+      ctx.strokeStyle=isActive?'#a78bfa':'#475569';
+      ctx.lineWidth=isActive?2.5:1.5;
+      roundRect(x,y,gap-20,80,40);ctx.fill();ctx.stroke();
+      drawText((i+1)+'',x+(gap-20)/2,y+20,isActive?'#a78bfa':'#64748b',isActive?18:14);
+      drawText(s,x+(gap-20)/2,y+55,isActive?'#fff':'#9ab0d0',isActive?15:12);
+      // Arrow
+      if(i<n-1){
+        ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(x+gap-20,y+40);ctx.lineTo(x+gap+5,y+40);ctx.stroke();
+      }
+    });
+  },
+
+  // --- Redox bridge (双线桥) ---
+  redox_bridge(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    ctx.fillStyle='rgba(167,139,250,0.08)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;
+    roundRect(30,30,W-60,70,10);ctx.fill();ctx.stroke();
+    drawText(a.equation||'',W/2,65,'#fff',20);
+    const brs=a.bridges||[];
+    brs.forEach((b,i)=>{
+      const side=b.side||'top';
+      const yBase=side==='top'?110:H/2+60;
+      const color=b.color||(side==='top'?'#34d399':'#ef4444');
+      const lx=W*0.25, rx=W*0.75;
+      // Arrow arc
+      ctx.strokeStyle=color;ctx.lineWidth=2.5;
+      ctx.beginPath();
+      const midY=yBase+(side==='top'?30:-30);
+      ctx.moveTo(lx,yBase);ctx.quadraticCurveTo((lx+rx)/2,midY,rx,yBase);
+      ctx.stroke();
+      // Label
+      const labelX=(lx+rx)/2,labelY=(yBase+midY)/2;
+      ctx.fillStyle=color;ctx.font='bold 13px sans-serif';
+      ctx.textAlign='center';ctx.fillText(b.label||'',labelX,labelY-8);
+      ctx.fillStyle='#e8eef8';ctx.font='11px sans-serif';
+      ctx.fillText(b.desc||'',labelX,labelY+10);
+      // Start/end labels
+      drawText(b.from+(b.fromV?'('+b.fromV+')':''),lx-60,yBase,'#fff',12);
+      drawText(b.to+(b.toV?'('+b.toV+')':''),rx+60,yBase,'#fff',12);
+    });
+    drawText('双线桥：同元素间连线，标注电子转移',W/2,H-25,'#9ab0d0',12);
+  },
+
+  // --- Equation display ---
+  equation(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};const eqs=a.equations||[];
+    drawText('化学方程式',W/2,35,'#fff',16);
+    eqs.forEach((eq,i)=>{
+      const y=80+i*70;
+      ctx.fillStyle='rgba(255,255,255,0.04)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+      roundRect(60,y-20,W-120,50,8);ctx.fill();ctx.stroke();
+      drawText(eq,W/2,y+5,'#e8eef8',eq.startsWith('  ↳')?15:17);
+    });
+  },
+
+  // --- Summary grid ---
+  summary_grid(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    const items=a.items||[];const cols=Math.min(3,items.length);
+    const cw=Math.min(200,(W-60)/cols-8);
+    items.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=30+col*(cw+8),y=45+row*Math.min(155,(H-80)/Math.ceil(items.length/cols)-4);
+      ctx.fillStyle=(m.color||'#a78bfa')+'22';ctx.strokeStyle=m.color||'#a78bfa';ctx.lineWidth=2;
+      roundRect(x,y,cw,Math.min(H-90,140),12);ctx.fill();ctx.stroke();
+      drawText(m.icon||'●',x+cw/2,y+35,m.color||'#fff',30);
+      drawText(m.title||'',x+cw/2,y+75,'#fff',16);
+      ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+      const desc=(m.desc||'').split('\n');
+      desc.forEach((ln,j)=>ctx.fillText(ln,x+cw/2,y+98+j*16));
+    });
+  },
+
+  // --- Activity series ---
+  activity_series(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};const series=a.series||[];
+    drawText('金属活动性顺序',W/2,35,'#fff',16);
+    const n=series.length;const gap=Math.min(70,(W-40)/n);
+    const sx=(W-(n*gap+20))/2;
+    series.forEach((m,i)=>{
+      const x=sx+i*gap+10,y=H/2-40;
+      const active=m.active!==false;
+      ctx.fillStyle=active?'rgba(52,211,153,0.2)':'rgba(100,116,139,0.12)';
+      ctx.strokeStyle=active?'#34d399':'#475569';ctx.lineWidth=active?2:1.5;
+      roundRect(x,y,gap-10,80,8);ctx.fill();ctx.stroke();
+      drawText(m.el,x+(gap-10)/2,y+35,active?'#34d399':'#64748b',active?15:12);
+      // Arrow
+      if(i<n-1){
+        ctx.fillStyle='#475569';
+        ctx.beginPath();ctx.moveTo(x+gap-10,y+40);ctx.lineTo(x+gap+3,y+36);
+        ctx.lineTo(x+gap+3,y+44);ctx.closePath();ctx.fill();
+      }
+    });
+    drawText('K Ca Na Mg Al Zn Fe Sn Pb (H) Cu Hg Ag Pt Au',W/2,H-60,'#9ab0d0',11);
+    drawText('← 活动性增强',10,H/2+5,'#34d399',11,'left');
+    drawText('活动性减弱 →',W-10,H/2+5,'#f87171',11,'right');
+  },
+
+  // --- Beaker reaction (animated) ---
+  beaker_reaction(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    drawText((a.metal||'')+'与'+(a.acid||a.solution||'')+'反应',W/2,30,'#fff',16);
+    const bx=W/2,by=H/2+40,bw=240,bh=180;
+    // Beaker
+    ctx.strokeStyle='rgba(205,215,234,0.4)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(bx-bw/2-8,by-bh);ctx.lineTo(bx-bw/2-8,by+8);
+    ctx.lineTo(bx+bw/2+8,by+8);ctx.lineTo(bx+bw/2+8,by-bh);ctx.stroke();
+    const waterY=by-bh+50;
+    const intensity=a.intensity||'medium';
+    // Liquid
+    ctx.fillStyle='rgba(6,182,212,0.15)';
+    ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    // Metal piece
+    const mX=bx-20+Math.sin(t*2)*30,mY=waterY+20+Math.sin(t*3)*3;
+    ctx.fillStyle='#94a3b8';ctx.shadowColor='#94a3b8';ctx.shadowBlur=6;
+    roundRect(mX-15,mY-6,30,12,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(a.metal||'',mX,mY,'#fff',12);
+    // Bubbles (gas)
+    const bubCount=intensity==='violent'?12:intensity==='slow'?3:6;
+    for(let i=0;i<bubCount;i++){
+      const ph=(t*1.5+i*0.25)%2.5;
+      if(ph<2){
+        const bx2=mX+(i%5-2)*6+Math.sin(ph*6+i)*3;
+        const by2=mY-ph*50;
+        const r=1.5+ph*2;
+        ctx.fillStyle='rgba(125,211,252,'+Math.min(0.6,1-ph/2.5)+')';
+        ctx.beginPath();ctx.arc(bx2,by2,Math.min(r,8),0,7);ctx.fill();
+      }
+    }
+    // Gas label
+    if(a.gas)drawText(a.gas+'↑',mX+20,mY-10,'#34d399',11);
+    // Solution color change
+    if(a.product&&a.product.includes('Fe')){
+      ctx.fillStyle='rgba(52,211,153,0.08)';
+      ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    }
+    // Precipitate
+    if(a.precipitate){
+      ctx.fillStyle='#fb923c';ctx.shadowColor='#fb923c';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(bx+bw/4,by-10+Math.sin(t*2)*2,8,0,7);ctx.fill();
+      ctx.shadowBlur=0;
+      drawText(a.precipitate,bx+bw/4,by-20,'#fb923c',11);
+    }
+    drawText((a.acid||a.solution||'')+'溶液',bx,by+bh+10,'#9ab0d0',11);
+  },
+};
+
+// ===================================================================
+// 3) Sync & render
+// ===================================================================
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  document.getElementById('panelTitle').innerHTML='<span class="badge">'+s.tag+'</span> '+s.name;
+  document.getElementById('panelBody').innerHTML=s.body||'';
+  const ptsEl=document.getElementById('panelPoints');
+  if(s.points){
+    ptsEl.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+((s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join(''))+'</ul>';
+  }else ptsEl.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sceneFn=SCENES[s.scene];
+  if(sceneFn)sceneFn(t,s.sceneArgs||{});
+  else {
+    drawText('场景: '+s.scene,cv.width/2,cv.height/2-10,'#9ab0d0',16);
+    drawText(s.name||'',cv.width/2,cv.height/2+20,'#fff',14);
+  }
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  stepTime+=dt*speed;
+  if(stepTime>=STEP_DURATION){
+    if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+    else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// ===================================================================
+// 4) Controls
+// ===================================================================
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+const speedInp=document.getElementById('speedInp');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+
+// Step bar
+function buildStepbar(){
+  const bar=document.getElementById('stepbar');bar.innerHTML='';
+  STEPS.forEach(function(s,i){
+    const el=document.createElement('div');
+    el.className='step'+(i===stepIdx?' active':'');
+    el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>9?s.name.slice(0,8)+'…':s.name||'')+'</div>';
+    el.onclick=function(){stepIdx=i;syncStep();draw();};
+    bar.appendChild(el);
+  });
+}
+buildStepbar();syncStep();requestAnimationFrame(loop);
+</script>
+</body>
+</html>

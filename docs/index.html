@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>交互教学课程导航</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#0a1628;color:#e8eef8;min-height:100vh}
+header{background:linear-gradient(135deg,#0f1f3a,#162a4e);border-bottom:1px solid #243a5e;padding:40px 24px 32px;text-align:center}
+header h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,#06b6d4,#6366f1,#d946ef);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{color:#9ab0d0;margin-top:8px;font-size:14px}
+.stats{display:flex;justify-content:center;gap:24px;margin-top:16px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat .num{font-size:24px;font-weight:700;color:#06b6d4}
+.stat .label{font-size:12px;color:#9ab0d0}
+.container{max-width:1200px;margin:0 auto;padding:24px 16px 60px}
+.section{margin-bottom:40px}
+.section-title{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #243a5e}
+.section-title .badge{font-size:12px;padding:2px 10px;border-radius:99px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.card{background:#11203a;border:1px solid #243a5e;border-radius:12px;padding:14px 16px;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s,box-shadow .15s;display:flex;flex-direction:column;gap:6px}
+.card:hover{transform:translateY(-2px);border-color:#6366f1;box-shadow:0 4px 20px rgba(99,102,241,.15)}
+.card .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;width:fit-content}
+.card .name{font-size:14px;font-weight:600;line-height:1.4}
+.card .desc{font-size:12px;color:#9ab0d0;line-height:1.5}
+.card .meta{font-size:11px;color:#64748b;display:flex;gap:8px;margin-top:auto}
+/* accent colors */
+.chem .tag,.badge.chem{background:rgba(99,102,241,.3);color:#a5b4fc}
+.it .tag,.badge.it{background:rgba(6,182,212,.3);color:#67e8f9}
+.bio .tag,.badge.bio{background:rgba(52,211,153,.3);color:#6ee7b7}
+.geo .tag,.badge.geo{background:rgba(251,191,36,.3);color:#fcd34d}
+.math .tag,.badge.math{background:rgba(248,113,113,.3);color:#fca5a5}
+.physics .tag,.badge.physics{background:rgba(232,121,249,.3);color:#f0abfc}
+.solid-geo .tag,.badge.solid-geo{background:rgba(14,165,233,.3);color:#7dd3fc}
+.chem{border-left:3px solid #6366f1}
+.it{border-left:3px solid #06b6d4}
+.bio{border-left:3px solid #34d399}
+.geo{border-left:3px solid #fbbf24}
+.math{border-left:3px solid #f87171}
+.physics{border-left:3px solid #e879f9}
+.solid-geo{border-left:3px solid #0ea5e9}
+.sub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding-left:12px;margin-top:8px}
+.sub-label{font-size:12px;color:#9ab0d0;font-weight:600;padding:4px 0 2px 12px}
+@media(max-width:600px){header{padding:24px 16px}header h1{font-size:22px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header style="position:relative">
+  <a href="https://github.com/liangdabiao/edulab-plus" target="_blank" style="position:absolute;top:16px;right:20px;display:flex;align-items:center;gap:6px;color:#9ab0d0;text-decoration:none;font-size:13px;padding:6px 14px;border:1px solid #243a5e;border-radius:8px;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='#6366f1';this.style.color='#e8eef8'" onmouseout="this.style.borderColor='#243a5e';this.style.color='#9ab0d0'">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <h1>交互教学课程导航</h1>
+  <p>步进式知识点讲解 · Canvas 2D 动画场景 · 侧栏面板 · 步进器控制</p>
+  <div class="stats">
+    <div class="stat"><div class="num" id="totalCount">0</div><div class="label">课程总数</div></div>
+    <div class="stat"><div class="num">6</div><div class="label">学科分类</div></div>
+  </div>
+</header>
+
+<div class="container" id="app">
+
+  <!-- ===== 化学 ===== -->
+  <div class="section">
+    <div class="section-title">
+      🧪 化学
+      <span class="badge chem">反应演示 + 教程</span>
+    </div>
+    <div class="sub-label">⚡ 微观看反应</div>
+    <div class="sub-grid" id="chem-reaction"></div>
+    <div class="sub-label" style="margin-top:12px">📖 步进教程</div>
+    <div class="sub-grid" id="chem-tutorial"></div>
+  </div>
+
+  <!-- ===== 信息技术 ===== -->
+  <div class="section">
+    <div class="section-title">
+      💻 信息技术
+      <span class="badge it">算法 · 编程 · 数据 · 网络 · AI</span>
+    </div>
+    <div class="grid" id="it"></div>
+  </div>
+
+  <!-- ===== 生物 ===== -->
+  <div class="section">
+    <div class="section-title">
+      🧬 生物
+      <span class="badge bio">分子与细胞 · 遗传 · 免疫 · PCR · 循环系统</span>
+    </div>
+    <div class="grid" id="bio"></div>
+  </div>
+
+  <!-- ===== 地理 ===== -->
+  <div class="section">
+    <div class="section-title">
+      🌍 地理
+      <span class="badge geo">自然 · 人文 · 区域 · GIS</span>
+    </div>
+    <div class="grid" id="geo"></div>
+  </div>
+
+  <!-- ===== 数学 ===== -->
+  <div class="section">
+    <div class="section-title">
+      📐 数学
+      <span class="badge math">函数 · 向量 · 统计 · 逻辑 · 几何</span>
+    </div>
+    <div class="grid" id="math"></div>
+  </div>
+
+  <!-- ===== 物理 ===== -->
+  <div class="section">
+    <div class="section-title">
+      ⚛ 物理
+      <span class="badge physics">力学 · 电磁学</span>
+    </div>
+    <div class="grid" id="physics"></div>
+  </div>
+
+  <!-- ===== 立体几何 ===== -->
+  <div class="section">
+    <div class="section-title">
+      🏛 立体几何
+      <span class="badge solid-geo">Three.js 3D 交互解题</span>
+    </div>
+    <div class="grid" id="solid-geo"></div>
+  </div>
+
+</div>
+
+<script>
+const DATA = [
+  // ---- 化学 反应演示 ----
+  {cat:"chem-reaction", title:"镁条燃烧", file:"reaction-mg-burn.html", tag:"燃烧", desc:"镁在空气中燃烧，发出耀眼白光，生成氧化镁"},
+  {cat:"chem-reaction", title:"锌与硫酸铜", file:"reaction-zn-cuso4.html", tag:"置换", desc:"锌片置换硫酸铜中的铜，溶液蓝色褪去"},
+  {cat:"chem-reaction", title:"铁与硫酸铜", file:"reaction-fe-cuso4.html", tag:"置换", desc:"铁钉置换硫酸铜中的铜，表面析出红色铜"},
+  {cat:"chem-reaction", title:"锌与盐酸", file:"reaction-zn-hcl.html", tag:"置换", desc:"锌粒与稀盐酸反应产生氢气"},
+  {cat:"chem-reaction", title:"钠与水", file:"reaction-na-water.html", tag:"反应", desc:"钠与水剧烈反应，产生氢气并熔化"},
+  {cat:"chem-reaction", title:"铜还原", file:"reaction-cu-reduction.html", tag:"还原", desc:"氧化铜被还原为铜单质"},
+  {cat:"chem-reaction", title:"铁生锈", file:"reaction-iron-rusting.html", tag:"氧化", desc:"铁在潮湿空气中缓慢氧化生锈"},
+  {cat:"chem-reaction", title:"氧化还原配平", file:"redox-balancing-tutorial.html", tag:"配平", desc:"化合价升降法配平氧化还原方程式"},
+
+  // ---- 化学 教程 ----
+  {cat:"chem-tutorial", title:"氧化还原配平", file:"tutorial-redox-balancing.html", tag:"教程", desc:"化合价升降法 · 电子守恒 · 双线桥"},
+  {cat:"chem-tutorial", title:"金属活动性", file:"tutorial-metal-activity.html", tag:"教程", desc:"金属活动性顺序及其应用"},
+  {cat:"chem-tutorial", title:"电解质", file:"tutorial-electrolyte.html", tag:"教程", desc:"电解质与非电解质的区别"},
+  {cat:"chem-tutorial", title:"镁条燃烧微观过程", file:"tutorial-镁条燃烧.html", tag:"微观", desc:"镁条燃烧发出剧烈白光的微观过程"},
+  {cat:"chem-tutorial", title:"过氧化氢分解", file:"tutorial-过氧化氢分解.html", tag:"微观", desc:"过氧化氢在二氧化锰催化下的分解过程"},
+
+  // ---- 信息技术 ----
+  {cat:"it", title:"冒泡排序", file:"tutorial-bubble_sort.html", tag:"算法", desc:"相邻元素两两比较，大的往后冒泡"},
+  {cat:"it", title:"选择排序", file:"tutorial-selection_sort.html", tag:"算法", desc:"每次选出最小元素放到前面"},
+  {cat:"it", title:"插入排序", file:"tutorial-insertion_sort.html", tag:"算法", desc:"将元素插入到已排好序的序列中"},
+  {cat:"it", title:"二分查找", file:"tutorial-binary_search.html", tag:"算法", desc:"在有序数组中快速定位目标值"},
+  {cat:"it", title:"算法复杂度", file:"tutorial-algorithm_complexity.html", tag:"算法", desc:"时间与空间复杂度分析方法"},
+  {cat:"it", title:"流程图基础", file:"tutorial-flowchart_basics.html", tag:"编程", desc:"流程图基本符号与画法"},
+  {cat:"it", title:"Python 基础", file:"tutorial-python_basics.html", tag:"编程", desc:"变量、数据类型、控制结构"},
+  {cat:"it", title:"Scratch 基础", file:"tutorial-scratch_basics.html", tag:"编程", desc:"图形化编程入门"},
+  {cat:"it", title:"C++ 基础", file:"tutorial-cpp_basics.html", tag:"编程", desc:"C++ 基本语法与编程思想"},
+  {cat:"it", title:"Excel 数据处理", file:"tutorial-excel_data.html", tag:"数据", desc:"表格设计、公式、图表与数据分析"},
+  {cat:"it", title:"数据库入门", file:"tutorial-database_intro.html", tag:"数据", desc:"关系数据库概念与 SQL 基础"},
+  {cat:"it", title:"机器学习概念", file:"tutorial-ml_concepts.html", tag:"AI", desc:"机器学习基本概念与算法分类"},
+  {cat:"it", title:"语音识别", file:"tutorial-voice_recognition.html", tag:"AI", desc:"语音识别技术原理与应用"},
+  {cat:"it", title:"图像识别", file:"tutorial-image_recognition.html", tag:"AI", desc:"卷积神经网络与图像分类"},
+  {cat:"it", title:"计算机组成", file:"tutorial-computer_architecture.html", tag:"硬件", desc:"冯·诺依曼结构与硬件组成"},
+  {cat:"it", title:"网络基础", file:"tutorial-network_basics.html", tag:"网络", desc:"TCP/IP 协议与网络拓扑"},
+  {cat:"it", title:"设计流程", file:"tutorial-design_process.html", tag:"设计", desc:"通用技术设计的一般过程"},
+  {cat:"it", title:"材料与工具", file:"tutorial-materials_tools.html", tag:"设计", desc:"常见材料性能与工具使用"},
+  {cat:"it", title:"电子控制", file:"tutorial-electronic_control.html", tag:"设计", desc:"传感器、控制器与执行器"},
+
+  // ---- 生物 ----
+  {cat:"bio", title:"细胞结构", file:"tutorial-cell_structure.html", tag:"微观", desc:"动植物细胞结构与细胞器功能"},
+  {cat:"bio", title:"循环系统", file:"tutorial-circulatory_system.html", tag:"人体", desc:"心脏结构与血液循环途径"},
+  {cat:"bio", title:"免疫系统", file:"tutorial-immune_system.html", tag:"稳态", desc:"特异性免疫与非特异性免疫"},
+  {cat:"bio", title:"孟德尔遗传", file:"tutorial-mendel_genetics.html", tag:"遗传", desc:"分离定律与自由组合定律"},
+  {cat:"bio", title:"PCR 技术", file:"tutorial-pcr_technique.html", tag:"生物技术", desc:"聚合酶链式反应原理与过程"},
+
+  // ---- 地理 ----
+  {cat:"geo", title:"自然地理基础", file:"tutorial-physical_geo.html", tag:"自然", desc:"地球运动 · 大气环流 · 水循环 · 板块构造"},
+  {cat:"geo", title:"人口与城市", file:"tutorial-population.html", tag:"人文", desc:"人口金字塔 · 城市结构模型 · 区位分析"},
+  {cat:"geo", title:"中国地理", file:"tutorial-china_geo.html", tag:"区域", desc:"地形阶梯 · 气候分区 · 城市与交通"},
+  {cat:"geo", title:"GIS 技术", file:"tutorial-gis_tech.html", tag:"技术", desc:"遥感 · GPS · GIS 图层叠加"},
+
+  // ---- 数学 ----
+  {cat:"math", title:"二次函数", file:"solution-quadratic.html", tag:"函数", desc:"二次函数图像与性质"},
+  {cat:"math", title:"向量加法", file:"solution-vector-addition.html", tag:"向量", desc:"二维向量的加法与几何意义"},
+  {cat:"math", title:"正态分布", file:"solution-normal-distribution.html", tag:"统计", desc:"正态分布曲线与性质"},
+  {cat:"math", title:"集合逻辑", file:"solution-logic.html", tag:"逻辑", desc:"集合运算与逻辑推理"},
+  {cat:"math", title:"Garfield 勾股证明", file:"solution-garfield-proof.html", tag:"几何", desc:"Garfield 梯形证法"},
+  {cat:"math", title:"Einstein 勾股证明", file:"solution-einstein-pythagoras.html", tag:"几何", desc:"爱因斯坦的相似三角形证法"},
+  {cat:"math", title:"Garfield 勾股定理", file:"solution-garfield-pythagoras.html", tag:"几何", desc:"Garfield 对勾股定理的证明"},
+
+  // ---- 物理 ----
+  {cat:"physics", title:"抛体运动", file:"solution-physics-projectile.html", tag:"力学", desc:"平抛运动分解与轨迹分析"},
+  {cat:"physics", title:"洛伦兹力", file:"solution-lorentz-force.html", tag:"电磁", desc:"电荷在磁场中的受力与运动"},
+
+  // ---- 立体几何 ----
+  {cat:"solid-geo", title:"正四棱锥线面角", file:"lesson-pyramid.html", tag:"3D", desc:"Three.js 交互 · 线面角求解 (MathJax)"},
+  {cat:"solid-geo", title:"空间角的正弦和余弦", file:"solution-space-angles.html", tag:"典型题", desc:"正方体中线面角正弦 + 异面直线余弦 ← 方向余弦统一视角"},
+];
+
+// Render
+const containers = {
+  "chem-reaction": "chem-reaction",
+  "chem-tutorial": "chem-tutorial",
+  "it": "it",
+  "bio": "bio",
+  "geo": "geo",
+  "math": "math",
+  "physics": "physics",
+  "solid-geo": "solid-geo",
+};
+
+document.getElementById("totalCount").textContent = DATA.length;
+
+for (const item of DATA) {
+  const el = document.getElementById(containers[item.cat]);
+  if (!el) continue;
+  const card = document.createElement("a");
+  card.className = `card ${item.cat === "chem-reaction" || item.cat === "chem-tutorial" ? "chem" : item.cat}`;
+  card.href = item.file;
+  card.innerHTML = `
+    <div class="tag">${item.tag}</div>
+    <div class="name">${item.title}</div>
+    <div class="desc">${item.desc}</div>
+    <div class="meta">${item.file}</div>
+  `;
+  el.appendChild(card);
+}
+</script>
+</body>
+</html>

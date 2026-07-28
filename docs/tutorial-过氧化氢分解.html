@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>过氧化氢分解 · 催化机理 · 交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#06b6d4;--accent2:#34d399;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.topbar .title{font-size:15px;font-weight:600}.topbar .subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(6,182,212,.06),transparent)}
+.card{flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--warn)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;min-width:0}
+canvas{background:#06101f;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+.panel{width:340px;flex:none;padding:14px;overflow-y:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(6,182,212,.2);color:#a5f3fc;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent2)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:100px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent2);border-color:var(--accent2);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--accent2)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:240px}}
+</style>
+</head>
+<body>
+<header class="topbar"><span class="title">过氧化氢分解 · 催化机理</span><span class="subtitle">2H₂O₂ →(MnO₂)→ 2H₂O + O₂↑ · 微观过程可视化</span></header>
+<div class="cards">
+  <div class="card"><div class="num">1</div><h4>宏观现象</h4><div class="v">无色液体中<br>大量气泡冒出</div></div>
+  <div class="card s2"><div class="num">2</div><h4>催化剂 MnO₂</h4><div class="v">加快分解速率<br>本身不变</div></div>
+  <div class="card s3"><div class="num">3</div><h4>微观过程</h4><div class="v">O-O 键断裂<br>重组成 H₂O+O₂</div></div>
+  <div class="card s4"><div class="num">4</div><h4>催化机理</h4><div class="v">降低活化能<br>提供反应路径</div></div>
+</div>
+<main>
+  <div class="stage"><canvas id="cv"></canvas></div>
+  <aside class="panel"><h2><span class="badge" id="stepBadge">宏观</span><span id="stepTitle">分解现象</span></h2><p class="body" id="stepBody"></p><div class="points" id="stepPoints"></div></aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const statusEl=document.getElementById('status'),speedInp=document.getElementById('speedInp');
+const stepBadge=document.getElementById('stepBadge'),stepTitle=document.getElementById('stepTitle');
+const stepBody=document.getElementById('stepBody'),stepPoints=document.getElementById('stepPoints');
+
+function fit(){const r=cv.parentElement.getBoundingClientRect();cv.width=Math.max(520,Math.min(1100,r.width-12));cv.height=Math.max(400,Math.min(600,r.height-12));}
+window.addEventListener('resize',()=>{fit();draw();});fit();
+
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawText(t,x,y,c,fs,a,b){ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);}
+function glow(c,b,fn){ctx.save();ctx.shadowColor=c;ctx.shadowBlur=b||10;fn();ctx.restore();}
+
+// ===================================================================
+// STEPS
+// ===================================================================
+const STEPS=[
+  // ===== 1. 宏观现象 =====
+  {
+    tag:'宏观',name:'H₂O₂ 分解现象',
+    body:'<p>在试管中加入适量<strong>过氧化氢（H₂O₂）</strong>，再加入少量<strong>黑色 MnO₂ 粉末</strong>。</p><p>立即看到<strong>大量气泡</strong>从液体中迅速冒出！用带火星木条检验，木条<strong>复燃</strong>——证明气体是<strong>氧气（O₂）</strong>。</p>',
+    points:{title:'宏观现象要点',items:['<strong>现象</strong>：无色液体中冒出大量气泡','<strong>气体</strong>：O₂（使带火星木条复燃）','<strong>催化剂</strong>：MnO₂ 黑色粉末','<strong>产物</strong>：H₂O + O₂']}
+  },
+  // ===== 2. 化学方程式 =====
+  {
+    tag:'宏观',name:'化学方程式',
+    body:'<p><strong>化学方程式</strong>：</p><p><code>2H₂O₂ →(MnO₂)→ 2H₂O + O₂↑</code></p><p>过氧化氢在二氧化锰催化下分解为<strong>水</strong>和<strong>氧气</strong>。MnO₂ 写在箭头上方，表示<strong>催化剂</strong>，不写入方程式。</p>',
+    points:{title:'方程式分析',items:['<strong>反应物</strong>：H₂O₂（过氧化氢）','<strong>产物</strong>：H₂O（水）+ O₂↑（氧气）','<strong>催化剂</strong>：MnO₂（不参与反应）','<strong>反应类型</strong>：分解反应']}
+  },
+  // ===== 3. H₂O₂ 分子结构 =====
+  {
+    tag:'微观',name:'H₂O₂ 分子结构',
+    body:'<p>过氧化氢分子结构为 <strong>H-O-O-H</strong>，呈<strong>书页形</strong>（非平面）。</p><p>关键特征是中间的 <strong>O-O 单键</strong>（过氧键）<strong>键能较弱</strong>（约 213 kJ/mol），不稳定，<strong>容易断裂</strong>——这也是 H₂O₂ 易分解的根本原因。</p>',
+    points:{title:'H₂O₂ 结构要点',items:['<strong>结构式</strong>：H-O-O-H','<strong>O-O 键</strong>：单键，键能弱（213 kJ/mol）','<strong>O 化合价</strong>：-1（中间价态，不稳定）','<strong>性质</strong>：既有氧化性又有还原性']}
+  },
+  // ===== 4. 催化剂 MnO₂ =====
+  {
+    tag:'催化',name:'MnO₂ 催化剂表面',
+    body:'<p><strong>MnO₂（二氧化锰）</strong>是黑色固体粉末，具有很大的<strong>比表面积</strong>，表面存在大量<strong>活性位点</strong>。</p><p>这些活性位点可以<strong>吸附 H₂O₂ 分子</strong>，使 O-O 键更易断裂，从而<strong>降低活化能</strong>，加速分解。</p><p>催化剂在反应前后<strong>质量和化学性质不变</strong>。</p>',
+    points:{title:'催化剂要点',items:['<strong>MnO₂</strong>：黑色固体粉末','<strong>作用</strong>：提供活性位点，降低活化能','<strong>特性</strong>：反应前后质量和化学性质不变','<strong>其他催化剂</strong>：FeCl₃、酶等也可催化']}
+  },
+  // ===== 5. 吸附过程 =====
+  {
+    tag:'催化',name:'H₂O₂ 吸附到活性位点',
+    body:'<p>H₂O₂ 分子扩散到 MnO₂ 表面，被<strong>活性位点吸附</strong>。吸附后，H₂O₂ 分子中的<strong>O-O 键被拉伸、削弱</strong>，变得更容易断裂。</p><p>这是催化反应的第<strong>一</strong>步：<strong>吸附</strong>。</p>',
+    points:{title:'吸附过程',items:['<strong>扩散</strong>：H₂O₂ 分子到达 MnO₂ 表面','<strong>吸附</strong>：被活性位点捕获','<strong>效果</strong>：O-O 键被拉伸变弱','<strong>示意图</strong>：H₂O₂ 分子在催化剂表面排列']}
+  },
+  // ===== 6. O-O 键断裂 =====
+  {
+    tag:'催化',name:'O-O 键断裂',
+    body:'<p>在活性位点作用下，H₂O₂ 的 <strong>O-O 键断裂</strong>：</p><p><code>H₂O₂ → 2·OH</code></p><p>分解为两个 <strong>·OH（羟基自由基）</strong>。这是一个<strong>高活性中间体</strong>，极不稳定。</p><p>这是催化反应的第二步：<strong>键断裂</strong>。</p>',
+    points:{title:'键断裂过程',items:['<strong>反应</strong>：H₂O₂ → 2·OH','<strong>·OH 自由基</strong>：高活性中间体','<strong>驱动</strong>：催化剂降低了断裂所需能量','<strong>结果</strong>：O-O 键完全断开']}
+  },
+  // ===== 7. 重排与产物生成 =====
+  {
+    tag:'催化',name:'重排生成 H₂O 和 O₂',
+    body:'<p>两个 ·OH 自由基进一步反应：</p><p><code>2·OH → H₂O + ½O₂</code></p><p>或者一个 ·OH 与另一个 H₂O₂ 反应：</p><p><code>·OH + H₂O₂ → H₂O + HO₂· → H₂O + O₂</code></p><p>最终产物是<strong>水（H₂O）</strong>和<strong>氧气（O₂）</strong>。这是第三步：<strong>重排→解吸</strong>。</p>',
+    points:{title:'产物生成',items:['<strong>·OH 自由基</strong>：重组成 H₂O','<strong>O₂ 生成</strong>：来自过氧键断裂+重组','<strong>解吸</strong>：产物离开催化剂表面','<strong>总反应</strong>：2H₂O₂ → 2H₂O + O₂']}
+  },
+  // ===== 8. 催化剂再生 =====
+  {
+    tag:'催化',name:'催化剂循环再生',
+    body:'<p>产物 H₂O 和 O₂ 从 MnO₂ 表面<strong>解吸</strong>（脱离），活性位点被<strong>释放</strong>出来。</p><p>释放的活性位点可以继续吸附<strong>新的 H₂O₂ 分子</strong>，开始新一轮催化循环。这就是为什么少量催化剂就能分解大量 H₂O₂。</p>',
+    points:{title:'催化剂特性',items:['<strong>再生</strong>：活性位点被释放','<strong>循环</strong>：吸附→断裂→重排→解吸','<strong>效率</strong>：少量 MnO₂ 分解大量 H₂O₂','<strong>本质</strong>：催化剂不消耗，循环使用']}
+  },
+  // ===== 9. 无催化剂对比 =====
+  {
+    tag:'能量',name:'有/无催化剂对比',
+    body:'<p><strong>无催化剂</strong>：H₂O₂ 也会缓慢分解（见久置的 H₂O₂ 变稀），但需克服<strong>较高活化能</strong>，分解速率极慢。</p><p><strong>有 MnO₂ 催化剂</strong>：提供<strong>替代反应路径</strong>，显著<strong>降低活化能</strong>，使分解速率<strong>提高数百万倍</strong>！</p>',
+    points:{title:'对比要点',items:['<strong>无催化剂</strong>：Ea 高，速率极慢','<strong>有催化剂</strong>：Ea 低，反应剧烈','<strong>速率提升</strong>：10⁶ 倍以上','<strong>催化本质</strong>：改变反应路径，不改变热力学']}
+  },
+  // ===== 10. 能量图 =====
+  {
+    tag:'能量',name:'催化活化能对比',
+    body:'<p>能量图展示 MnO₂ 如何<strong>降低活化能</strong>：</p><p>蓝色曲线 = 无催化剂（活化能高）<br>绿色曲线 = 有 MnO₂（活化能低）</p><p>两条曲线始末能量相同（ΔH 不变），但<strong>爬坡高度不同</strong>——催化剂让「翻山」更容易！</p>',
+    points:{title:'能量图要点',items:['<strong>纵轴</strong>：反应物→产物能量变化','<strong>无 MnO₂</strong>：高活化能峰（蓝色）','<strong>有 MnO₂</strong>：低活化能峰（绿色）','<strong>结论</strong>：催化剂不改变 ΔH']}
+  },
+  // ===== 11. 环境影响 =====
+  {
+    tag:'应用',name:'H₂O₂ 分解的影响因素',
+    body:'<p>影响 H₂O₂ 分解速率的因素：</p><p><strong>① 温度</strong>：温度越高，分解越快（加热加速分子运动）。</p><p><strong>② 浓度</strong>：浓度越高，分解越快。</p><p><strong>③ pH</strong>：碱性条件下分解加快。</p><p><strong>④ 光照</strong>：光照促进分解（H₂O₂ 避光保存）。</p>',
+    points:{title:'影响因素',items:['<strong>温度↑</strong>：速率加快','<strong>浓度↑</strong>：速率加快','<strong>碱性</strong>：加快分解','<strong>光照</strong>：促进分解（避光保存）']}
+  },
+  // ===== 12. 应用总结 =====
+  {
+    tag:'应用',name:'应用与总结',
+    body:'<p><strong>H₂O₂ 的应用</strong>：医用消毒（3%）、漂白剂、实验室制 O₂、环保氧化剂。</p><p><strong>MnO₂ 催化</strong>：实验室常用此法制 O₂，安全易控。</p><p><strong>催化循环</strong>：吸附→断裂→重排→解吸→循环。</p><p><strong>催化三要素</strong>：加快反应、选择性、本身不变。</p>',
+    points:{title:'核心总结',items:['<strong>反应</strong>：2H₂O₂ → 2H₂O + O₂↑','<strong>关键结构</strong>：O-O 弱键易断','<strong>催化步骤</strong>：吸附→断键→重排→解吸','<strong>口诀</strong>：双氧分解，二氧化锰催，水氧生成，催化循环']}
+  },
+];
+
+// ===================================================================
+// SCENE DRAWERS
+// ===================================================================
+const SCENES = {
+
+  // --- 1. 宏观分解现象 ---
+  beaker_bubbles(t, a){
+    const W=cv.width,H=cv.height;
+    // 烧杯
+    const bx=W/2,by=H/2+45,bw=280,bh=200;
+    ctx.strokeStyle='rgba(205,215,234,0.35)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(bx-bw/2-8,by-bh);ctx.lineTo(bx-bw/2-8,by+8);
+    ctx.lineTo(bx+bw/2+8,by+8);ctx.lineTo(bx+bw/2+8,by-bh);ctx.stroke();
+    // 液面
+    const waterY=by-bh+55;
+    ctx.fillStyle='rgba(6,182,212,0.12)';
+    ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    // MnO₂ 黑色粉末（底部）
+    ctx.fillStyle='rgba(30,30,40,0.6)';
+    ctx.beginPath();
+    const baseY=by-5;
+    ctx.moveTo(bx-bw/2-5,baseY);
+    for(let x=bx-bw/2-5;x<=bx+bw/2+5;x+=4){
+      const y=baseY-5-Math.sin(x*0.3)*4-Math.sin(x*0.7+t*0.5)*3;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(bx+bw/2+5,baseY);ctx.closePath();ctx.fill();
+    drawText('MnO₂（催化剂）',bx,baseY+25,'#64748b',11);
+    // 气泡（O₂ 冒出）
+    for(let i=0;i<16;i++){
+      const seed=i*0.618;
+      const rise=(t*1.2+seed)%1.5;
+      if(rise<1.2){
+        const x=bx+(Math.sin(seed*20)-0.5)*bw*0.7;
+        const y=baseY-5-rise*200;
+        const r=2.5+rise*4+Math.sin(seed+20)*1.5;
+        const al=Math.min(0.7,1-rise/1.5);
+        ctx.fillStyle='rgba(125,211,252,'+al+')';
+        ctx.beginPath();ctx.arc(x,y,Math.min(r,12),0,7);ctx.fill();
+      }
+    }
+    drawText('H₂O₂ 溶液',bx,waterY-22,'#06b6d4',13);
+    drawText('O₂↑ 大量气泡冒出',bx+bw/4,waterY+30,'#34d399',12);
+    // 木条复燃小图
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(bx-bw/2+30,waterY-10);ctx.lineTo(bx-bw/2+30,waterY-60);ctx.stroke();
+    ctx.fillStyle='#f97316';ctx.shadowColor='#f97316';ctx.shadowBlur=6;
+    ctx.beginPath();ctx.arc(bx-bw/2+30,waterY-65,5,0,7);ctx.fill();ctx.shadowBlur=0;
+    drawText('带火星木条复燃',bx-bw/2+30,waterY-80,'#f97316',10);
+    drawText('2H₂O₂ →(MnO₂)→ 2H₂O + O₂↑',W/2,H-20,'#34d399',13);
+  },
+
+  // --- 2. 方程式展示 ---
+  equation_show(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('化学方程式',W/2,35,'#fff',16);
+    ctx.fillStyle='rgba(6,182,212,0.12)';ctx.strokeStyle='#06b6d4';ctx.lineWidth=2.5;
+    roundRect(60,80,W-120,70,14);ctx.fill();ctx.stroke();
+    drawText('2H₂O₂ →(MnO₂)→ 2H₂O + O₂↑',W/2,120,'#fff',22);
+    // 分析
+    const items=[
+      {label:'反应物：H₂O₂（过氧化氢）',color:'#06b6d4'},
+      {label:'产物：H₂O（水）+ O₂（氧气）',color:'#34d399'},
+      {label:'催化剂：MnO₂（写在箭头上方）',color:'#fbbf24'},
+      {label:'反应类型：分解反应',color:'#a78bfa'},
+    ];
+    items.forEach((m,i)=>{
+      const y=180+i*50;
+      ctx.fillStyle=m.color+'18';ctx.strokeStyle=m.color;ctx.lineWidth=1.5;
+      roundRect(W/2-170,y,340,38,10);ctx.fill();ctx.stroke();
+      drawText('▸ '+m.label,W/2,y+19,m.color,14);
+    });
+    drawText('催化剂在反应前后质量和化学性质不变',W/2,H-25,'#9ab0d0',12);
+  },
+
+  // --- 3. H₂O₂ 分子结构 ---
+  h2o2_structure(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('过氧化氢 H₂O₂ 分子结构',W/2,28,'#fff',16);
+    const cx=W/2,cy=H/2;
+    // H - O - O - H 书页形结构
+    const spacing=55;
+    // 四个原子
+    const atoms=[
+      {x:cx-spacing*1.5,y:cy+20,label:'H',color:'#e2e8f0',r:14},
+      {x:cx-spacing*0.5,y:cy-20,label:'O',color:'#ef4444',r:18},
+      {x:cx+spacing*0.5,y:cy-20,label:'O',color:'#ef4444',r:18},
+      {x:cx+spacing*1.5,y:cy+20,label:'H',color:'#e2e8f0',r:14},
+    ];
+    // 键（先画）
+    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=3;
+    for(let i=0;i<atoms.length-1;i++){
+      ctx.beginPath();ctx.moveTo(atoms[i].x,atoms[i].y);ctx.lineTo(atoms[i+1].x,atoms[i+1].y);ctx.stroke();
+    }
+    // 原子（后画，覆盖键端点）
+    atoms.forEach(a2=>{
+      ctx.fillStyle=a2.color;ctx.shadowColor=a2.color;ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(a2.x,a2.y,a2.r,0,7);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#1a1a1a';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(a2.label,a2.x,a2.y);
+    });
+    // 标注键
+    drawText('O-O 键',cx,cy-55,'#fbbf24',12);
+    drawText('键能弱（213 kJ/mol）→ 易断裂',cx,cy-42,'#f87171',11);
+    drawText('H',cx-spacing*1.5,cy+42,'#e2e8f0',11);
+    drawText('H',cx+spacing*1.5,cy+42,'#e2e8f0',11);
+    // 下方说明
+    ctx.fillStyle='rgba(255,255,255,0.06)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+    roundRect(cx-200,cy+55,400,50,8);ctx.fill();ctx.stroke();
+    drawText('H-O-O-H  ｜  O 化合价 -1（中间价态，不稳定）',cx,cy+80,'#e8eef8',13);
+    drawText('O-O 弱键是 H₂O₂ 易分解的根本原因',W/2,H-20,'#fbbf24',12);
+  },
+
+  // --- 4. MnO₂ 表面 ---
+  mno2_surface(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('MnO₂ 催化剂表面 · 活性位点',W/2,28,'#fff',16);
+    // 催化剂表面（粗糙的波浪线）
+    ctx.fillStyle='rgba(30,30,50,0.5)';
+    const baseY=H/2+30;
+    ctx.beginPath();ctx.moveTo(30,baseY+20);
+    for(let x=30;x<=W-30;x+=3){
+      const y=baseY+Math.sin(x*0.05)*12+Math.sin(x*0.12+t*0.3)*6;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W-30,baseY+60);ctx.lineTo(30,baseY+60);ctx.closePath();ctx.fill();
+    // MnO₂ 标注
+    drawText('MnO₂ 固体表面',W/2,baseY+50,'#64748b',12);
+    // 活性位点（小圆坑/突出点）
+    const sites=[];
+    for(let i=0;i<10;i++){
+      const sx=60+i*(W-120)/9;
+      const sy=baseY+Math.sin(sx*0.05)*12+Math.sin(sx*0.12+t*0.3)*6;
+      sites.push({x:sx,y:sy});
+      ctx.fillStyle='rgba(52,211,153,'+(0.4+0.3*Math.sin(t*2+i))+')';
+      ctx.shadowColor='#34d399';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(sx,sy-6,6,0,7);ctx.fill();ctx.shadowBlur=0;
+      drawText('活性位点',sx,sy-24,'#34d399',9);
+    }
+    // 附近漂浮的 H₂O₂ 分子
+    for(let i=0;i<4;i++){
+      const fx=60+i*160+Math.sin(t+i*1.5)*20;
+      const fy=80+Math.sin(t*0.7+i*2)*15;
+      ctx.fillStyle='rgba(239,68,68,0.6)';ctx.shadowColor='#ef4444';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(fx,fy,10,0,7);ctx.fill();ctx.shadowBlur=0;
+      drawText('H₂O₂',fx,fy,'#fff',9);
+    }
+    drawText('H₂O₂ 分子向活性位点扩散',W/2,40,'#06b6d4',11);
+    drawText('大量活性位点 → 高效催化分解',W/2,H-20,'#34d399',12);
+  },
+
+  // --- 5. 吸附 ---
+  adsorption(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('吸附：H₂O₂ 分子被活性位点捕获',W/2,28,'#fff',15);
+    const p=Math.min(1,(t*0.3)%2.2);
+
+    // MnO₂ 表面
+    const baseY=H/2+40;
+    ctx.fillStyle='rgba(30,30,50,0.5)';
+    ctx.beginPath();ctx.moveTo(30,baseY);
+    for(let x=30;x<=W-30;x+=3){
+      ctx.lineTo(x,baseY+Math.sin(x*0.06)*10+Math.sin(x*0.14)*5);
+    }
+    ctx.lineTo(W-30,baseY+40);ctx.lineTo(30,baseY+40);ctx.closePath();ctx.fill();
+    drawText('MnO₂ 表面',W/2,baseY+25,'#64748b',11);
+
+    // 活性位点（3 个）
+    for(let i=0;i<3;i++){
+      const sx=W/2-80+i*80;
+      const sy=baseY-6+Math.sin(sx*0.06)*10;
+      ctx.fillStyle='rgba(52,211,153,'+(0.4+0.2*Math.sin(t*1.5+i*2))+')';
+      ctx.shadowColor='#34d399';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(sx,sy-5,5,0,7);ctx.fill();ctx.shadowBlur=0;
+    }
+
+    // H₂O₂ 分子 (向活性位点移动)
+    for(let i=0;i<3;i++){
+      const ep=Math.max(0,Math.min(1,(p+i*0.1)/0.6));
+      const startX=W/2-100+(i-1)*70+Math.sin(i*3)*20;
+      const startY=80+i*40;
+      const targetX=W/2-80+i*80;
+      const targetY=baseY-30;
+      const hx=startX+(targetX-startX)*ep;
+      const hy=startY+(targetY-startY)*ep;
+      const hov=1-ep;
+
+      ctx.fillStyle=hov>0?'rgba(239,68,68,'+(0.5+0.3*ep)+')':'rgba(52,211,153,0.7)';
+      ctx.shadowColor=hov>0?'#ef4444':'#34d399';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(hx,hy,10+hov*3,0,7);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#fff';ctx.font='8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('H₂O₂',hx,hy);
+
+      // 吸附轨迹
+      if(ep<0.8){
+        ctx.strokeStyle='rgba(251,191,36,0.3)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+        ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(targetX,targetY);ctx.stroke();ctx.setLineDash([]);
+      }
+    }
+
+    drawText('H₂O₂ 分子被活性位点吸附 → O-O 键被拉伸削弱',W/2,baseY+60,'#fbbf24',12);
+    drawText('第一步：吸附',W/2,H-15,'#34d399',13);
+  },
+
+  // --- 6. O-O 键断裂 ---
+  bond_break(t, a){
+    const W=cv.width,H=cv.height;
+    const p=Math.min(1,(t*0.3)%2);
+    drawText('O-O 键断裂：H₂O₂ → 2·OH',W/2,28,'#fff',16);
+
+    // MnO₂ 表面（底部）
+    const baseY=H/2+20;
+    ctx.fillStyle='rgba(30,30,50,0.4)';
+    ctx.beginPath();ctx.moveTo(40,baseY+5);
+    for(let x=40;x<=W-40;x+=3){
+      ctx.lineTo(x,baseY+5+Math.sin(x*0.06)*8+Math.sin(x*0.14)*4);
+    }
+    ctx.lineTo(W-40,baseY+35);ctx.lineTo(40,baseY+35);ctx.closePath();ctx.fill();
+
+    // H₂O₂ 分子在活性位点上
+    const cx=W/2,cy=baseY-30;
+
+    if(p<0.5){
+      // 完整 H₂O₂ 分子
+      const spread=30;
+      // H-O-O-H 结构
+      ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(cx-spread*1.3,cy+15);ctx.lineTo(cx-spread*0.3,cy-12);ctx.lineTo(cx+spread*0.3,cy-12);ctx.lineTo(cx+spread*1.3,cy+15);ctx.stroke();
+      // 原子
+      const atoms=[{x:cx-spread*1.3,y:cy+15,c:'#e2e8f0',l:'H',r:12},{x:cx-spread*0.3,y:cy-12,c:'#ef4444',l:'O',r:14},{x:cx+spread*0.3,y:cy-12,c:'#ef4444',l:'O',r:14},{x:cx+spread*1.3,y:cy+15,c:'#e2e8f0',l:'H',r:12}];
+      atoms.forEach(a2=>{ctx.fillStyle=a2.c;ctx.beginPath();ctx.arc(a2.x,a2.y,a2.r,0,7);ctx.fill();ctx.fillStyle='#1a1a1a';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(a2.l,a2.x,a2.y);});
+      // O-O 键闪烁警告
+      const warn=0.5+0.5*Math.sin(t*6);
+      ctx.strokeStyle='rgba(248,113,113,'+warn+')';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(cx-spread*0.3,cy-12);ctx.lineTo(cx+spread*0.3,cy-12);ctx.stroke();
+      drawText('⚠ O-O 键即将断裂',cx,cy-45,'#f87171',12);
+    }else{
+      // 断裂成两个 ·OH
+      const sep=p>0.7?40:20*(p-0.5)*4;
+      ctx.fillStyle='rgba(239,68,68,0.8)';ctx.shadowColor='#ef4444';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(cx-sep,cy-10,14,0,7);ctx.fill();
+      drawText('·OH',cx-sep,cy-10,'#fff',10);
+      ctx.beginPath();ctx.arc(cx+sep,cy-10,14,0,7);ctx.fill();
+      drawText('·OH',cx+sep,cy-10,'#fff',10);
+      ctx.shadowBlur=0;
+      drawText('O-O 键断裂！',cx,cy-45,'#fbbf24',14);
+      drawText('羟基自由基（高活性中间体）',cx,cy-30,'#9ab0d0',11);
+    }
+
+    drawText('催化剂活性位点',W/2,baseY+12,'#64748b',10);
+    drawText('第二步：键断裂',W/2,H-18,'#34d399',13);
+  },
+
+  // --- 7. 重排生成 ---
+  rearrangement(t, a){
+    const W=cv.width,H=cv.height;
+    const p=Math.min(1,(t*0.25)%2.5);
+    drawText('重排生成：H₂O + O₂',W/2,28,'#fff',16);
+
+    const cx=W/2,cy=H/2-20;
+
+    if(p<0.4){
+      // 两个 ·OH 自由基靠近
+      const sep=60-p*70;
+      ctx.fillStyle='rgba(239,68,68,0.8)';ctx.shadowColor='#ef4444';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(cx-sep,cy,14,0,7);ctx.fill();drawText('·OH',cx-sep,cy,'#fff',10);
+      ctx.beginPath();ctx.arc(cx+sep,cy,14,0,7);ctx.fill();drawText('·OH',cx+sep,cy,'#fff',10);
+      ctx.shadowBlur=0;
+      drawText('两个 ·OH 自由基靠近',cx,cy+40,'#9ab0d0',12);
+    }else if(p<0.7){
+      // 重排中
+      drawText('··· 重排中 ···',cx,cy-20,'#fbbf24',16);
+      // 模糊的中间态
+      ctx.fillStyle='rgba(239,68,68,0.4)';
+      ctx.beginPath();ctx.arc(cx-15,cy-5,12,0,7);ctx.fill();
+      ctx.fillStyle='rgba(239,68,68,0.3)';
+      ctx.beginPath();ctx.arc(cx+15,cy+5,10,0,7);ctx.fill();
+      drawText('原子重新组合',cx,cy+30,'#9ab0d0',12);
+    }else{
+      // 产物：H₂O + ½O₂
+      const fade=Math.min(1,(p-0.7)/0.3);
+      // H₂O 分子（左）
+      ctx.fillStyle='rgba(6,182,212,'+(0.6+0.3*fade)+')';ctx.shadowColor='#06b6d4';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(cx-55,cy-5,15,0,7);ctx.fill();ctx.shadowBlur=0;
+      drawText('H₂O',cx-55,cy-5,'#fff',11);
+      // O₂ 分子（右）
+      ctx.fillStyle='rgba(52,211,153,'+(0.6+0.3*fade)+')';ctx.shadowColor='#34d399';ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(cx+50,cy-8,12,0,7);ctx.fill();
+      ctx.beginPath();ctx.arc(cx+80,cy-8,12,0,7);ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='rgba(52,211,153,0.6)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx+62,cy-8);ctx.lineTo(cx+68,cy-8);ctx.stroke();
+      drawText('O₂',cx+65,cy-8,'#fff',10);
+      drawText('✓ 产物生成！',cx,cy+35,'#34d399',15);
+    }
+
+    if(p>0.7){
+      drawText('2·OH → H₂O + ½O₂',cx,cy+60,'#e8eef8',14);
+    }
+    drawText('第三步：重排与解吸',W/2,H-18,'#34d399',13);
+  },
+
+  // --- 8. 催化剂再生 ---
+  catalyst_recycle(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('催化剂循环再生',W/2,28,'#fff',16);
+
+    // MnO₂ 表面
+    const baseY=H/2+30;
+    ctx.fillStyle='rgba(30,30,50,0.5)';
+    ctx.beginPath();ctx.moveTo(30,baseY);
+    for(let x=30;x<=W-30;x+=3){
+      ctx.lineTo(x,baseY+Math.sin(x*0.06)*10+Math.sin(x*0.12)*5);
+    }
+    ctx.lineTo(W-30,baseY+35);ctx.lineTo(30,baseY+35);ctx.closePath();ctx.fill();
+    drawText('MnO₂ 表面（活性位点已释放）',W/2,baseY+18,'#64748b',11);
+
+    // 产物离开
+    const p=t*0.5%2.5;
+    // H₂O 飘走
+    if(p>0.2){
+      const wy=baseY-20-(p-0.2)*80;
+      const wx=W/2-70+Math.sin(p*2)*10;
+      ctx.fillStyle='rgba(6,182,212,0.6)';ctx.shadowColor='#06b6d4';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(wx,wy,12,0,7);ctx.fill();ctx.shadowBlur=0;
+      drawText('H₂O',wx,wy,'#fff',9);
+    }
+    // O₂ 飘走
+    if(p>0.4){
+      const oy=baseY-20-(p-0.4)*80;
+      const ox=W/2+50+Math.sin(p*1.5+1)*10;
+      ctx.fillStyle='rgba(52,211,153,0.6)';ctx.shadowColor='#34d399';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(ox-10,oy-3,10,0,7);ctx.fill();
+      ctx.beginPath();ctx.arc(ox+10,oy-3,10,0,7);ctx.fill();
+      ctx.shadowBlur=0;
+      drawText('O₂',ox,oy-3,'#fff',8);
+    }
+
+    // 活性位点重新暴露
+    for(let i=0;i<5;i++){
+      const sx=80+i*140+Math.sin(t*0.5+i)*10;
+      const sy=baseY-4+Math.sin(sx*0.06)*10;
+      const al=0.5+0.4*Math.sin(t*1.5+i*1.7);
+      ctx.fillStyle='rgba(52,211,153,'+al+')';
+      ctx.shadowColor='#34d399';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(sx,sy-4,6+2*Math.sin(t*2+i),0,7);ctx.fill();ctx.shadowBlur=0;
+    }
+
+    // 循环箭头
+    drawText('新 H₂O₂ 分子 → 吸附 → 断键 → 重排 → 解吸 → 循环',W/2,H-70,'#fbbf24',12);
+    // 循环标志
+    ctx.strokeStyle='#34d399';ctx.lineWidth=2.5;
+    const rx=W/2-100,ry=H-45,rw=200,rh=20;
+    ctx.beginPath();ctx.arc(rx,ry,14,0,6.28);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(rx-14,ry-6);ctx.lineTo(rx-20,ry);ctx.lineTo(rx-14,ry+6);ctx.fill();ctx.stroke();
+    drawText('催化剂循环使用，质量、化学性质不变',W/2,ry+3,'#34d399',13);
+  },
+
+  // --- 9. 有/无催化剂对比 ---
+  comparison(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('有 / 无 MnO₂ 催化剂对比',W/2,28,'#fff',16);
+
+    // 左侧：无催化剂
+    const lx=W*0.25,ly=H/2-40;
+    ctx.fillStyle='rgba(248,113,113,0.12)';ctx.strokeStyle='#f87171';ctx.lineWidth=2;
+    roundRect(lx-100,ly-20,200,160,12);ctx.fill();ctx.stroke();
+    drawText('✗ 无催化剂',lx,ly,'#f87171',14);
+    drawText('H₂O₂',lx,ly+35,'rgba(239,68,68,0.6)',13);
+    drawText('活化能高',lx,ly+65,'#f87171',11);
+    drawText('分解极慢',lx,ly+85,'#f87171',11);
+    drawText('久置变稀',lx,ly+105,'#9ab0d0',10);
+    // 慢箭头
+    ctx.strokeStyle='#f87171';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(lx-20,ly+130);ctx.lineTo(lx+20,ly+130);ctx.stroke();
+
+    // 右侧：有催化剂
+    const rx=W*0.75,ry=H/2-40;
+    ctx.fillStyle='rgba(52,211,153,0.12)';ctx.strokeStyle='#34d399';ctx.lineWidth=2;
+    roundRect(rx-100,ry-20,200,160,12);ctx.fill();ctx.stroke();
+    drawText('✓ 有 MnO₂',rx,ry,'#34d399',14);
+    drawText('H₂O₂ + MnO₂',rx,ry+35,'rgba(52,211,153,0.8)',13);
+    drawText('活化能低',rx,ry+65,'#34d399',11);
+    drawText('剧烈分解',rx,ry+85,'#34d399',11);
+    drawText('大量 O₂ 冒出',rx,ry+105,'#9ab0d0',10);
+    // 快箭头
+    ctx.strokeStyle='#34d399';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(rx-30,ry+130);ctx.lineTo(rx+30,ry+130);
+    ctx.moveTo(rx+25,ry+125);ctx.lineTo(rx+30,ry+130);ctx.lineTo(rx+25,ry+135);ctx.stroke();
+    // 气泡
+    for(let i=0;i<5;i++){
+      const bx=rx-40+i*20+Math.sin(t*2+i)*5;
+      const by=ry+140-(t*1.5+i*0.3)%1*50;
+      ctx.fillStyle='rgba(125,211,252,0.5)';
+      ctx.beginPath();ctx.arc(bx,by,3+((t*1.5+i)%1)*3,0,7);ctx.fill();
+    }
+
+    drawText('催化剂加速率达 10⁶ 倍以上',W/2,H-30,'#fbbf24',13);
+    drawText('本质：降低活化能，不改变化学平衡',W/2,H-12,'#9ab0d0',11);
+  },
+
+  // --- 10. 能量图 ---
+  energy_compare(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('催化 vs 非催化 · 活化能对比',W/2,28,'#fff',16);
+
+    const cx=W/2,cy=H/2+20;
+
+    // 坐标轴
+    ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx-190,cy+55);ctx.lineTo(cx+190,cy+55);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-190,cy+55);ctx.lineTo(cx-190,cy-90);ctx.stroke();
+    drawText('反应进程',cx+175,cy+55,'#64748b',11,'right');
+    drawText('能量',cx-205,cy-90,'#64748b',11,'left');
+
+    // 反应物能级
+    ctx.fillStyle='rgba(100,116,139,0.2)';ctx.strokeStyle='#64748b';ctx.lineWidth=1.5;
+    roundRect(cx-180,cy+15,80,32,6);ctx.fill();ctx.stroke();
+    drawText('2H₂O₂',cx-140,cy+31,'#fff',11);
+
+    // 产物能级
+    ctx.fillStyle='rgba(52,211,153,0.2)';ctx.strokeStyle='#34d399';ctx.lineWidth=1.5;
+    roundRect(cx+100,cy-25,90,32,6);ctx.fill();ctx.stroke();
+    drawText('2H₂O+O₂',cx+145,cy-9,'#fff',11);
+
+    // 无催化活化能（高曲线 - 蓝色）
+    ctx.strokeStyle='rgba(96,165,250,0.7)';ctx.lineWidth=2.5;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(cx-100,cy+30);
+    ctx.quadraticCurveTo(cx-50,cy-80,cx,cy-65);
+    ctx.quadraticCurveTo(cx+50,cy-50,cx+80,cy-10);
+    ctx.stroke();ctx.setLineDash([]);
+    drawText('无催化剂',cx,cy-78,'#60a5fa',12);
+    drawText('Ea(高)',cx-60,cy-55,'#60a5fa',11);
+
+    // 有催化活化能（低曲线 - 绿色）
+    ctx.strokeStyle='rgba(52,211,153,0.9)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(cx-100,cy+30);
+    ctx.quadraticCurveTo(cx-50,cy-25,cx,cy-10);
+    ctx.quadraticCurveTo(cx+50,cy+5,cx+80,cy-10);
+    ctx.stroke();
+    drawText('有 MnO₂',cx,cy-35,'#34d399',12);
+    drawText('Ea(低)',cx-55,cy-15,'#34d399',11);
+
+    // ΔH 标注（反应物到产物）
+    ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx-130,cy+32);ctx.lineTo(cx-130,cy-18);
+    ctx.moveTo(cx+110,cy+32);ctx.lineTo(cx+110,cy-18);ctx.stroke();
+    drawText('ΔH 相同',cx-10,cy-22,'#fbbf24',11);
+
+    // 产物标注
+    drawText('催化剂不改变 ΔH，只降低活化能',W/2,H-30,'#fbbf24',12);
+    drawText('绿色 = 催化路径（Ea 低），蓝色 = 非催化路径（Ea 高）',W/2,H-10,'#9ab0d0',11);
+  },
+
+  // --- 11. 影响因素 ---
+  factors(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('影响 H₂O₂ 分解速率因素',W/2,28,'#fff',16);
+    const items=[
+      {icon:'🔥',title:'温度↑',desc:'温度升高 → 分子运动加快\n→ 分解速率增大',color:'#f87171'},
+      {icon:'🧪',title:'浓度↑',desc:'浓度升高 → 更多 H₂O₂\n与催化剂接触',color:'#fbbf24'},
+      {icon:'⚗️',title:'pH',desc:'碱性条件加快分解\n酸性条件较稳定',color:'#a78bfa'},
+      {icon:'☀️',title:'光照',desc:'光照促进分解\nH₂O₂ 需避光保存',color:'#06b6d4'},
+    ];
+    const cw=Math.min(190,(W-60)/2-8);
+    items.forEach((m,i)=>{
+      const col=i%2,row=Math.floor(i/2);
+      const x=30+col*(cw+10),y=55+row*145;
+      ctx.fillStyle=m.color+'22';ctx.strokeStyle=m.color;ctx.lineWidth=2;
+      roundRect(x,y,cw,125,12);ctx.fill();ctx.stroke();
+      drawText(m.icon||'●',x+cw/2,y+30,m.color,26);
+      drawText(m.title,x+cw/2,y+65,'#fff',15);
+      ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+      (m.desc||'').split('\n').forEach((ln,j)=>ctx.fillText(ln,x+cw/2,y+90+j*15));
+    });
+    drawText('H₂O₂ 应保存在棕色瓶中，避光、低温、密封',W/2,H-15,'#fbbf24',12);
+  },
+
+  // --- 12. 总结 ---
+  summary(t, a){
+    const W=cv.width,H=cv.height;
+    drawText('核心总结',W/2,28,'#fff',18);
+
+    // 反应式
+    ctx.fillStyle='rgba(6,182,212,0.1)';ctx.strokeStyle='#06b6d4';ctx.lineWidth=2;
+    roundRect(W/2-180,50,360,42,10);ctx.fill();ctx.stroke();
+    drawText('2H₂O₂ →(MnO₂)→ 2H₂O + O₂↑',W/2,71,'#fff',17);
+
+    // 催化四步
+    const steps=[
+      {label:'① 吸附',desc:'H₂O₂ 吸附到活性位点',color:'#34d399'},
+      {label:'② 断键',desc:'O-O 弱键断裂 → 2·OH',color:'#fbbf24'},
+      {label:'③ 重排',desc:'·OH 重组为 H₂O + O₂',color:'#f97316'},
+      {label:'④ 解吸',desc:'产物离开，活性位点释放',color:'#a78bfa'},
+    ];
+    const stepW=Math.min(170,(W-40)/4-6);
+    steps.forEach((m,i)=>{
+      const x=20+i*(stepW+8),y=110;
+      ctx.fillStyle=m.color+'22';ctx.strokeStyle=m.color;ctx.lineWidth=2;
+      roundRect(x,y,stepW,80,10);ctx.fill();ctx.stroke();
+      drawText(m.label,x+stepW/2,y+25,m.color,15);
+      drawText(m.desc,x+stepW/2,y+55,'#e8eef8',11);
+      if(i<steps.length-1){
+        drawText('→',x+stepW+4,y+40,'#64748b',16);
+      }
+    });
+
+    // 催化三要素
+    const elems=[
+      {label:'加快反应速率',color:'#34d399'},
+      {label:'选择性催化',color:'#fbbf24'},
+      {label:'本身不变',color:'#f87171'},
+    ];
+    elems.forEach((m,i)=>{
+      const x=W/2-180+i*180,y=215;
+      ctx.fillStyle=m.color+'22';ctx.strokeStyle=m.color;ctx.lineWidth=1.5;
+      roundRect(x,y,160,40,8);ctx.fill();ctx.stroke();
+      drawText('✓ '+m.label,x+80,y+20,m.color,13);
+    });
+
+    drawText('关键词：过氧键 · 活性位点 · 羟基自由基 · 催化循环',W/2,295,'#fbbf24',13);
+    drawText('H₂O₂ 避光、低温保存 ｜ 不可用 MnO₂ 催化 H₂O₂ 做喷泉实验（O₂ 微溶）',W/2,H-20,'#64748b',12);
+  },
+};
+
+// ===================================================================
+// Scene override by step index
+// ===================================================================
+const SCENE_MAP = {
+  0:'beaker_bubbles', 1:'equation_show', 2:'h2o2_structure', 3:'mno2_surface',
+  4:'adsorption', 5:'bond_break', 6:'rearrangement', 7:'catalyst_recycle',
+  8:'comparison', 9:'energy_compare', 10:'factors', 11:'summary',
+};
+
+// ===================================================================
+// Sync & render
+// ===================================================================
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0;
+const STEP_DURATION=3.5;
+
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  stepBadge.textContent=s.tag||'';
+  stepTitle.textContent=s.name||'';
+  stepBody.innerHTML=s.body||'';
+  if(s.points){
+    stepPoints.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+(s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>';
+  }else stepPoints.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const fn=SCENES[SCENE_MAP[stepIdx]];
+  if(fn)fn(t,s.sceneArgs||{});
+  else {drawText('2H₂O₂ →(MnO₂)→ 2H₂O + O₂↑',cv.width/2,cv.height/2-10,'#06b6d4',16);drawText(s.name||'',cv.width/2,cv.height/2+20,'#e8eef8',14);}
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  stepTime+=dt*speed;
+  if(stepTime>=STEP_DURATION){
+    if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+    else{playing=false;document.getElementById('playBtn').textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;
+  const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// Controls
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+
+// Step bar
+const bar=document.getElementById('stepbar');
+STEPS.forEach(function(s,i){
+  const el=document.createElement('div');
+  el.className='step'+(i===stepIdx?' active':'');
+  el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>8?s.name.slice(0,7)+'…':s.name||'')+'</div>';
+  el.onclick=function(){stepIdx=i;syncStep();draw();};
+  bar.appendChild(el);
+});
+syncStep();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

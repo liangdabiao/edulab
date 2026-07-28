@@ -1,0 +1,12 @@
+# Python build artifacts (the skill ships .py source, not compiled caches)
+**/__pycache__/
+*.py[cod]
+
+# Internal development samples (not needed by consumers)
+skills/edu-solid-geometry/output/
+skills/edu-analytic-geometry/output/
+
+# Editor / OS cruft
+.idea/
+.vscode/
+.DS_Store

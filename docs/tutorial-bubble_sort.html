@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="pageTitle">IT 交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#6366f1;--accent2:#06b6d4;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.topbar .title{font-size:15px;font-weight:600}.topbar .subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(99,102,241,.06),transparent)}
+.card{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--warn)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;min-width:0;position:relative}
+canvas{background:#0f172a;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+#codeOverlay{position:absolute;top:10px;right:14px;background:rgba(15,23,42,0.92);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-family:'Consolas','Monaco','Courier New',monospace;font-size:12px;line-height:1.6;max-width:340px;display:none;overflow:auto;max-height:calc(100% - 40px)}
+#codeOverlay .line{color:#94a3b8;white-space:pre}.codeOverlay .highlight{background:rgba(251,191,36,0.2);border-left:3px solid var(--warn);padding-left:6px;display:block}
+.code-keyword{color:#c084fc}.code-builtin{color:#67e8f9}.code-string{color:#34d399}.code-number{color:#fbbf24}.code-comment{color:#64748b;font-style:italic}.code-op{color:#f87171}
+.panel{width:340px;flex:none;padding:14px;overflow-y:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(99,102,241,.2);color:#c7d2fe;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent2)}
+#paramArea{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;display:none}
+#paramArea label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+#paramArea input[type=range]{width:100%;accent-color:var(--accent2);height:6px;border-radius:3px;background:var(--line);outline:none;cursor:pointer}
+#paramArea .readout{font-size:12px;color:var(--ink);font-weight:600;text-align:right;margin-top:2px}
+#paramArea .stat-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;padding:2px 0;border-top:1px solid rgba(255,255,255,.05)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:90px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent2);border-color:var(--accent2);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent2);cursor:pointer;border:2px solid var(--ink)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:200px}.cards .card{min-width:100px}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<div class="cards" id="cards"></div>
+<main>
+  <div class="stage">
+    <canvas id="cv"></canvas>
+    <div id="codeOverlay"></div>
+  </div>
+  <aside class="panel">
+    <h2><span class="badge" id="stepBadge">概念</span><span id="stepTitle">步骤标题</span></h2>
+    <p class="body" id="stepBody"></p>
+    <div class="points" id="stepPoints"></div>
+    <div id="paramArea">
+      <label id="paramLabel">参数</label>
+      <input type="range" id="paramSlider" min="0" max="1" step="0.01" value="0">
+      <div class="readout" id="paramReadout">0</div>
+      <div id="paramStats"></div>
+    </div>
+  </aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+// ===================================================================
+// 0) Data
+// ===================================================================
+const _DATA = {"meta": {"title": "冒泡排序", "subtitle": "相邻比较 · 依次冒泡 · O(n²)", "module": "algorithm", "accent": "indigo"}, "cards": [{"num": 1, "title": "核心思想", "body": "相邻元素两两比较<br>大数逐步\"冒泡\"到末尾"}, {"num": 2, "title": "时间复杂度", "body": "最坏 O(n²)<br>最好 O(n)"}, {"num": 3, "title": "空间复杂度", "body": "O(1)<br>原地排序"}, {"num": 4, "title": "稳定性", "body": "稳定排序<br>相等不交换"}], "steps": [{"tag": "概念", "name": "算法思想", "body": "<p><strong>冒泡排序</strong>反复遍历序列，依次比较相邻元素，逆序则交换。每轮最大值像气泡一样浮到末尾。</p>", "points": {"title": "核心思想", "items": ["相邻比较：比较 arr[j] 和 arr[j+1]", "条件交换：若顺序不对则交换", "每轮冒泡：最大值沉底", "多轮直到：全部有序"]}, "scene": "flowchart", "sceneArgs": {"title": "冒泡排序流程图", "nodes": [{"id": 0, "x": 200, "y": 40, "w": 120, "h": 40, "label": "开始", "type": "startend"}, {"id": 1, "x": 200, "y": 110, "w": 160, "h": 44, "label": "i = 0 to n-2"}, {"id": 2, "x": 200, "y": 180, "w": 160, "h": 44, "label": "j = 0 to n-2-i"}, {"id": 3, "x": 200, "y": 250, "w": 160, "h": 44, "label": "arr[j] > arr[j+1]?", "type": "decision"}, {"id": 4, "x": 40, "y": 250, "w": 120, "h": 40, "label": "交换 arr[j] ↔ arr[j+1]"}, {"id": 5, "x": 200, "y": 330, "w": 120, "h": 40, "label": "结束", "type": "startend"}], "edges": [[0, 1], [1, 2], [2, 3], [3, 4, "是"], [4, 2], [3, 5, "否"]], "active": -1}}, {"tag": "概念", "name": "算法步骤", "body": "<p><strong>外层循环</strong> i = 0 → n-2（共 n-1 轮）</p><p><strong>内层循环</strong> j = 0 → n-2-i</p><p>每轮比较相邻元素，逆序交换。</p>", "points": {"title": "伪代码", "items": ["for i = 0 to n-2:", "  for j = 0 to n-2-i:", "    if arr[j] > arr[j+1]:", "      swap(arr[j], arr[j+1])"]}, "scene": "concept_cards", "sceneArgs": {"title": "冒泡排序四要素", "items": [{"icon": "🔄", "label": "相邻比较", "desc": "相邻元素两两对比", "color": "#6366f1"}, {"icon": "🔄", "label": "条件交换", "desc": "逆序则交换位置", "color": "#fbbf24"}, {"icon": "⬆️", "label": "冒泡", "desc": "大数逐渐浮到末尾", "color": "#f87171"}, {"icon": "✅", "label": "多轮有序", "desc": "n-1 轮后完全有序", "color": "#34d399"}]}}, {"tag": "演示", "name": "手动模拟", "body": "<p>拖动滑块观察排序过程：黄=比较中，红=交换中，绿=已排序。</p>", "points": {"title": "观察", "items": ["每轮最大值沉底", "已排序区逐步扩大", "比较次数 = n×(n-1)/2"]}, "scene": "sort_bars", "sceneArgs": {"data": [5, 3, 8, 4, 2, 7, 1, 6], "title": "冒泡排序演示", "param": {"name": "排序进度", "min": 0, "max": 1, "step": 0.01, "value": 0}, "readouts": [{"label": "数组长度", "value": "8"}]}}, {"tag": "分析", "name": "复杂度分析", "body": "<p>最坏 O(n²)（逆序），最好 O(n)（已有序+优化），平均 O(n²)。空间 O(1)。</p>", "points": {"title": "复杂度", "items": ["最坏：O(n²) — 数组逆序", "最好：O(n) — 已有序", "空间：O(1) 原地", "稳定：✓"]}, "scene": "complexity_chart", "sceneArgs": {"title": "冒泡排序复杂度", "items": [{"name": "冒泡排序", "best": "O(n)", "worst": "O(n²)", "avg": "O(n²)", "space": "O(1)", "stable": true}]}}, {"tag": "总结", "name": "要点回顾", "body": "<p><strong>口诀</strong>：相邻循环比大小，逆序就交换；一轮沉底一个数，多轮自然有序。</p>", "points": {"title": "速记", "items": ["口诀：相邻比，逆序换，轮轮沉底", "最好 O(n)，最坏 O(n²)", "稳定排序"]}, "scene": "concept_cards", "sceneArgs": {"title": "冒泡排序总结", "items": [{"icon": "💡", "label": "核心", "desc": "相邻比较大数冒泡", "color": "#6366f1"}, {"icon": "⏱️", "label": "时间", "desc": "最好 O(n) 最坏 O(n²)", "color": "#fbbf24"}, {"icon": "📦", "label": "空间", "desc": "O(1) 原地排序", "color": "#34d399"}]}}]};
+const ACCENT = _DATA.meta?.accent || 'indigo';
+const ACCENT_MAP = {
+  amber:'#f59e0b',violet:'#a78bfa',emerald:'#34d399',cyan:'#06b6d4',
+  indigo:'#6366f1',sky:'#0ea5e9',red:'#ef4444',green:'#22c55e',
+  orange:'#f97316',slate:'#64748b',pink:'#ec4899'
+};
+document.documentElement.style.setProperty('--accent', ACCENT_MAP[ACCENT] || '#6366f1');
+document.documentElement.style.setProperty('--accent2', ACCENT_MAP[ACCENT]==='#06b6d4'?'#6366f1':'#06b6d4');
+document.getElementById('pageTitle').textContent = _DATA.meta.title + ' · 交互课程';
+document.getElementById('topbar').innerHTML = '<span class="title">'+_DATA.meta.title+'</span><span class="subtitle">'+_DATA.meta.subtitle+'</span>';
+
+// Cards
+const cardsEl = document.getElementById('cards');
+if(_DATA.cards && _DATA.cards.length){
+  _DATA.cards.forEach(function(c,i){
+    const d=document.createElement('div');d.className='card'+(i>0?' s'+(i+1):'');
+    d.innerHTML='<div class="num">'+c.num+'</div><h4>'+c.title+'</h4><div class="v">'+c.body+'</div>';
+    cardsEl.appendChild(d);
+  });
+}else cardsEl.style.display='none';
+
+// Canvas & refs
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const statusEl=document.getElementById('status'),speedInp=document.getElementById('speedInp');
+const stepBadge=document.getElementById('stepBadge'),stepTitle=document.getElementById('stepTitle');
+const stepBody=document.getElementById('stepBody'),stepPoints=document.getElementById('stepPoints');
+const codeOverlay=document.getElementById('codeOverlay');
+const paramArea=document.getElementById('paramArea'),paramSlider=document.getElementById('paramSlider');
+const paramLabel=document.getElementById('paramLabel'),paramReadout=document.getElementById('paramReadout');
+const paramStats=document.getElementById('paramStats');
+
+function fit(){
+  const r=cv.parentElement.getBoundingClientRect();
+  cv.width=Math.max(460,Math.min(1000,r.width-12));
+  cv.height=Math.max(380,Math.min(600,r.height-12));
+}
+window.addEventListener('resize',function(){fit();draw();});fit();
+
+// ===================================================================
+// Helpers
+// ===================================================================
+function drawText(t,x,y,c,fs,a,b){
+  ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';
+  ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function glow(c,b,fn){ctx.save();ctx.shadowColor=c;ctx.shadowBlur=b||10;fn();ctx.restore();}
+
+// ===================================================================
+// 1) Code overlay
+// ===================================================================
+function showCode(lines,hl){
+  const el=codeOverlay;
+  if(!lines||!lines.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=lines.map(function(l,i){
+    const cls=(i+1)===hl?' class="highlight"':'';
+    return '<span'+cls+'><span class="line">'+escHtml(l)+'</span></span>';
+  }).join('');
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function hideCode(){codeOverlay.style.display='none';}
+
+// ===================================================================
+// 2) Scene drawers
+// ===================================================================
+const SCENES = {};
+
+// --- array_bars: 静态柱状数组 ---
+SCENES.array_bars = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const title=args.title||'数组';
+  drawText(title,W/2,25,'#fff',15);
+  if(!data.length)return;
+  const n=data.length,max=Math.max(...data);
+  const gap=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gap*(n-1))/n);
+  const baseY=H-50;
+  data.forEach(function(v,i){
+    const bh=(v/max)*(H-90);
+    const x=30+i*(barW+gap);
+    const y=baseY-bh;
+    ctx.fillStyle=args.colors&&args.colors[i]?args.colors[i]:'#6366f1';
+    ctx.fillRect(x,y,barW,bh);
+    drawText(v+'',x+barW/2,y-8,'#e8eef8',11);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',10);
+  });
+  drawText('索引',W/2,baseY+30,'#64748b',10);
+};
+
+// --- sort_bars: 排序动画核心 ---
+SCENES.sort_bars = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const progress=args.progress||0;
+  const p=Math.min(1,Math.max(0,progress));
+  drawText(args.title||'排序过程',W/2,25,'#fff',15);
+  if(!data.length)return;
+
+  // 计算快照
+  const n=data.length;
+  const totalSteps=n*(n-1)/2;
+  const stepIdx2=Math.floor(p*totalSteps);
+  const arr=[...data];
+  // 模拟排序，记录每一步的交换状态
+  let compI=-1,compJ=-1,swapI=-1,swapJ=-1,sortedUpTo=n;
+  let stepCount=0;
+  for(let i=0;i<n-1;i++){
+    for(let j=0;j<n-1-i;j++){
+      if(stepCount===stepIdx2){
+        compI=j;compJ=j+1;
+        if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];swapI=j;swapJ=j+1;}
+      }
+      if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];}
+      stepCount++;
+      if(stepCount>stepIdx2)break;
+    }
+    if(stepCount>stepIdx2){sortedUpTo=i;break;}
+    sortedUpTo=i+1;
+  }
+  // 如果是完整排序后的状态
+  if(stepIdx2>=totalSteps){arr.sort((a,b)=>a-b);sortedUpTo=n;compI=-1;compJ=-1;}
+
+  const max=Math.max(...data);
+  const gap=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gap*(n-1))/n);
+  const baseY=H-50;
+  arr.forEach(function(v,i){
+    const bh=(v/max)*(H-90);
+    const x=30+i*(barW+gap);
+    const y=baseY-bh;
+    // 颜色
+    let col;
+    if(i===compI||i===compJ)col='#fbbf24';       // 比较中（黄）
+    else if(i===swapI||i===swapJ)col='#f87171';   // 交换中（红）
+    else if(i>=n-sortedUpTo)col='#34d399';         // 已排序（绿）
+    else col='#6366f1';                            // 未排序（紫）
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=col==='#6366f1'?0:6;
+    roundRect(x,y,barW,bh,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(v+'',x+barW/2,y-6,'#e8eef8',10);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',9);
+  });
+  // 状态说明
+  const statusLine=stepIdx2>=totalSteps?'✓ 排序完成！':(swapI>=0?'↔ 交换 '+data[swapI]+' 和 '+data[swapJ]:(compI>=0?'⇄ 比较 '+arr[compI]+' 和 '+arr[compJ]:'准备'));
+  drawText(statusLine,W/2,H-12,stepIdx2>=totalSteps?'#34d399':'#fbbf24',12);
+};
+
+// --- search_visual: 查找动画 ---
+SCENES.search_visual = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const target=args.target!==undefined?args.target:null;
+  const p=Math.min(1,Math.max(0,args.progress||0));
+  const type=args.type||'linear';
+  drawText((type==='binary'?'二分':'线性')+'查找 · 目标: '+target,W/2,25,'#fff',15);
+  if(!data.length)return;
+
+  const n=data.length;
+  const sorted=[...data].sort((a,b)=>a-b);
+  const gap=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gap*(n-1))/n);
+  const baseY=H-50;
+  let foundIdx=-1,checked=[],lo=0,hi=n-1,mid=-1;
+
+  if(type==='binary'){
+    const steps=Math.ceil(Math.log2(n))||1;
+    const stepIdx2=Math.min(Math.floor(p*steps),steps-1);
+    let cl=0,cr=n-1;
+    for(let s=0;s<steps;s++){
+      const cm=Math.floor((cl+cr)/2);
+      if(s<stepIdx2){
+        checked.push(cm);
+        if(sorted[cm]===target){foundIdx=cm;break;}
+        if(sorted[cm]<target)cl=cm+1;else cr=cm-1;
+      }else{
+        lo=cl;hi=cr;mid=cm;
+        // 标记所有未检查的为未检查状态
+        break;
+      }
+    }
+  }else{
+    const steps=n;
+    const stepIdx2=Math.min(Math.floor(p*steps),steps-1);
+    for(let i=0;i<=stepIdx2;i++){
+      checked.push(i);
+      if(sorted[i]===target){foundIdx=i;break;}
+    }
+  }
+
+  sorted.forEach(function(v,i){
+    const bh=(v/Math.max(...data))*(H-90);
+    const x=30+i*(barW+gap);
+    const y=baseY-bh;
+    let col;
+    if(i===foundIdx)col='#34d399';
+    else if(i===mid&&type==='binary')col='#fbbf24';
+    else if(checked.includes(i))col='#f87171';
+    else if(type==='binary'&&(i<lo||i>hi))col='#1e293b';
+    else col='#6366f1';
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=col==='#6366f1'||col==='#1e293b'?0:6;
+    roundRect(x,y,barW,bh,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(v+'',x+barW/2,y-6,'#e8eef8',10);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',9);
+  });
+  const found=foundIdx>=0;
+  drawText(found?'✓ 找到 '+target+' 在索引 '+foundIdx:(checked.length>=n||hi<lo?'✗ '+target+' 不存在':'查找中...'),W/2,H-12,found?'#34d399':'#fbbf24',12);
+};
+
+// --- flowchart: 流程图（增强版）---
+SCENES.flowchart = function(t,args){
+  const W=cv.width,H=cv.height;
+  const nodes=args.nodes||[];
+  const edges=args.edges||[];
+  const active=args.active!==undefined?args.active:-1;
+  const edgeLabels=args.edgeLabels||{};
+  drawText(args.title||'算法流程图',W/2,22,'#fff',15);
+  if(!nodes.length)return;
+
+  const isAct=function(ni){return active<0||ni===active;};
+
+  // 1) Draw edges first (behind nodes)
+  edges.forEach(function(e){
+    const from=nodes[e[0]],to=nodes[e[1]];
+    if(!from||!to)return;
+    const fx=from.x,fy=from.y,fw=from.w,fh=from.h;
+    const tx=to.x,ty=to.y,tw=to.w,th=to.h;
+    const fcx=fx+fw/2,fcy=fy+fh/2;
+    const tcx=tx+tw/2,tcy=ty+th/2;
+    const dy=tcy-fcy,dx=tcx-fcx;
+    const col=isAct(e[1])?'#34d399':'#475569';
+    const lw=isAct(e[1])?2.5:1.5;
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.fillStyle=col;
+    const edgeLabel = e.length>2 ? e[2] : (e.label || '');
+
+    let pts=[]; // 路径点序列
+
+    if(Math.abs(dy)<=5){
+      // 水平连接
+      pts.push([fcx,fcy],[tcx,tcy]);
+    }else if(dy>0){
+      // 向下：目标在正下方 → 直连；目标偏左→左出；偏右→右出
+      if(dx<-fw/2-20){
+        const ex=from.x;
+        const bendY=(fy+fh+ty)/2;
+        pts.push([ex,fcy],[ex,bendY],[tcx,bendY],[tcx,ty]);
+      }else if(dx>tw/2+20){
+        const ex=from.x+fw;
+        const bendY=(fy+fh+ty)/2;
+        pts.push([ex,fcy],[ex,bendY],[tcx,bendY],[tcx,ty]);
+      }else{
+        pts.push([fcx,fy+fh],[tcx,ty]);
+      }
+    }else{
+      // 向上（回环）
+      const side = dx>0?'right':'left';
+      const ex = side==='right'? from.x+fw+30 : from.x-30;
+      const ey = (fy+ty+fh)/2;
+      if(side==='right'){
+        pts.push([from.x+fw,fcy],[from.x+fw+30,ey],[tx+tw+30,ey],[tx+tw,tcy]);
+      }else{
+        pts.push([from.x,fcy],[from.x-30,ey],[tx-30,ey],[tx,tcy]);
+      }
+    }
+
+    // 绘制路径
+    if(pts.length===2){
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);ctx.stroke();
+    }else if(pts.length===4){
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+      ctx.lineTo(pts[1][0],pts[1][1]);
+      ctx.lineTo(pts[2][0],pts[2][1]);
+      ctx.lineTo(pts[3][0],pts[3][1]);
+      ctx.stroke();
+    }
+
+    // 箭头头（在最后一段路径末尾）
+    const last=pts[pts.length-1],prev=pts[pts.length-2];
+    const ang=Math.atan2(last[1]-prev[1],last[0]-prev[0]);
+    const aLen=8,aAng=0.5;
+    ctx.beginPath();
+    ctx.moveTo(last[0],last[1]);
+    ctx.lineTo(last[0]-aLen*Math.cos(ang-aAng),last[1]-aLen*Math.sin(ang-aAng));
+    ctx.lineTo(last[0]-aLen*Math.cos(ang+aAng),last[1]-aLen*Math.sin(ang+aAng));
+    ctx.closePath();ctx.fill();
+
+    // Edge label（如"是/否"）
+    if(edgeLabel){
+      const midIdx=Math.floor(pts.length/2);
+      const mp=pts[midIdx];
+      drawText(edgeLabel,mp[0]+(pts[midIdx-1][0]===mp[0]?12:-12),
+               mp[1]+(pts[midIdx-1][1]===mp[1]?-8:8),
+               isAct(e[1])?'#34d399':'#94a3b8',11,
+               pts[midIdx-1][0]===mp[0]?'center':'center');
+    }
+  });
+
+  // 2) Draw nodes (on top of edges)
+  nodes.forEach(function(n){
+    const col=n.color||(isAct(n.id)?'#6366f1':'#334155');
+    const x=n.x||0,y=n.y||0,w=n.w||140,h=n.h||44;
+
+    // Shadow
+    if(isAct(n.id)){
+      ctx.shadowColor=col;ctx.shadowBlur=12;
+    }
+
+    // Fill
+    ctx.fillStyle=isAct(n.id)?col+'55':'rgba(30,41,59,0.6)';
+    ctx.strokeStyle=isAct(n.id)?col:'#475569';
+    ctx.lineWidth=isAct(n.id)?2.5:1.5;
+
+    if(n.type==='decision'){
+      ctx.beginPath();
+      ctx.moveTo(x,y+h/2);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h/2);ctx.lineTo(x+w/2,y+h);
+      ctx.closePath();ctx.fill();ctx.stroke();
+    }else if(n.type==='io'){
+      // 平行四边形（输入/输出）
+      const offset=12;
+      ctx.beginPath();
+      ctx.moveTo(x+offset,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w-offset,y+h);ctx.lineTo(x,y+h);
+      ctx.closePath();ctx.fill();ctx.stroke();
+    }else{
+      const r=n.type==='startend'?(h/2):6;
+      roundRect(x,y,w,h,r);ctx.fill();ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+
+    // Label text
+    const lines=(n.label||'').split('\n');
+    lines.forEach(function(ln,i){
+      drawText(ln,x+w/2,y+h/2+(i-(lines.length-1)/2)*16,
+               isAct(n.id)?'#fff':'#94a3b8',isAct(n.id)?13:11);
+    });
+  });
+};
+
+// --- concept_cards: 概念卡片 ---
+SCENES.concept_cards = function(t,args){
+  const W=cv.width,H=cv.height;
+  const items=args.items||[];
+  drawText(args.title||'核心概念',W/2,30,'#fff',16);
+  const n=items.length;const cw=Math.min(180,(W-80)/n-10);
+  items.forEach(function(m,i){
+    const x=40+i*(cw+10),y=70;
+    ctx.fillStyle=(m.color||'#6366f1')+'22';ctx.strokeStyle=m.color||'#6366f1';ctx.lineWidth=2;
+    roundRect(x,y,cw,Math.min(H-140,200),12);ctx.fill();ctx.stroke();
+    drawText(m.icon||'●',x+cw/2,y+35,m.color||'#fff',26);
+    drawText(m.label||'',x+cw/2,y+75,'#fff',14);
+    ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+    (m.desc||'').split('\n').forEach(function(ln,j){ctx.fillText(ln,x+cw/2,y+98+j*16);});
+  });
+};
+
+// --- complexity_chart: 复杂度对比表 ---
+SCENES.complexity_chart = function(t,args){
+  const W=cv.width,H=cv.height;
+  const items=args.items||[];
+  drawText(args.title||'算法复杂度对比',W/2,30,'#fff',16);
+  const headers=['算法','最好','最坏','平均','空间','稳定'];
+  const colW=[140,80,80,80,70,50];
+  const totalW=colW.reduce(function(a,b){return a+b;},0);
+  const sx=(W-totalW)/2,sy=60;
+  // header
+  headers.forEach(function(h,i){
+    ctx.fillStyle='#334155';ctx.strokeStyle='var(--line)';ctx.lineWidth=1;
+    const x=sx+colW.slice(0,i).reduce(function(a,b){return a+b;},0);
+    ctx.fillRect(x,sy,colW[i],32);ctx.strokeRect(x,sy,colW[i],32);
+    drawText(h,x+colW[i]/2,sy+16,'#e8eef8',11);
+  });
+  // rows
+  items.forEach(function(m,i){
+    const rowY=sy+32+2+i*32;
+    const vals=[m.name,m.best||'-',m.worst||'-',m.avg||'-',m.space||'-',m.stable?'✓':'✗'];
+    vals.forEach(function(v,j){
+      const x=sx+colW.slice(0,j).reduce(function(a,b){return a+b;},0);
+      ctx.fillStyle='rgba(255,255,255,0.03)';ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+      ctx.fillRect(x,rowY,colW[j],32);ctx.strokeRect(x,rowY,colW[j],32);
+      const c=j===5?(v==='✓'?'#34d399':'#f87171'):(j===0?'#fff':'#94a3b8');
+      drawText(v,x+colW[j]/2,rowY+16,c,11);
+    });
+  });
+};
+
+// --- comparison: 对比展示 ---
+SCENES.comparison = function(t,args){
+  const W=cv.width,H=cv.height;
+  drawText(args.title||'对比',W/2,30,'#fff',16);
+  const left=args.left||{},right=args.right||{};
+  const cw=Math.min(280,(W-80)/2-10);
+  [left,right].forEach(function(side,si){
+    const x=30+si*(cw+20),y=65;
+    ctx.fillStyle=(side.color||(si===0?'#f87171':'#34d399'))+'22';
+    ctx.strokeStyle=side.color||(si===0?'#f87171':'#34d399');
+    ctx.lineWidth=2;
+    roundRect(x,y,cw,Math.min(H-130,200),12);ctx.fill();ctx.stroke();
+    drawText(side.title||'',x+cw/2,y+25,'#fff',15);
+    (side.items||[]).forEach(function(it,j){
+      drawText('• '+it,x+cw/2,y+55+j*22,'#9ab0d0',12);
+    });
+  });
+};
+
+// --- block_diagram: 框图 ---
+SCENES.block_diagram = function(t,args){
+  const W=cv.width,H=cv.height;
+  drawText(args.title||'结构框图',W/2,25,'#fff',15);
+  const blocks=args.blocks||[];
+  blocks.forEach(function(b){
+    ctx.fillStyle=(b.color||'#6366f1')+'33';
+    ctx.strokeStyle=b.color||'#6366f1';ctx.lineWidth=2;
+    const r=b.r||6;
+    roundRect(b.x,b.y,b.w||120,b.h||50,r);ctx.fill();ctx.stroke();
+    drawText(b.label||'',b.x+(b.w||120)/2,b.y+(b.h||50)/2,'#fff',13);
+  });
+  const arrows=args.arrows||[];
+  arrows.forEach(function(a){
+    ctx.strokeStyle=a.color||'#475569';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(a.x1,a.y1);ctx.lineTo(a.x2,a.y2);ctx.stroke();
+    // arrowhead
+    const ang=Math.atan2(a.y2-a.y1,a.x2-a.x1);
+    ctx.beginPath();ctx.moveTo(a.x2,a.y2);
+    ctx.lineTo(a.x2-8*Math.cos(ang-0.4),a.y2-8*Math.sin(ang-0.4));
+    ctx.lineTo(a.x2-8*Math.cos(ang+0.4),a.y2-8*Math.sin(ang+0.4));
+    ctx.closePath();ctx.fill();
+    if(a.label)drawText(a.label,(a.x1+a.x2)/2,(a.y1+a.y2)/2-8,a.color||'#9ab0d0',10);
+  });
+};
+
+// --- data_table: 数据表 ---
+SCENES.data_table = function(t,args){
+  const W=cv.width,H=cv.height;
+  const headers=args.headers||[],rows=args.rows||[];
+  const highlight=args.highlight||[];
+  drawText(args.title||'数据表',W/2,22,'#fff',15);
+  if(!headers.length)return;
+  const colW=Math.min(120,(W-60)/headers.length);
+  const totalW=colW*headers.length;
+  const sx=(W-totalW)/2,sy=40;
+  ctx.strokeStyle='#475569';ctx.lineWidth=1;
+  headers.forEach(function(h,i){
+    ctx.fillStyle=highlight.includes(-1)?'#6366f144':'#334155';
+    ctx.fillRect(sx+i*colW,sy,colW,32);
+    ctx.strokeRect(sx+i*colW,sy,colW,32);
+    drawText(h,sx+i*colW+colW/2,sy+16,'#e8eef8',12);
+  });
+  rows.forEach(function(r,ri){
+    const ry=sy+34+ri*28;
+    const hl=highlight.includes(ri);
+    ctx.fillStyle=hl?'#6366f133':'rgba(255,255,255,0.02)';
+    ctx.fillRect(sx,ry,totalW,28);
+    r.forEach(function(c,ci){
+      ctx.strokeStyle='rgba(71,85,105,0.4)';
+      ctx.strokeRect(sx+ci*colW,ry,colW,28);
+      drawText(c,sx+ci*colW+colW/2,ry+14,hl?'#fbbf24':'#94a3b8',11);
+    });
+  });
+};
+
+// --- chart: 统计图（柱状/折线/饼图）---
+SCENES.chart = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[],labels=args.labels||[];
+  const colors=args.colors||['#6366f1','#fbbf24','#f87171','#34d399','#06b6d4','#a855f7'];
+  drawText(args.title||'统计图',W/2,22,'#fff',15);
+  if(!data.length)return;
+  if(args.type==='pie'){
+    const total=data.reduce(function(a,b){return a+b;},0);
+    const cx=W/2,cy=H/2+10,r=Math.min(W,H)/2-40;
+    let ang=-Math.PI/2;
+    data.forEach(function(v,i){
+      const a=(v/total)*Math.PI*2;
+      ctx.fillStyle=colors[i%colors.length];
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,ang,ang+a);ctx.closePath();ctx.fill();
+      if(labels[i]){
+        const la=ang+a/2;
+        drawText(labels[i],cx+(r+16)*Math.cos(la),cy+(r+16)*Math.sin(la),'#e8eef8',10);
+      }
+      ang+=a;
+    });
+  }else{
+    const pad={l:50,r:20,t:40,b:40};
+    const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+    const max=Math.max.apply(null,data);
+    const barW=Math.min(40,cw/data.length-8);
+    data.forEach(function(v,i){
+      const x=pad.l+i*(cw/data.length)+4;
+      const bh=(v/max)*ch*0.85;
+      const y=pad.t+ch-bh;
+      ctx.fillStyle=colors[i%colors.length];
+      if(args.type==='line'){
+        ctx.beginPath();ctx.arc(x+barW/2,y,4,0,Math.PI*2);ctx.fill();
+        if(i>0){
+          const px=pad.l+(i-1)*(cw/data.length)+4+barW/2;
+          const py=pad.t+ch-(data[i-1]/max)*ch*0.85;
+          ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x+barW/2,y);ctx.strokeStyle=colors[i%colors.length];ctx.lineWidth=2;ctx.stroke();
+        }
+      }else{
+        ctx.fillRect(x,y,barW,bh);
+      }
+      if(labels[i])drawText(labels[i],x+barW/2,pad.t+ch+12,'#9ab0d0',9);
+      drawText(v,x+barW/2,y-6,'#e8eef8',9);
+    });
+  }
+};
+
+// --- neural_net: 神经网络图 ---
+SCENES.neural_net = function(t,args){
+  const W=cv.width,H=cv.height;
+  const layers=args.layers||[];
+  drawText(args.title||'神经网络结构',W/2,22,'#fff',15);
+  if(!layers.length)return;
+  const highlight=args.highlight||[];
+  const layerGap=(W-80)/(layers.length+1);
+  const maxNeurons=Math.max.apply(null,layers);
+  const neuronR=Math.min(20,Math.min(layerGap*0.35,((H-80)/maxNeurons)*0.35));
+  // Draw connections
+  ctx.strokeStyle='rgba(148,163,184,0.15)';ctx.lineWidth=1;
+  for(let li=0;li<layers.length-1;li++){
+    const lx=40+layerGap*(li+1),nx=40+layerGap*(li+2);
+    const nLeft=layers[li],nRight=layers[li+1];
+    for(let ni=0;ni<nLeft;ni++){
+      const ly=H/2+(ni-(nLeft-1)/2)*(neuronR*2.5);
+      for(let nj=0;nj<nRight;nj++){
+        const ny=H/2+(nj-(nRight-1)/2)*(neuronR*2.5);
+        ctx.beginPath();ctx.moveTo(lx+neuronR,ly);ctx.lineTo(nx-neuronR,ny);ctx.stroke();
+      }
+    }
+  }
+  // Draw neurons
+  layers.forEach(function(n,li){
+    const x=40+layerGap*(li+1);
+    for(let ni=0;ni<n;ni++){
+      const y=H/2+(ni-(n-1)/2)*(neuronR*2.5);
+      const hl=highlight.length&&highlight[0]===li&&highlight[1]===ni;
+      ctx.beginPath();ctx.arc(x,y,neuronR,0,Math.PI*2);
+      ctx.fillStyle=hl?'#fbbf24':(args.inputLayer===li?'#6366f1':'#334155');
+      ctx.strokeStyle=hl?'#fbbf24':(args.inputLayer===li?'#6366f1':'#475569');
+      ctx.lineWidth=hl?3:1.5;ctx.fill();ctx.stroke();
+    }
+    if(layers.length<=7)drawText('层'+(li+1)+' ('+n+')',x,H-20,'#9ab0d0',10);
+  });
+};
+
+// ===================================================================
+// 3) Sync & render
+// ===================================================================
+const STEPS=_DATA.steps||[];
+const STEP_DURATION=3.5;
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0,paramVal=0;
+
+function getSceneArgs(s){
+  const a=JSON.parse(JSON.stringify(s.sceneArgs||{}));
+  if(a.param&&a.param.name){a.progress=paramVal;}
+  return a;
+}
+
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  stepBadge.textContent=s.tag||'';
+  stepTitle.textContent=s.name||'';
+  stepBody.innerHTML=s.body||'';
+  if(s.points){
+    stepPoints.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+(s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>';
+  }else stepPoints.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+
+  // Param area
+  const sa=s.sceneArgs||{};
+  if(sa.param){
+    paramArea.style.display='block';
+    paramLabel.textContent=sa.param.name;
+    paramSlider.min=sa.param.min||0;
+    paramSlider.max=sa.param.max||1;
+    paramSlider.step=sa.param.step||0.01;
+    paramSlider.value=sa.param.value!==undefined?sa.param.value:0;
+    paramVal=parseFloat(paramSlider.value);
+    paramReadout.textContent=paramVal;
+    if(sa.readouts){
+      paramStats.innerHTML=sa.readouts.map(function(r){return '<div class="stat-row"><span>'+r.label+'</span><span>'+r.value+'</span></div>';}).join('');
+    }else paramStats.innerHTML='';
+  }else{
+    paramArea.style.display='none';
+    paramVal=0;
+  }
+
+  // Code
+  if(sa.code)showCode(sa.code.lines,sa.code.highlightLine);
+  else hideCode();
+  draw();
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sceneFn=SCENES[s.scene];
+  if(sceneFn)sceneFn(t,getSceneArgs(s));
+  else{drawText('场景: '+s.scene,cv.width/2,cv.height/2-10,'#9ab0d0',16);drawText(s.name||'',cv.width/2,cv.height/2+20,'#fff',14);}
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sa=s.sceneArgs||{};
+  if(sa.param){
+    // 交互模式：param 驱动
+    const sliderVal=parseFloat(paramSlider.value);
+    if(sliderVal<paramSlider.max){
+      const inc=parseFloat(paramSlider.step)*speed*dt*3;
+      paramSlider.value=Math.min(paramSlider.max,parseFloat(paramSlider.value)+inc);
+      paramVal=parseFloat(paramSlider.value);
+      paramReadout.textContent=paramVal.toFixed(2);
+    }else if(stepIdx<STEPS.length-1){
+      stepIdx++;syncStep();
+    }else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }else{
+    // 自动播放模式
+    stepTime+=dt*speed;
+    if(stepTime>=STEP_DURATION){
+      if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+      else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+    }
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// ===================================================================
+// 4) Controls
+// ===================================================================
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+paramSlider.oninput=function(){paramVal=parseFloat(this.value);paramReadout.textContent=paramVal;draw();};
+
+// Step bar
+const bar=document.getElementById('stepbar');
+STEPS.forEach(function(s,i){
+  const el=document.createElement('div');
+  el.className='step'+(i===stepIdx?' active':'');
+  el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>8?s.name.slice(0,7)+'…':s.name||'')+'</div>';
+  el.onclick=function(){stepIdx=i;syncStep();draw();};
+  bar.appendChild(el);
+});
+syncStep();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

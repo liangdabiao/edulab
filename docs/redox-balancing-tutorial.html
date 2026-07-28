@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氧化还原方程式配平 · 化合价升降法</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:system-ui,-apple-system,sans-serif; background:#f1f5f9; color:#1e293b; min-height:100vh; padding-bottom:60px; }
+header { background:linear-gradient(135deg,#1e293b,#334155); color:#fff; padding:36px 0 28px; text-align:center; }
+header h1 { font-size:26px; font-weight:800; letter-spacing:1px; }
+header p { font-size:14px; color:#94a3b8; margin-top:6px; }
+header .tags { display:flex; justify-content:center; gap:8px; margin-top:12px; flex-wrap:wrap; }
+header .tags span { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15); border-radius:20px; padding:3px 12px; font-size:12px; color:#cbd5e1; }
+.container { max-width:820px; margin:0 auto; padding:0 16px; }
+
+/* Reaction Card */
+.card { background:#fff; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-top:28px; overflow:hidden; }
+.card-header { display:flex; align-items:center; gap:12px; padding:16px 22px; border-bottom:1px solid #e2e8f0; cursor:pointer; user-select:none; }
+.card-header .idx { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; flex-shrink:0; }
+.card-header .cat { font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-left:auto; }
+.card-header h2 { font-size:16px; font-weight:600; }
+.card-header .arrow { transition:transform .3s; font-size:14px; color:#94a3b8; }
+.card-body { padding:0 22px; max-height:0; overflow:hidden; transition:max-height .6s ease, padding .3s; }
+.card.open .card-body { max-height:3000px; padding:18px 22px; }
+.card.open .arrow { transform:rotate(180deg); }
+
+/* Equation display */
+.eq-line { text-align:center; padding:16px 14px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:12px; font-size:18px; line-height:2.2; overflow-x:auto; }
+.eq-line .katex { font-size:1.15em; }
+.step-nav { display:flex; gap:8px; margin:14px 0; flex-wrap:wrap; align-items:center; }
+.step-nav button { padding:6px 16px; border-radius:8px; border:none; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; }
+.btn-prev { background:#e2e8f0; color:#475569; }
+.btn-prev:hover { background:#cbd5e1; }
+.btn-next { background:#6366f1; color:#fff; }
+.btn-next:hover { filter:brightness(1.1); }
+.step-label { font-size:12px; font-weight:600; color:#64748b; margin-left:auto; }
+
+/* Step content */
+.step-content { display:none; }
+.step-content.active { display:block; }
+.step-content h4 { font-size:14px; font-weight:700; color:#334155; margin:14px 0 8px; display:flex; align-items:center; gap:6px; }
+.step-content h4 .icon { width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0; }
+.step-content p { font-size:13px; line-height:1.7; color:#475569; margin-bottom:8px; }
+.step-content .highlight-box { background:#f0f9ff; border-left:3px solid #3b82f6; border-radius:4px; padding:10px 14px; margin:10px 0; font-size:13px; line-height:1.7; }
+
+/* Oxidation number display */
+.ox-number { display:inline-flex; align-items:center; gap:4px; padding:1px 6px; border-radius:4px; font-weight:700; font-size:13px; }
+.ox-inc { color:#dc2626; }
+.ox-dec { color:#059669; }
+.ox-unchanged { color:#64748b; }
+
+/* Bridge visualization */
+.bridge-container { display:flex; align-items:center; justify-content:center; gap:14px; padding:12px; background:#fafafa; border-radius:10px; border:1px dashed #cbd5e1; margin:14px 0; flex-wrap:wrap; }
+.bridge-half { text-align:center; padding:8px 14px; border-radius:8px; min-width:140px; }
+.bridge-half.ox { background:#fef2f2; border:1px solid #fecaca; }
+.bridge-half.red { background:#f0fdf4; border:1px solid #bbf7d0; }
+.bridge-half .el { font-size:16px; font-weight:700; }
+.bridge-half .val { font-size:13px; margin-top:2px; }
+.bridge-half .val .arrow-d { color:#dc2626; }
+.bridge-half .val .arrow-u { color:#059669; }
+.bridge-center { text-align:center; font-size:14px; font-weight:700; color:#6366f1; }
+.bridge-center .e-num { font-size:20px; }
+
+/* Step indicators */
+.step-dots { display:flex; gap:4px; margin:4px 0 10px; }
+.step-dot { width:8px; height:8px; border-radius:50%; background:#e2e8f0; cursor:pointer; transition:all .3s; }
+.step-dot.act { background:#6366f1; transform:scale(1.3); }
+.step-dot.done { background:#818cf8; }
+
+/* Principle section */
+.principle { background:linear-gradient(135deg,#eef2ff,#f0f9ff); border:1px solid #c7d2fe; border-radius:12px; padding:18px 22px; margin-top:28px; }
+.principle h3 { font-size:15px; font-weight:700; color:#312e81; margin-bottom:8px; }
+.principle .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.principle .grid-item { background:#fff; border-radius:8px; padding:12px; border:1px solid #e0e7ff; }
+.principle .grid-item .title { font-size:12px; font-weight:700; color:#4338ca; margin-bottom:4px; }
+.principle .grid-item .body { font-size:12px; line-height:1.6; color:#475569; }
+
+/* Examples list in sidebar */
+.footer-info { text-align:center; margin-top:32px; font-size:12px; color:#94a3b8; }
+
+/* Responsive */
+@media (max-width:600px) {
+  header h1 { font-size:20px; }
+  .card-body { padding:0 14px; }
+  .card.open .card-body { padding:14px; }
+  .principle .grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>⚡ 氧化还原方程式配平</h1>
+    <p>化合价升降法 · 电子守恒 · 双线桥表示法</p>
+    <div class="tags">
+      <span>化合价分析</span>
+      <span>电子守恒</span>
+      <span>双线桥</span>
+      <span>配平步骤</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- Principle panel -->
+<div class="principle">
+  <h3>📐 化合价升降法配平五步法</h3>
+  <div class="grid">
+    <div class="grid-item"><div class="title">① 标化合价</div><div class="body">标出反应前后各元素化合价，找出变化的元素</div></div>
+    <div class="grid-item"><div class="title">② 找升降</div><div class="body">确定升价元素（还原剂）与降价元素（氧化剂）</div></div>
+    <div class="grid-item"><div class="title">③ 求总数</div><div class="body">求升价总数与降价总数的<strong>最小公倍数</strong></div></div>
+    <div class="grid-item"><div class="title">④ 定系数</div><div class="body">按电子守恒确定氧化剂/还原剂化学计量数</div></div>
+    <div class="grid-item" style="grid-column:1/-1"><div class="title">⑤ 配完整</div><div class="body">用观察法配平其他物质，检查原子守恒与电荷守恒</div></div>
+  </div>
+</div>
+
+<!-- Reactions will be rendered here by JS -->
+<div id="reactions-container"></div>
+
+<div class="footer-info">
+  <p>单击卡片标题展开/折叠 · 点击"下一步"逐步查看配平过程</p>
+</div>
+
+</div>
+
+<script>
+// ======================== DATA ========================
+var REACTIONS = [
+  { id:'r1', title:'氧化铜与氢气', cat:'简单置换', color:'#6366f1',
+    unbalanced:'\\text{CuO} + \\text{H}_2 \\rightarrow \\text{Cu} + \\text{H}_2\\text{O}',
+    balanced:'\\text{CuO} + \\text{H}_2 \\xrightarrow{\\Delta} \\text{Cu} + \\text{H}_2\\text{O}',
+    steps:[
+      { title:'标化合价', icon:'1', html:function(){
+        return '<p>标出反应前后各元素的化合价：</p>'+
+          '<div class="eq-line">'+
+          '\\('+
+          '\\overset{+2}{\\text{Cu}}\\overset{-2}{\\text{O}}'+
+          ' + '+
+          '\\overset{\\phantom{+}0}{\\text{H}_2}'+
+          ' \\rightarrow '+
+          '\\overset{\\phantom{+}0}{\\text{Cu}}'+
+          ' + '+
+          '\\overset{+1}{\\text{H}_2}\\overset{-2}{\\text{O}}'+
+          '\\)</div>';
+      }},
+      { title:'找升降', icon:'2', html:function(){
+        return '<p>化合价发生变化的元素：</p>'+
+          '<div class="highlight-box">'+
+          '<span class="ox-number ox-dec">▼ Cu: +2 → 0，<strong>降低 2</strong>（被还原，CuO 是氧化剂）</span><br>'+
+          '<span class="ox-number ox-inc">▲ H: 0 → +1，<strong>升高 1</strong>（被氧化，H₂ 是还原剂）</span>'+
+          '</div>'+
+          '<div class="bridge-container">'+
+          '<div class="bridge-half red"><div class="el">Cu (+2 → 0)</div><div class="val"><span class="arrow-d">↓ 降低 2</span></div><div style="font-size:11px;color:#64748b;margin-top:2px">得 2e⁻ · 还原</div></div>'+
+          '<div class="bridge-center"><div class="e-num">2e⁻</div><div style="font-size:11px">转移</div></div>'+
+          '<div class="bridge-half ox"><div class="el">H (0 → +1)</div><div class="val"><span class="arrow-u">↑ 升高 1</span></div><div style="font-size:11px;color:#64748b;margin-top:2px">失 1e⁻ × 2 · 氧化</div></div>'+
+          '</div>';
+      }},
+      { title:'电子守恒', icon:'3', html:function(){
+        return '<p>确定得失电子的最小公倍数：</p>'+
+          '<div class="highlight-box">'+
+          'Cu: 降低 2 → <strong>得 2e⁻</strong><br>'+
+          'H: 升高 1 × 2 个 H 原子 → <strong>失 2e⁻</strong><br>'+
+          '<span style="color:#6366f1;font-weight:700;font-size:15px">得失电子总数相等：2e⁻ ✓</span>'+
+          '</div><p>电子守恒已满足，系数比为 1:1。</p>';
+      }},
+      { title:'配平方程', icon:'4', html:function(){
+        return '<p>确定系数，配平完整方程式：</p>'+
+          '<div class="eq-line">\\('+
+          '\\overset{\\text{氧化剂}}{\\text{CuO}}'+
+          ' + '+
+          '\\overset{\\text{还原剂}}{\\text{H}_2}'+
+          ' \\xrightarrow{\\Delta} '+
+          '\\text{Cu} + \\text{H}_2\\text{O}'+
+          '\\)</div>'+
+          '<div class="bridge-container">'+
+          '<div class="bridge-half red" style="border:2px solid #059669"><div class="el">CuO → Cu</div><div style="font-size:12px;font-weight:700;color:#059669">得 2e⁻（还原反应）</div></div>'+
+          '<div class="bridge-center" style="width:40px"><div style="border-top:2px solid #6366f1;width:100%"></div><div style="font-size:12px;font-weight:600;color:#6366f1;margin-top:-8px;text-align:center">2e⁻</div></div>'+
+          '<div class="bridge-half ox" style="border:2px solid #dc2626"><div class="el">H₂ → H₂O</div><div style="font-size:12px;font-weight:700;color:#dc2626">失 2e⁻（氧化反应）</div></div>'+
+          '</div>';
+      }},
+    ]
+  },
+  { id:'r2', title:'铁与硫酸铜溶液', cat:'置换反应', color:'#059669',
+    unbalanced:'\\text{Fe} + \\text{CuSO}_4 \\rightarrow \\text{FeSO}_4 + \\text{Cu}',
+    balanced:'\\text{Fe} + \\text{CuSO}_4 \\rightarrow \\text{FeSO}_4 + \\text{Cu}',
+    steps:[
+      { title:'标化合价', icon:'1', html:function(){
+        return '<p>标出反应前后各元素的化合价：</p>'+
+          '<div class="eq-line">\\('+
+          '\\overset{\\phantom{+}0}{\\text{Fe}}'+
+          ' + '+
+          '\\overset{+2}{\\text{Cu}}\\text{SO}_4'+
+          ' \\rightarrow '+
+          '\\overset{+2}{\\text{Fe}}\\text{SO}_4'+
+          ' + '+
+          '\\overset{\\phantom{+}0}{\\text{Cu}}'+
+          '\\)</div>'+
+          '<p>(SO₄²⁻ 中 S 和 O 的化合价不变，未参与氧化还原)</p>';
+      }},
+      { title:'找升降', icon:'2', html:function(){
+        return '<p>化合价发生变化的元素：</p>'+
+          '<div class="highlight-box">'+
+          '<span class="ox-number ox-inc">▲ Fe: 0 → +2，<strong>升高 2</strong>（被氧化，Fe 是还原剂）</span><br>'+
+          '<span class="ox-number ox-dec">▼ Cu: +2 → 0，<strong>降低 2</strong>（被还原，CuSO₄ 是氧化剂）</span>'+
+          '</div>';
+      }},
+      { title:'电子守恒', icon:'3', html:function(){
+        return '<div class="bridge-container">'+
+          '<div class="bridge-half ox"><div class="el">Fe 0→+2</div><div class="val"><span class="arrow-u">↑ 升高 2</span></div><div style="font-size:12px;font-weight:700;color:#dc2626">失 2e⁻</div></div>'+
+          '<div class="bridge-center"><div class="e-num">2e⁻</div><div style="font-size:11px">得失守恒 ✓</div></div>'+
+          '<div class="bridge-half red"><div class="el">Cu +2→0</div><div class="val"><span class="arrow-d">↓ 降低 2</span></div><div style="font-size:12px;font-weight:700;color:#059669">得 2e⁻</div></div>'+
+          '</div><p style="text-align:center;font-weight:700;color:#6366f1;margin-top:4px">得失电子数相等，系数比为 1:1</p>';
+      }},
+      { title:'配平方程', icon:'4', html:function(){
+        return '<p>完成配平（Fe 和 CuSO₄ 的系数均为 1）：</p>'+
+          '<div class="eq-line">\\('+
+          '\\overset{\\text{还原剂}}{\\text{Fe}}'+
+          ' + '+
+          '\\overset{\\text{氧化剂}}{\\text{CuSO}_4}'+
+          ' \\rightarrow '+
+          '\\text{FeSO}_4 + \\text{Cu}'+
+          '\\)</div>'+
+          '<p style="font-size:12px;color:#64748b">▸ 双线桥：Fe 失去 2 个电子给 Cu²⁺，Fe 被氧化、Cu²⁺ 被还原</p>';
+      }},
+    ]
+  },
+  { id:'r3', title:'高锰酸钾与浓盐酸', cat:'复杂氧化还原', color:'#dc2626',
+    unbalanced:'\\text{KMnO}_4 + \\text{HCl} \\rightarrow \\text{KCl} + \\text{MnCl}_2 + \\text{Cl}_2 + \\text{H}_2\\text{O}',
+    balanced:'2\\text{KMnO}_4 + 16\\text{HCl} \\rightarrow 2\\text{KCl} + 2\\text{MnCl}_2 + 5\\text{Cl}_2 + 8\\text{H}_2\\text{O}',
+    steps:[
+      { title:'标化合价', icon:'1', html:function(){
+        return '<p>标出反应前后各元素的化合价（K、O、H 不变，关注 Mn 和 Cl）：</p>'+
+          '<div class="eq-line">\\('+
+          '\\text{K}\\overset{+7}{\\text{Mn}}\\overset{-2}{\\text{O}}_4'+
+          ' + '+
+          '\\text{H}\\overset{-1}{\\text{Cl}}'+
+          ' \\rightarrow '+
+          '\\text{KCl} + \\overset{+2}{\\text{Mn}}\\text{Cl}_2 + \\overset{\\phantom{+}0}{\\text{Cl}}_2 + \\text{H}_2\\text{O}'+
+          '\\)</div><p>Mn: +7 → +2（降低 5），Cl: -1 → 0（升高 1）</p>';
+      }},
+      { title:'找升降 · 最小公倍数', icon:'2', html:function(){
+        return '<p>确定升降数，求最小公倍数：</p>'+
+          '<div class="highlight-box">'+
+          '<span class="ox-number ox-dec">▼ Mn: +7 → +2，降低 <strong>5</strong></span><br>'+
+          '<span class="ox-number ox-inc">▲ Cl: -1 → 0，升高 <strong>1</strong></span>'+
+          '</div>'+
+          '<p>升价总数 = 降价总数 → 1 × 5 = 5 × 1 → <strong>最小公倍数为 5</strong></p>'+
+          '<div class="bridge-container">'+
+          '<div class="bridge-half red"><div class="el" style="font-size:14px">Mn (+7 → +2)</div><div class="val"><span class="arrow-d">↓ 降低 5</span></div><div style="font-size:12px;color:#059669">得 5e⁻</div></div>'+
+          '<div class="bridge-center"><div style="font-size:11px">×2</div></div>'+
+          '<div class="bridge-half ox"><div class="el" style="font-size:14px">Cl (-1 → 0)</div><div class="val"><span class="arrow-u">↑ 升高 1</span></div><div style="font-size:12px;color:#dc2626">失 1e⁻ × 10</div></div>'+
+          '</div>';
+      }},
+      { title:'确定系数', icon:'3', html:function(){
+        return '<p>按电子守恒确定氧化剂与还原剂的系数：</p>'+
+          '<div class="highlight-box">'+
+          'Mn 降低 5 → 需要 <strong>2 个 Mn</strong>（得 5×2=10e⁻）<br>'+
+          'Cl 升高 1 → 需要 <strong>10 个 Cl 原子</strong>变为 Cl₂（失 10e⁻）<br>'+
+          '<span style="color:#6366f1;font-weight:700">2KMnO₄ + 10HCl(被氧化) + 6HCl(酸性介质)</span>'+
+          '</div>';
+      }},
+      { title:'配平完整方程', icon:'4', html:function(){
+        return '<p>最后配平其他物质，得到完整方程式：</p>'+
+          '<div class="eq-line" style="font-size:16px">\\('+
+          '2\\text{KMnO}_4 + 16\\text{HCl} \\rightarrow 2\\text{KCl} + 2\\text{MnCl}_2 + 5\\text{Cl}_2 + 8\\text{H}_2\\text{O}'+
+          '\\)</div>'+
+          '<div class="bridge-container">'+
+          '<div class="bridge-half red"><div>Mn: +7 → +2</div><div style="font-size:20px;font-weight:700;color:#059669">得 5e⁻×2</div></div>'+
+          '<div class="bridge-center" style="display:flex;flex-direction:column">'+
+          '<div style="border-top:2px solid #6366f1;width:50px"></div>'+
+          '<div style="font-size:13px;font-weight:700;color:#6366f1;margin-top:-8px">10e⁻</div>'+
+          '</div>'+
+          '<div class="bridge-half ox"><div>Cl: -1 → 0</div><div style="font-size:20px;font-weight:700;color:#dc2626">失 1e⁻×10</div></div>'+
+          '</div>';
+      }},
+    ]
+  },
+  { id:'r4', title:'一氧化碳还原氧化铁', cat:'工业应用', color:'#d97706',
+    unbalanced:'\\text{Fe}_2\\text{O}_3 + \\text{CO} \\rightarrow \\text{Fe} + \\text{CO}_2',
+    balanced:'\\text{Fe}_2\\text{O}_3 + 3\\text{CO} \\xrightarrow{\\text{高温}} 2\\text{Fe} + 3\\text{CO}_2',
+    steps:[
+      { title:'标化合价', icon:'1', html:function(){
+        return '<p>标出反应前后各元素的化合价：</p>'+
+          '<div class="eq-line">\\('+
+          '\\overset{+3}{\\text{Fe}_2}\\overset{-2}{\\text{O}}_3'+
+          ' + '+
+          '\\overset{+2}{\\text{C}}\\overset{-2}{\\text{O}}'+
+          ' \\rightarrow '+
+          '\\overset{\\phantom{+}0}{\\text{Fe}}'+
+          ' + '+
+          '\\overset{+4}{\\text{C}}\\overset{-2}{\\text{O}}_2'+
+          '\\)</div>';
+      }},
+      { title:'找升降', icon:'2', html:function(){
+        return '<div class="highlight-box">'+
+          '<span class="ox-number ox-dec">▼ Fe: +3 → 0，降低 <strong>3</strong>（被还原，Fe₂O₃ 是氧化剂）</span><br>'+
+          '<span class="ox-number ox-inc">▲ C: +2 → +4，升高 <strong>2</strong>（被氧化，CO 是还原剂）</span>'+
+          '</div>';
+      }},
+      { title:'最小公倍数 · 定系数', icon:'3', html:function(){
+        return '<p>求升降数的最小公倍数：</p>'+
+          '<div class="highlight-box">'+
+          'Fe: 降低 3 × 2 个 Fe 原子 = 总降低 <strong>6</strong><br>'+
+          'C: 升高 2<br>'+
+          '最小公倍数 = 6 → Fe₂O₃ 系数 1（得 6e⁻）× CO 系数 3（失 6e⁻）'+
+          '</div>'+
+          '<div class="bridge-container">'+
+          '<div class="bridge-half red"><div class="el">Fe +3→0</div><div class="val"><span class="arrow-d">↓ 降 3×2=6</span></div><div style="font-size:14px;font-weight:700;color:#059669">得 6e⁻</div></div>'+
+          '<div class="bridge-center"><div class="e-num">6e⁻</div></div>'+
+          '<div class="bridge-half ox"><div class="el">C +2→+4</div><div class="val"><span class="arrow-u">↑ 升 2×3=6</span></div><div style="font-size:14px;font-weight:700;color:#dc2626">失 6e⁻</div></div>'+
+          '</div>';
+      }},
+      { title:'配平完整方程', icon:'4', html:function(){
+        return '<p>配平后的方程式：</p>'+
+          '<div class="eq-line">\\('+
+          '\\overset{\\text{氧化剂}}{\\text{Fe}_2\\text{O}_3}'+
+          ' + '+
+          '3\\overset{\\text{还原剂}}{\\text{CO}}'+
+          ' \\xrightarrow{\\text{高温}} '+
+          '2\\text{Fe} + 3\\text{CO}_2'+
+          '\\)</div><p><strong>电子守恒验证：</strong>Fe 得 6e⁻（3e⁻×2），C 失 6e⁻（2e⁻×3）✓</p>';
+      }},
+    ]
+  },
+];
+
+// ======================== RENDER ========================
+function $id(id) { return document.getElementById(id); }
+
+function renderReaction(rx, idx) {
+  var eqHtml;
+  try { eqHtml = katex.renderToString(rx.balanced, {displayMode:false,throwOnError:false}); }
+  catch(e) { eqHtml = rx.balanced; }
+
+  var html = '<div class="card" id="card-'+rx.id+'">'+
+    '<div class="card-header" onclick="toggleCard(\''+rx.id+'\')">'+
+    '<span class="idx" style="background:'+rx.color+'">'+(idx+1)+'</span>'+
+    '<h2>'+rx.title+'</h2>'+
+    '<span class="cat">'+rx.cat+'</span>'+
+    '<span class="arrow">▼</span></div>'+
+    '<div class="card-body">'+
+    '<div class="eq-line">'+eqHtml+'</div>';
+
+  // Step nav
+  html += '<div class="step-nav" id="nav-'+rx.id+'">'+
+    '<button class="btn-prev" onclick="prevStep(\''+rx.id+'\')">◀ 上一步</button>'+
+    '<button class="btn-next" onclick="nextStep(\''+rx.id+'\')">下一步 ▶</button>'+
+    '<span class="step-label" id="label-'+rx.id+'">1 / '+rx.steps.length+'</span></div>';
+
+  // Step dots
+  html += '<div class="step-dots" id="dots-'+rx.id+'">';
+  for (var i = 0; i < rx.steps.length; i++) {
+    html += '<div class="step-dot'+(i===0?' act':'')+'" onclick="goStep(\''+rx.id+'\','+i+')"></div>';
+  }
+  html += '</div>';
+
+  // Step content
+  for (var i = 0; i < rx.steps.length; i++) {
+    var s = rx.steps[i];
+    html += '<div class="step-content'+(i===0?' active':'')+'" id="step-'+rx.id+'-'+i+'">'+
+      '<h4><span class="icon" style="background:'+rx.color+'">'+s.icon+'</span>'+s.title+'</h4>'+
+      (typeof s.html === 'function' ? s.html() : s.html) + '</div>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderAll() {
+  var c = document.getElementById('reactions-container');
+  var html = '';
+  for (var i = 0; i < REACTIONS.length; i++) {
+    html += renderReaction(REACTIONS[i], i);
+  }
+  c.innerHTML = html;
+
+  // Re-render KaTeX for all equations now in DOM
+  if (window.renderMathInElement) {
+    try { renderMathInElement(document.body, {delimiters:[{left:'\\(',right:'\\)',display:false}]}); } catch(e) {}
+  } else {
+    // Manual KaTeX render fallback
+    document.querySelectorAll('.eq-line').forEach(function(el) {
+      var m = el.textContent.match(/\\\\(.*?\\\\)/);
+      // Elements already rendered via renderToString, but some have \(...\) that need rendering
+    });
+    // Auto-render
+    if (window.katex && katex.renderToString) {
+      // elements with \( \) patterns
+      document.querySelectorAll('.eq-line, .highlight-box').forEach(function(el) {
+        var html = el.innerHTML;
+        html = html.replace(/\\\\([\s\S]*?\\\\)/g, function(m) {
+          try { return katex.renderToString(m.slice(2,-2), {displayMode:false,throwOnError:false}); }
+          catch(e) { return m; }
+        });
+        el.innerHTML = html;
+      });
+    }
+  }
+}
+
+// ======================== STATE ========================
+var stepStates = {};
+
+function getState(id) {
+  if (!stepStates[id]) stepStates[id] = { step: 0, open: false };
+  return stepStates[id];
+}
+
+function toggleCard(id) {
+  var st = getState(id);
+  st.open = !st.open;
+  document.getElementById('card-'+id).classList.toggle('open', st.open);
+}
+
+function updateStep(id) {
+  var rx = REACTIONS.find(function(r){return r.id===id;});
+  var st = getState(id);
+  var si = st.step;
+
+  // content
+  for (var i = 0; i < rx.steps.length; i++) {
+    var el = document.getElementById('step-'+id+'-'+i);
+    if (el) el.classList.toggle('active', i === si);
+  }
+
+  // dots
+  var dots = document.getElementById('dots-'+id);
+  if (dots) {
+    var ds = dots.querySelectorAll('.step-dot');
+    ds.forEach(function(d, i){
+      d.classList.toggle('act', i===si);
+      d.classList.toggle('done', i<si);
+    });
+  }
+
+  // label
+  var label = document.getElementById('label-'+id);
+  if (label) label.textContent = (si+1) + ' / ' + rx.steps.length;
+
+  // Open card if not open
+  if (!getState(id).open) toggleCard(id);
+}
+
+function goStep(id, idx) {
+  var rx = REACTIONS.find(function(r){return r.id===id;});
+  var st = getState(id);
+  st.step = Math.max(0, Math.min(rx.steps.length-1, idx));
+  updateStep(id);
+}
+
+function nextStep(id) {
+  var rx = REACTIONS.find(function(r){return r.id===id;});
+  var st = getState(id);
+  goStep(id, st.step + 1);
+}
+
+function prevStep(id) {
+  goStep(id, getState(id).step - 1);
+}
+
+// ======================== INIT ========================
+// Auto-render KaTeX
+document.addEventListener('DOMContentLoaded', function() {
+  // Load KaTeX auto-render
+  var script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js';
+  script.onload = function() {
+    renderAll();
+    // Re-render after renderAll
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left:'\\(', right:'\\)', display:false},
+          {left:'\\[', right:'\\]', display:true}
+        ],
+        throwOnError: false
+      });
+    }
+  };
+  script.onerror = function() { renderAll(); };
+  document.head.appendChild(script);
+});
+
+// Fallback if DOMContentLoaded already fired
+if (document.readyState !== 'loading') {
+  var evt = new Event('DOMContentLoaded');
+  document.dispatchEvent(evt);
+}
+</script>
+</body>
+</html>
