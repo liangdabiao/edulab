@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
     <title>化学反应微观 3D 演示</title>
-    <script src="https://gcore.jsdelivr.net/npm/tailwindcss@3.4.17/src/standalone-cdn.js"></script>
-    <script src="https://gcore.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://gcore.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="stylesheet" href="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
-    <script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
-    <script src="https://gcore.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
     <style>
         :root { --accent: #6366f1; --accent-soft: rgba(99,102,241,0.25); }
         ::-webkit-scrollbar { width: 6px; }
@@ -23,140 +22,295 @@
         .acc-ring:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
         .play-btn { background: var(--accent); }
         .play-btn:hover { filter: brightness(1.08); }
+
+        /* Tailwind replacements */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: ui-sans-serif,system-ui,sans-serif; background: #eef2f7; color: #0f172a; min-height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1 1 0%; min-height:0; }
+        .flex-shrink-0,.shrink-0 { flex-shrink: 0; }
+        .flex-wrap { flex-wrap: wrap; }
+        .grid { display: grid; }
+        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .fixed { position: fixed; }
+        .inset-0 { top:0; right:0; left:0; bottom:0; }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .min-h-screen { min-height: 100vh; }
+        .max-w-\[90px\] { max-width: 90px; }
+        .p-3 { padding: 0.75rem; }
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .p-6 { padding: 1.5rem; }
+        .px-2 { padding-left:0.5rem; padding-right:0.5rem; }
+        .px-2\.5 { padding-left:0.625rem; padding-right:0.625rem; }
+        .px-3 { padding-left:0.75rem; padding-right:0.75rem; }
+        .px-4 { padding-left:1rem; padding-right:1rem; }
+        .px-6 { padding-left:1.5rem; padding-right:1.5rem; }
+        .py-1 { padding-top:0.25rem; padding-bottom:0.25rem; }
+        .py-1\.5 { padding-top:0.375rem; padding-bottom:0.375rem; }
+        .py-2 { padding-top:0.5rem; padding-bottom:0.5rem; }
+        .py-2\.5 { padding-top:0.625rem; padding-bottom:0.625rem; }
+        .py-3 { padding-top:0.75rem; padding-bottom:0.75rem; }
+        .pl-2\.5 { padding-left:0.625rem; }
+        .pr-3 { padding-right:0.75rem; }
+        .mt-1 { margin-top:0.25rem; }
+        .mt-2 { margin-top:0.5rem; }
+        .mt-3 { margin-top:0.75rem; }
+        .mt-4 { margin-top:1rem; }
+        .mt-6 { margin-top:1.5rem; }
+        .mb-1 { margin-bottom:0.25rem; }
+        .mb-2 { margin-bottom:0.5rem; }
+        .mb-3 { margin-bottom:0.75rem; }
+        .mb-4 { margin-bottom:1rem; }
+        .gap-1\.5 { gap:0.375rem; }
+        .gap-2 { gap:0.5rem; }
+        .gap-2\.5 { gap:0.625rem; }
+        .gap-3 { gap:0.75rem; }
+        .gap-4 { gap:1rem; }
+        .space-x-1\.5 > * + * { margin-left:0.375rem; }
+        .space-x-2 > * + * { margin-left:0.5rem; }
+        .space-x-3 > * + * { margin-left:0.75rem; }
+        .space-y-4 > * + * { margin-top:1rem; }
+        .text-xs { font-size:0.75rem; line-height:1rem; }
+        .text-sm { font-size:0.875rem; line-height:1.25rem; }
+        .text-base { font-size:1rem; line-height:1.5rem; }
+        .text-lg { font-size:1.125rem; line-height:1.75rem; }
+        .text-xl { font-size:1.25rem; line-height:1.75rem; }
+        .text-\[10px\] { font-size:10px; }
+        .text-\[11px\] { font-size:11px; }
+        .font-bold { font-weight:700; }
+        .font-semibold { font-weight:600; }
+        .font-mono { font-family:'Courier New',monospace; }
+        .text-center { text-align:center; }
+        .text-white { color:#fff; }
+        .text-slate-900 { color:#0f172a; }
+        .text-slate-800 { color:#1e293b; }
+        .text-slate-700 { color:#334155; }
+        .text-slate-600 { color:#475569; }
+        .text-slate-500 { color:#64748b; }
+        .text-slate-400 { color:#94a3b8; }
+        .text-emerald-600 { color:#059669; }
+        .text-amber-700 { color:#b45309; }
+        .leading-relaxed { line-height:1.625; }
+        .leading-tight { line-height:1.25; }
+        .tracking-wide { letter-spacing:0.025em; }
+        .tracking-wider { letter-spacing:0.05em; }
+        .uppercase { text-transform:uppercase; }
+        .tabular-nums { font-variant-numeric:tabular-nums; }
+        .bg-white { background:#fff; }
+        .bg-white\/85 { background:rgba(255,255,255,0.85); }
+        .bg-slate-50 { background:#f8fafc; }
+        .bg-slate-100 { background:#f1f5f9; }
+        .bg-slate-200 { background:#e2e8f0; }
+        .bg-slate-300 { background:#cbd5e1; }
+        .bg-amber-50 { background:#fffbeb; }
+        .bg-amber-100 { background:#fef3c7; }
+        .bg-amber-500 { background:#f59e0b; }
+        .border { border:1px solid; }
+        .border-2 { border-width:2px; }
+        .border-t { border-top:1px solid; }
+        .border-b { border-bottom:1px solid; }
+        .border-l { border-left:1px solid; }
+        .border-slate-200 { border-color:#e2e8f0; }
+        .border-slate-300 { border-color:#cbd5e1; }
+        .border-amber-200 { border-color:#fde68a; }
+        .rounded { border-radius:0.25rem; }
+        .rounded-lg { border-radius:0.5rem; }
+        .rounded-xl { border-radius:0.75rem; }
+        .rounded-full { border-radius:9999px; }
+        .shadow-sm { box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+        .shadow-lg { box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1); }
+        .cursor-pointer { cursor:pointer; }
+        .cursor-grab { cursor:grab; }
+        .active\:cursor-grabbing:active { cursor:grabbing; }
+        .select-none { user-select:none; }
+        .overflow-hidden { overflow:hidden; }
+        .overflow-y-auto { overflow-y:auto; }
+        .overflow-x-auto { overflow-x:auto; }
+        .hidden { display:none; }
+        .opacity-0 { opacity:0; }
+        .z-10 { z-index:10; }
+        .z-20 { z-index:20; }
+        .z-30 { z-index:30; }
+        .transition-all { transition:all .3s; }
+        .transition-colors { transition:color .15s,background-color .15s,border-color .15s; }
+        .transition-opacity { transition:opacity .3s; }
+        .duration-300 { transition-duration:.3s; }
+        .appearance-none { appearance:none; -webkit-appearance:none; }
+        .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border-width:0; }
+        .inline-block { display:inline-block; }
+        .items-center { align-items:center; }
+        .justify-center { justify-content:center; }
+        .justify-between { justify-content:space-between; }
+        .pointer-events-none { pointer-events:none; }
+        .shrink-0 { flex-shrink:0; }
+        .backdrop-blur { backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+
+        @media (min-width:1024px) {
+            .lg\:flex-row { flex-direction:row; }
+            .lg\:w-\[480px\] { width:480px; }
+            .lg\:border-t-0 { border-top-width:0; }
+            .lg\:border-l { border-left-width:1px; }
+        }
+
+        .peer:checked ~ .peer-checked\:bg-amber-500 { background:#f59e0b; }
+        .peer:checked ~ .peer-checked\:after\:translate-x-full::after { transform:translateX(100%); }
+
+        /* Toggle switch common */
+        .toggle-switch { width:2.75rem; height:1.5rem; background:#cbd5e1; border-radius:9999px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+        .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:1.25rem; height:1.25rem; background:#fff; border-radius:50%; transition:transform .2s; }
+        .toggle-switch.on { background:var(--accent); }
+        .toggle-switch.on::after { transform:translateX(1.25rem); }
+        .toggle-switch.amber.on { background:#f59e0b; }
     </style>
 </head>
-<body class="bg-[#eef2f7] text-slate-900 min-h-screen flex flex-col overflow-hidden font-sans">
+<body>
     <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
 
         <!-- 3D Viewport -->
-        <div class="flex-1 relative bg-[#eef2f7] flex flex-col min-h-[45vh]">
+        <div class="flex-1 relative" style="background:#eef2f7;display:flex;flex-direction:column;min-height:45vh;">
             <div id="labels-overlay" class="absolute inset-0 pointer-events-none z-20 overflow-hidden"></div>
             <div id="canvas-container" class="flex-1 w-full h-full cursor-grab active:cursor-grabbing"></div>
 
             <!-- Labels show / hide toggle -->
-            <button id="labels-toggle" class="absolute top-4 left-4 z-30 bg-white/85 border border-slate-200 backdrop-blur text-xs pl-2.5 pr-3 py-1.5 rounded-lg text-slate-600 shadow-sm hover:bg-white transition-colors flex items-center gap-1.5 cursor-pointer select-none" title="显示 / 隐藏标签">
-                <svg id="labels-toggle-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <button id="labels-toggle" class="absolute" style="top:1rem;left:1rem;z-index:30;background:rgba(255,255,255,0.85);border:1px solid #e2e8f0;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-size:0.75rem;padding:0.375rem 0.75rem 0.375rem 0.625rem;border-radius:0.5rem;color:#475569;box-shadow:0 1px 2px rgba(0,0,0,0.05);display:flex;align-items:center;gap:0.375rem;cursor:pointer;user-select:none;line-height:1rem;transition:background .15s;font-family:inherit;" title="显示 / 隐藏标签">
+                <svg style="width:0.875rem;height:0.875rem;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span id="labels-toggle-text">标签</span>
             </button>
 
             <!-- Energy diagram (optional) -->
-            <div id="energy-panel" class="absolute top-4 right-4 hidden bg-white/85 border border-slate-200 backdrop-blur rounded-xl p-3 select-none shadow-sm">
-                <div class="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1" id="energy-title">能量·反应进程</div>
+            <div id="energy-panel" class="absolute hidden" style="top:1rem;right:1rem;background:rgba(255,255,255,0.85);border:1px solid #e2e8f0;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border-radius:0.75rem;padding:0.75rem;user-select:none;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.25rem;" id="energy-title">能量·反应进程</div>
                 <canvas id="energy-canvas" width="200" height="110"></canvas>
             </div>
 
-            <div class="absolute bottom-4 left-4 bg-white/85 border border-slate-200 backdrop-blur text-xs px-3 py-2 rounded-lg text-slate-500 select-none shadow-sm">
-                <div class="flex items-center space-x-1.5">
-                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+            <div class="absolute" style="bottom:1rem;left:1rem;background:rgba(255,255,255,0.85);border:1px solid #e2e8f0;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-size:0.75rem;padding:0.5rem 0.75rem;border-radius:0.5rem;color:#64748b;user-select:none;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <div style="display:flex;align-items:center;gap:0.375rem;">
+                    <svg style="width:0.875rem;height:0.875rem;color:#94a3b8;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
                     <span id="drag-hint">拖拽旋转 · 滚轮缩放 · 右键平移</span>
                 </div>
             </div>
-            <div class="absolute bottom-0 left-0 right-0 h-1 bg-slate-200">
-                <div id="viewport-progress" class="h-full acc-grad" style="width:0%"></div>
+            <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:#e2e8f0;">
+                <div id="viewport-progress" class="acc-grad" style="height:100%;width:0%;transition:width .3s;"></div>
             </div>
         </div>
 
         <!-- Right panel -->
-        <div class="w-full lg:w-[480px] shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col overflow-y-auto">
-
-            <div class="p-6 border-b border-slate-200 bg-slate-50">
-                <h1 id="title" class="text-lg font-bold tracking-wide text-slate-900">化学反应 3D 虚拟实验室</h1>
-                <p id="subtitle" class="text-xs acc-text mt-1"></p>
-                <div id="equation-container" class="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 mt-4 text-sm overflow-x-auto"></div>
+        <div style="width:100%;flex-shrink:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;flex-direction:column;overflow-y:auto;" class="lg:w-[480px] lg:border-t-0 lg:border-l">
+            <div style="padding:1.5rem;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+                <h1 id="title" style="font-size:1.125rem;font-weight:700;letter-spacing:0.025em;color:#0f172a;">化学反应 3D 虚拟实验室</h1>
+                <p id="subtitle" class="acc-text" style="font-size:0.75rem;margin-top:0.25rem;"></p>
+                <div id="equation-container" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:0.75rem;padding:0.5rem 0.75rem;margin-top:1rem;font-size:0.875rem;overflow-x:auto;"></div>
             </div>
 
             <!-- Stepper -->
-            <div class="p-6 border-b border-slate-200 bg-slate-50">
+            <div style="padding:1.5rem;border-bottom:1px solid #e2e8f0;background:#f8fafc;">
                 <div class="relative">
-                    <div class="absolute top-4 left-5 right-5 h-0.5 bg-slate-200">
-                        <div id="step-progress-line" class="h-full acc-bg transition-all duration-300" style="width:0%"></div>
+                    <div class="absolute" style="top:1rem;left:1.25rem;right:1.25rem;height:2px;background:#e2e8f0;">
+                        <div id="step-progress-line" class="acc-bg" style="height:100%;width:0%;transition:width .3s;"></div>
                     </div>
                     <div id="stepper" class="relative flex justify-between"></div>
                 </div>
 
-                <div class="mt-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <span id="progress-label" class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">反应进度</span>
-                        <span id="progress-readout" class="text-xs font-mono font-bold acc-text tabular-nums">0%</span>
+                <div style="margin-top:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span id="progress-label" style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.05em;text-transform:uppercase;">反应进度</span>
+                        <span id="progress-readout" class="acc-text" style="font-size:0.75rem;font-weight:700;font-family:'Courier New',monospace;font-variant-numeric:tabular-nums;">0%</span>
                     </div>
-                    <input type="range" id="reaction-slider" min="0" max="100" value="0" class="acc-range acc-ring w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                    <p id="slider-hint" class="text-[11px] text-slate-400 mt-2 leading-relaxed"></p>
+                    <input type="range" id="reaction-slider" min="0" max="100" value="0" class="acc-range acc-ring" style="width:100%;height:8px;background:#e2e8f0;border-radius:4px;appearance:none;-webkit-appearance:none;cursor:pointer;accent-color:var(--accent);">
+                    <p id="slider-hint" style="font-size:11px;color:#94a3b8;margin-top:0.5rem;line-height:1.625;"></p>
                 </div>
 
-                <div class="flex items-center gap-2 mt-4">
-                    <button id="prev-btn" class="p-2.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-600 transition-colors cursor-pointer" title="上一步">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:1rem;">
+                    <button id="prev-btn" style="padding:0.625rem;background:#e2e8f0;border:none;border-radius:0.5rem;color:#475569;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-family:inherit;" title="上一步">
+                        <svg style="width:1.25rem;height:1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                     </button>
-                    <button id="play-btn" class="play-btn flex-1 px-4 py-2.5 text-white rounded-lg flex items-center justify-center space-x-1.5 transition-colors shadow-lg cursor-pointer">
-                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <button id="play-btn" class="play-btn" style="flex:1;padding:0.625rem 1rem;color:#fff;border:none;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.375rem;cursor:pointer;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1);font-family:inherit;font-size:0.875rem;font-weight:600;">
+                        <svg style="width:1rem;height:1rem;fill:currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         <span id="play-text">自动演示</span>
                     </button>
-                    <button id="next-btn" class="p-2.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-600 transition-colors cursor-pointer" title="下一步">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    <button id="next-btn" style="padding:0.625rem;background:#e2e8f0;border:none;border-radius:0.5rem;color:#475569;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-family:inherit;" title="下一步">
+                        <svg style="width:1.25rem;height:1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </button>
-                    <button id="reset-btn" class="p-2.5 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-lg transition-colors cursor-pointer" title="复位">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
+                    <button id="reset-btn" style="padding:0.625rem;background:#e2e8f0;border:none;border-radius:0.5rem;color:#475569;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-family:inherit;" title="复位">
+                        <svg style="width:1.25rem;height:1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
                     </button>
                 </div>
             </div>
 
-            <div class="p-6 flex-1 space-y-4">
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <h2 class="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
-                        <svg class="w-4 h-4 acc-text shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <div style="padding:1.5rem;flex:1;display:flex;flex-direction:column;gap:1rem;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1rem;">
+                    <h2 style="font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem;">
+                        <svg style="width:1rem;height:1rem;color:var(--accent);flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                         <span id="step-title-text">—</span>
                     </h2>
-                    <p id="explanation-text" class="text-sm text-slate-700 leading-relaxed min-h-[140px]">加载中...</p>
+                    <p id="explanation-text" style="font-size:0.875rem;color:#334155;line-height:1.625;min-height:140px;">加载中...</p>
                 </div>
 
                 <!-- Conservation counter -->
-                <div id="conservation-panel" class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase" id="conservation-label">原子守恒</span>
-                        <span class="text-[10px] text-emerald-600" id="conservation-note">反应前后不变</span>
+                <div id="conservation-panel" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <span id="conservation-label" style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.05em;text-transform:uppercase;">原子守恒</span>
+                        <span id="conservation-note" style="font-size:10px;color:#059669;">反应前后不变</span>
                     </div>
-                    <div id="conservation-chips" class="flex flex-wrap gap-2 mt-3"></div>
+                    <div id="conservation-chips" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;"></div>
                 </div>
 
                 <!-- Overlay toggles (flame / catalyst) -->
-                <div id="toggle-flame" class="hidden p-4 rounded-xl bg-amber-50 border border-amber-200 items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177 7.547 7.547 0 01-1.705-1.715.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248z"/></svg>
+                <div id="toggle-flame" class="hidden" style="padding:1rem;border-radius:0.75rem;background:#fffbeb;border:1px solid #fde68a;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div style="width:2.5rem;height:2.5rem;border-radius:0.5rem;background:#fef3c7;display:flex;align-items:center;justify-content:center;color:#d97706;flex-shrink:0;">
+                            <svg style="width:1.5rem;height:1.5rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177 7.547 7.547 0 01-1.705-1.715.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248z"/></svg>
                         </div>
-                        <div><h4 class="text-sm font-bold text-slate-800" id="flame-title">燃烧火焰与高温</h4>
-                             <p class="text-xs text-amber-700" id="flame-sub">显示反应放出的热与光</p></div>
+                        <div><h4 style="font-size:0.875rem;font-weight:700;color:#1e293b;" id="flame-title">燃烧火焰与高温</h4>
+                             <p style="font-size:0.75rem;color:#b45309;" id="flame-sub">显示反应放出的热与光</p></div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;">
                         <input type="checkbox" id="flame-toggle" class="sr-only peer" checked>
-                        <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                        <div class="toggle-switch amber"></div>
                     </label>
                 </div>
 
-                <div id="toggle-catalyst" class="hidden p-4 rounded-xl bg-slate-100 border border-slate-200 items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background: var(--accent-soft); color: var(--accent)">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <div id="toggle-catalyst" class="hidden" style="padding:1rem;border-radius:0.75rem;background:#f1f5f9;border:1px solid #e2e8f0;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div style="width:2.5rem;height:2.5rem;border-radius:0.5rem;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;">
+                            <svg style="width:1.5rem;height:1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                         </div>
-                        <div><h4 class="text-sm font-bold text-slate-800" id="catalyst-title">催化剂</h4>
-                             <p class="text-xs acc-text" id="catalyst-sub">显示催化剂如何参与反应</p></div>
+                        <div><h4 style="font-size:0.875rem;font-weight:700;color:#1e293b;" id="catalyst-title">催化剂</h4>
+                             <p class="acc-text" style="font-size:0.75rem;" id="catalyst-sub">显示催化剂如何参与反应</p></div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;">
                         <input type="checkbox" id="catalyst-toggle" class="sr-only peer" checked>
-                        <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-[color:var(--accent)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        <div class="toggle-switch"></div>
                     </label>
                 </div>
 
                 <!-- Atom legend -->
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase" id="legend-label">原子图例</span>
-                    <div id="legend-grid" class="grid grid-cols-2 gap-2.5 mt-3 text-xs"></div>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1rem;">
+                    <span id="legend-label" style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.05em;text-transform:uppercase;">原子图例</span>
+                    <div id="legend-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.625rem;margin-top:0.75rem;font-size:0.75rem;"></div>
                 </div>
             </div>
         </div>
     </main>
 
     <script>
+    // Inline OrbitControls for three.js r128 (MIT License)
+    (function(){if(typeof THREE==='undefined')return;var O=THREE.OrbitControls=function(e,t){this.object=e;this.domElement=t;this.enabled=true;this.target=new THREE.Vector3();this.minDistance=0;this.maxDistance=Infinity;this.minZoom=0;this.maxZoom=Infinity;this.minPolarAngle=0;this.maxPolarAngle=Math.PI;this.minAzimuthAngle=-Infinity;this.maxAzimuthAngle=Infinity;this.enableDamping=false;this.dampingFactor=0.05;this.enableZoom=true;this.zoomSpeed=1;this.enableRotate=true;this.rotateSpeed=1;this.enablePan=true;this.panSpeed=1;this.screenSpacePanning=false;this.keyPanSpeed=7;this.autoRotate=false;this.autoRotateSpeed=2;this.enableKeys=true;this.keys={LEFT:'ArrowLeft',UP:'ArrowUp',RIGHT:'ArrowRight',BOTTOM:'ArrowDown'};this.mouseButtons={LEFT:THREE.MOUSE?THREE.MOUSE.ROTATE:0,MIDDLE:THREE.MOUSE?THREE.MOUSE.DOLLY:1,RIGHT:THREE.MOUSE?THREE.MOUSE.PAN:2};this.touches={ONE:THREE.TOUCH?THREE.TOUCH.ROTATE:0,TWO:THREE.TOUCH?THREE.TOUCH.DOLLY_PAN:1};this._spherical=new THREE.Spherical();this._sphericalDelta=new THREE.Spherical();this._scale=1;this._panOffset=new THREE.Vector3();this._rotateStart=new THREE.Vector2();this._rotateEnd=new THREE.Vector2();this._rotateDelta=new THREE.Vector2();this._panStart=new THREE.Vector2();this._panEnd=new THREE.Vector2();this._panDelta=new THREE.Vector2();this._dollyStart=new THREE.Vector2();this._dollyEnd=new THREE.Vector2();this._dollyDelta=new THREE.Vector2();this._mouseChange=new THREE.Vector2();var P=this;function handleResize(){var n=P.domElement.clientWidth;P.domElement.style&&(P.domElement.style.width=n+'px')}
+    function getZoomScale(){return Math.pow(.95,P.zoomSpeed)}
+    function rotateLeft(a){P._sphericalDelta.theta-=a}
+    function rotateUp(a){P._sphericalDelta.phi-=a}
+    function panLeft(a,b){var c=new THREE.Vector3();c.crossVectors(P.object.up,new THREE.Vector3(0,0,1));c.applyQuaternion(P.object.quaternion);c.multiplyScalar(a*b);P._panOffset.add(c)}
+    function panUp(a,b){var c=new THREE.Vector3(0,1,0);c.applyQuaternion(P.object.quaternion);c.multiplyScalar(a*b);P._panOffset.add(c)}
+    function panIn(a,b,c){if(P.screenSpacePanning){panLeft(a,b);panUp(a,b)}else{panLeft(a,P.object.matrix.extractBasis?0.5*b:0);panUp(a,0.5*b)}}
+    function dollyIn(a){P._scale*=a}
+    function dollyOut(a){P._scale/=a}
+    this.update=function(){var e=P.object;var t=P.target;var s=e.position.distanceTo(t);var c=e.position.clone().sub(t).setFromSpherical(P._spherical);P._spherical.setFromVector3(c);P._sphericalDelta.theta+=P.autoRotate?P.autoRotateSpeed*2*Math.PI/60/60:0;P._spherical.theta+=P._sphericalDelta.theta;P._spherical.phi+=P._sphericalDelta.phi;P._spherical.theta=Math.max(P.minAzimuthAngle,Math.min(P.maxAzimuthAngle,P._spherical.theta));P._spherical.phi=Math.max(P.minPolarAngle,Math.min(P.maxPolarAngle,P._spherical.phi));P._spherical.makeSafe();var r=P._sphericalDelta.theta!==0||P._sphericalDelta.phi!==0||P._scale!==1;e.position.setFromSpherical(P._spherical).add(t);e.updateMatrix();P._sphericalDelta.set(0,0,0);P._scale=1;t.add(P._panOffset);P._panOffset.set(0,0,0);if(P.enableDamping){P._spherical.theta+=P._sphericalDelta.theta*P.dampingFactor;P._spherical.phi+=P._sphericalDelta.phi*P.dampingFactor}else{var d=P.object.position;d.x+=P._panOffset.x;d.y+=P._panOffset.y;d.z+=P._panOffset.z};t.copy(P.object.position).sub(c.setFromSpherical(P._spherical));return r};var q=new THREE.Vector3();var r=function(e){e.preventDefault();var t=P.domElement.getBoundingClientRect();P._rotateStart.set((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1)};var s=function(e){e.preventDefault();var t=P.domElement.getBoundingClientRect();var n=P._rotateStart;var i=new THREE.Vector2((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1);P._rotateDelta.subVectors(i,n);P._rotateDelta.x*=1;P._rotateDelta.y*=1;var a=P.rotateSpeed;rotateLeft(2*Math.PI*P._rotateDelta.x*a);rotateUp(2*Math.PI*P._rotateDelta.y*a);n.copy(i)};var u=function(e){var t=P.domElement.getBoundingClientRect();P._dollyStart.set((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1)};var v=function(e){var t=P.domElement.getBoundingClientRect();var n=new THREE.Vector2((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1);P._dollyDelta.subVectors(n,P._dollyStart);var i=Math.pow(P._dollyDelta.x,2)+Math.pow(P._dollyDelta.y,2);var a=Math.sqrt(i);var o=P.zoomSpeed;if(P._dollyDelta.y>0){dollyOut(getZoomScale())}else if(P._dollyDelta.y<0){dollyIn(getZoomScale())};P._dollyStart.copy(n)};var w=function(e){var t=P.domElement.getBoundingClientRect();P._panStart.set((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1)};var x=function(e){var t=P.domElement.getBoundingClientRect();P._panDelta.subVectors(new THREE.Vector2((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1),P._panStart);panLeft(P._panDelta.x,P.panSpeed);panUp(P._panDelta.y,P.panSpeed);P._panStart.copy(new THREE.Vector2((e.clientX-t.left)/t.width*2-1,(e.clientY-t.top)/t.height*2-1))};var y=function(e){if(!P.enabled)return;switch(e.button){case 0:if(!P.enableRotate)return;r(e);P.domElement.addEventListener('pointermove',s);break;case 1:if(!P.enableZoom)return;u(e);P.domElement.addEventListener('pointermove',v);break;case 2:if(!P.enablePan)return;w(e);P.domElement.addEventListener('pointermove',x);break}};var z=function(){P.domElement.removeEventListener('pointermove',s);P.domElement.removeEventListener('pointermove',v);P.domElement.removeEventListener('pointermove',x)};P.domElement.addEventListener('pointerdown',y);window.addEventListener('pointerup',z);P.domElement.addEventListener('wheel',function(e){if(!P.enabled||!P.enableZoom)return;e.preventDefault();var t=1;if(e.deltaY<0){dollyIn(getZoomScale())}else if(e.deltaY>0){dollyOut(getZoomScale())};P.update()},{passive:false,capture:true});P.domElement.style.touchAction='none'};O.prototype.constructor=THREE.OrbitControls;})();
+
     const DATA = {"meta": {"title": "镁条燃烧", "subtitle": "2Mg + O₂ 点燃生成 MgO，发出耀眼白光", "language": "zh-CN", "category": "inorganic", "accent": "amber", "engine": "morph", "equation": "2\\,\\text{Mg} + \\text{O}_2 \\;\\xrightarrow{\\text{点燃}}\\; 2\\,\\text{MgO}"}, "conditions": {"text": "点燃", "exothermic": true, "flame": true}, "atoms": [{"id": "Mg1", "el": "Mg", "color": "#d1d5db", "radius": 0.56, "start": [-4.0, 0.2, 0.0], "end": [-2.575, -0.6, 0.0], "rmol": "Mg#1", "pmol": "MgO#1"}, {"id": "Mg2", "el": "Mg", "color": "#d1d5db", "radius": 0.56, "start": [-4.0, 0.2, 0.0], "end": [0.825, 0.6, 0.0], "rmol": "Mg#2", "pmol": "MgO#2"}, {"id": "O1", "el": "O", "color": "#ef4444", "radius": 0.42, "start": [2.85, -0.6, 0.0], "end": [-0.825, -0.6, 0.0], "rmol": "O2#1", "pmol": "MgO#1"}, {"id": "O2", "el": "O", "color": "#ef4444", "radius": 0.42, "start": [3.95, -0.6, 0.0], "end": [2.575, 0.6, 0.0], "rmol": "O2#1", "pmol": "MgO#2"}], "bonds": {"before": [{"a": "O1", "b": "O2", "order": 2}], "after": [{"a": "Mg1", "b": "O1", "order": "ionic"}, {"a": "Mg2", "b": "O2", "order": "ionic"}], "broken": [{"a": "O1", "b": "O2", "order": 2}], "formed": [{"a": "Mg1", "b": "O1", "order": "ionic"}, {"a": "Mg2", "b": "O2", "order": "ionic"}], "kept": []}, "labels": [{"id": "reactant-Mg#1", "text": "镁 (Mg)", "color": "slate", "phase": "reactant", "atoms": ["Mg1"]}, {"id": "reactant-Mg#2", "text": "镁 (Mg)", "color": "slate", "phase": "reactant", "atoms": ["Mg2"]}, {"id": "reactant-O2#1", "text": "氧气 (O₂)", "color": "red", "phase": "reactant", "atoms": ["O1", "O2"]}, {"id": "product-MgO#1", "text": "氧化镁 (MgO)", "color": "slate", "phase": "product", "atoms": ["Mg1", "O1"]}, {"id": "product-MgO#2", "text": "氧化镁 (MgO)", "color": "slate", "phase": "product", "atoms": ["Mg2", "O2"]}], "elementCounts": {"Mg": 2, "O": 2}, "legend": [{"el": "Mg", "color": "#d1d5db", "name": "镁"}, {"el": "O", "color": "#ef4444", "name": "氧"}], "steps": [{"title": "点燃镁条", "html": "<span class='text-slate-300 font-semibold'>镁条 (Mg)</span> 在空气中点燃，达到着火点后剧烈燃烧，发出<span class='text-amber-300 font-semibold'>耀眼白光</span>。镁是活泼金属，常温下表面有氧化膜，点燃后剧烈反应。"}, {"title": "电子转移 · 剧烈燃烧", "html": "Mg 失去 2 个 <span class='text-cyan-300 font-semibold'>电子</span> 变成 Mg²⁺（<span class='text-amber-400 font-semibold'>氧化</span>），O 得到 2 个电子变成 O²⁻（<span class='text-emerald-400 font-semibold'>还原</span>）。反应放出大量热与光——<span class='text-amber-300 font-semibold'>燃烧</span>的微观本质是剧烈的氧化还原。"}, {"title": "生成氧化镁", "html": "Mg²⁺ 与 O²⁻ 通过<span class='text-amber-300 font-semibold'>离子键</span>结合成<span class='text-slate-200 font-semibold'>氧化镁 (MgO)</span>——白色粉末。电子守恒：Mg 共失 4e⁻、O 共得 4e⁻ ✓。原子守恒：2Mg·2O。"}], "fragments": [], "energy": {"activation": 0.55, "deltaH": -0.9, "reactantLabel": "Mg+O₂", "productLabel": "MgO"}, "electrons": [{"from": "Mg1", "to": "O1", "count": 2, "label": "e⁻"}, {"from": "Mg2", "to": "O2", "count": 2, "label": "e⁻"}], "ui": {"reactants": "反应物", "products": "产物", "progress": "反应进度", "play": "自动演示", "pause": "暂停演示", "reset": "复位", "prev": "上一步", "next": "下一步", "hint": "拖动滑块观察化学键的断裂、原子重组与守恒，或点击上方步骤跳转。", "drag": "拖拽旋转 · 滚轮缩放 · 右键平移", "legend": "原子图例", "conservation": "原子守恒", "energy": "能量·反应进程", "broken": "断裂的键", "formed": "新生成的键", "labels": "标签", "labelsHint": "显示 / 隐藏分子标签"}};
     (function () {
         const META = DATA.meta, COND = DATA.conditions || {}, UI = DATA.ui || {};
@@ -220,11 +374,11 @@
                 renderer = new THREE.WebGLRenderer({ antialias: true, failIfMajorPerformanceCaveat: false, alpha: false });
             } catch(e) {
                 document.getElementById('canvas-container').innerHTML =
-                    '<div class="flex items-center justify-center h-full text-slate-500 p-8 text-center">' +
-                    '<div><svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;padding:2rem;text-align:center;">' +
+                    '<div><svg style="width:3rem;height:3rem;margin:0 auto 0.75rem;color:#cbd5e1;display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>' +
-                    '<p class="font-semibold text-slate-600">您的浏览器不支持 WebGL</p>' +
-                    '<p class="text-xs mt-1 text-slate-400">请使用支持 WebGL 的现代浏览器（Chrome / Firefox / Edge）打开此页面。</p></div></div>';
+                    '<p style="font-weight:600;color:#475569;">您的浏览器不支持 WebGL</p>' +
+                    '<p style="font-size:0.75rem;margin-top:0.25rem;color:#94a3b8;">请使用支持 WebGL 的现代浏览器（Chrome / Firefox / Edge）打开此页面。</p></div></div>';
                 console.warn('WebGL not available:', e.message);
                 return;
             }
@@ -473,10 +627,10 @@
             (DATA.labels || []).forEach(l => {
                 const el = document.createElement('div');
                 el.id = 'lbl-' + l.id;
-                el.className = 'absolute text-white text-xs font-semibold px-2 py-1 rounded shadow-lg transition-opacity duration-300 transform -translate-x-1/2 -translate-y-full border';
+                el.className = 'absolute';
                 const c = ({ red:'#ef4444', cyan:'#0891b2', blue:'#3b82f6', emerald:'#10b981', slate:'#475569',
                     violet:'#8b5cf6', green:'#16a34a', sky:'#0ea5e9', orange:'#f97316' })[l.color] || ACC;
-                el.style.background = hexToRgba(c, 0.92); el.style.borderColor = hexToRgba(c, 1);
+                el.style.cssText = 'position:absolute;color:#fff;font-size:0.75rem;font-weight:600;padding:0.25rem 0.5rem;border-radius:0.25rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1);transform:translate(-50%,-100%);border:1px solid;transition:opacity .3s;background:'+hexToRgba(c,0.92)+';border-color:'+c;
                 el.textContent = l.text; el.dataset.phase = l.phase;
                 overlay.appendChild(el); l._el = el; l._ids = l.atoms;
             });
@@ -489,7 +643,6 @@
                 const show = showLabels && (l.phase === 'reactant' ? reactantPhase : !reactantPhase);
                 const el = l._el;
                 if (!show) { el.style.opacity = '0'; return; }
-                // Anchor above the molecule's topmost atom so the box never covers the bonds.
                 let sx = 0, topY = Infinity, n = 0;
                 for (const id of l._ids) {
                     const a = atoms[id];
@@ -518,7 +671,6 @@
             const peakX = 0.45, peak = Math.max(y0, yEnd) + act * 0.5 + 0.1;
             const Y = v => pad + (1 - v) * (H - 2 * pad);
             const X = u => pad + u * (W - 2 * pad);
-            // curve
             x.strokeStyle = ACC; x.lineWidth = 2; x.beginPath();
             for (let i = 0; i <= 60; i++) {
                 const u = i / 60; let yv;
@@ -527,12 +679,10 @@
                 const px = X(u), py = Y(yv); i ? x.lineTo(px, py) : x.moveTo(px, py);
             }
             x.stroke();
-            // marker
             const u = Math.min(1, p); let yv;
             if (u < peakX) { const k = u / peakX; yv = y0 + (peak - y0) * (k * k * (3 - 2 * k)); }
             else { const k = (u - peakX) / (1 - peakX); yv = peak + (yEnd - peak) * (k * k * (3 - 2 * k)); }
             x.fillStyle = '#0f172a'; x.beginPath(); x.arc(X(u), Y(yv), 3.5, 0, 7); x.fill();
-            // baseline labels
             x.fillStyle = '#64748b'; x.font = '9px sans-serif';
             x.fillText(E.reactantLabel || '反应物', pad, Y(y0) - 4);
             x.fillText(E.productLabel || '产物', W - pad - 26, Y(yEnd) - 4);
@@ -648,6 +798,7 @@
             document.getElementById('subtitle').textContent = META.subtitle || '';
             document.getElementById('equation-container').innerHTML = '$$' + (META.equation || '') + '$$';
             document.getElementById('drag-hint').textContent = UI.drag || '拖拽旋转 · 滚轮缩放 · 右键平移';
+            document.getElementById('energy-title').textContent = UI.energy || '能量·反应进程';
             document.getElementById('progress-label').textContent = UI.progress || '反应进度';
             document.getElementById('slider-hint').textContent = UI.hint || '';
             document.getElementById('play-text').textContent = UI.play || '自动演示';
@@ -702,9 +853,9 @@
             document.getElementById('prev-btn').addEventListener('click', () => jumpToStep(Math.max(1, stepIndexFor(progress / 100) - 1)));
             document.getElementById('next-btn').addEventListener('click', () => jumpToStep(Math.min(steps.length, stepIndexFor(progress / 100) + 1)));
             const ft = document.getElementById('flame-toggle');
-            if (ft) ft.addEventListener('change', e => showFlame = e.target.checked);
+            if (ft) ft.addEventListener('change', e => { showFlame = e.target.checked; const ts=e.target.nextElementSibling; if(ts)ts.classList.toggle('on',e.target.checked); });
             const ct = document.getElementById('catalyst-toggle');
-            if (ct) ct.addEventListener('change', e => showCatalyst = e.target.checked);
+            if (ct) ct.addEventListener('change', e => { showCatalyst = e.target.checked; const ts=e.target.nextElementSibling; if(ts)ts.classList.toggle('on',e.target.checked); });
             const EYE = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>`;
             const EYE_OFF = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/>`;
             const lt = document.getElementById('labels-toggle'), lti = document.getElementById('labels-toggle-icon');
@@ -718,6 +869,8 @@
 
         window.onload = function () {
             paintStaticUI(); buildStepper(); init3D(); buildLabels(); bindEvents();
+            // Init toggle switches
+            document.querySelectorAll('.toggle-switch').forEach(function(ts){ts.classList.add('on');});
             updateStep(0); lastStep = -1;
             animate();
             if (typeof renderMathInElement === 'function') {

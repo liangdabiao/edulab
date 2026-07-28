@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
     <title>立体几何交互教学</title>
     <style>
         :root {
@@ -572,8 +573,8 @@
     <script type="importmap">
     {
         "imports": {
-            "three": "https://gcore.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://gcore.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
         }
     }
     </script>
@@ -599,7 +600,7 @@
             }
         };
     </script>
-    <script id="MathJax-script" async src="https://gcore.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
 
     <!-- 课程数据（由 generate.py 注入；语言、题面、步骤、3D 模型全部数据驱动） -->
     <script id="lesson-data" type="application/json">{"lesson": {"language": "zh-CN", "meta": "交互解题 · 线面角", "title": "正四棱锥P-ABCD中，底面边长为2，高为1，E为PC中点，求直线BE与平面PAC所成角的正弦值", "answerLabel": "直线 BE 与平面 PAC 所成角的正弦值", "answerValue": "$\\frac{2 \\sqrt{22}}{11}$"}, "steps": [{"title": "建立空间直角坐标系", "content": "<p>首先，我们需要建立一个合适的空间直角坐标系来量化几何元素。</p><p>取底面正方形 $ABCD$ 的中心 $O$ 为原点 $(0,0,0)$。</p><p>让底面对角线 $AC$ 在 $x$ 轴，$BD$ 在 $y$ 轴，顶点 $P$ 在 $z$ 轴上。</p><p>因为底面边长为 $2$，所以两条对角线长为 $2 \\sqrt{2}$，半对角线长为 $\\sqrt{2}$。于是关键点坐标为：</p>$$A(\\sqrt{2}, 0, 0), C(- \\sqrt{2}, 0, 0)$$$$B(0, \\sqrt{2}, 0), D(0, - \\sqrt{2}, 0)$$$$P(0, 0, 1)$$<p>这样 $AC \\perp BD$ 关系更明显。</p>", "highlight": ["Axis", "Len_AB", "Len_AC", "Len_PO"], "cameraPos": {"x": 5, "y": 4, "z": 5}}, {"title": "计算中点 E 与向量 BE", "content": "<p>已知 $E$ 是侧棱 $PC$ 的中点。</p><p>利用中点坐标公式：$E = \\frac{P + C}{2}$</p>$$P(0, 0, 1), C(- \\sqrt{2}, 0, 0)$$$$E = (- \\frac{\\sqrt{2}}{2}, 0, \\frac{1}{2})$$<p>接下来计算直线 $BE$ 的方向向量 $\\vec{BE}$：</p>$$\\vec{BE} = E - B = (- \\frac{\\sqrt{2}}{2}, - \\sqrt{2}, \\frac{1}{2})$$", "highlight": ["Line_BE"], "cameraPos": {"x": 3, "y": 3, "z": 6}}, {"title": "确定平面 PAC 的法向量", "content": "<p>我们需要求直线 $BE$ 与平面 $PAC$ 的夹角。</p><p>观察几何体特征：</p><ul><li>底面 $ABCD$ 是正方形，对角线互相垂直，即 $AC \\perp BD$。</li><li>顶点 $P$ 在底面的投影是中心 $O$，所以 $PO \\perp AC$。</li></ul><p>因为 $AC \\perp BD$ 且 $AC \\perp PO$，所以直线 $BD \\perp$ 平面 $PAC$。</p><p>因此，平面 $PAC$ 的法向量 $\\vec{n}$ 就是 $\\vec{BD}$ 的方向：</p>$$\\vec{n} = (0, 2 \\sqrt{2}, 0)$$<p>简化取 $\\vec{n} = (0, 1, 0)$。</p>", "highlight": ["Line_BE", "Plane_PAC", "Normal_Vector"], "cameraPos": {"x": 4, "y": 5, "z": 2}}, {"title": "利用向量公式求解", "content": "<p>设直线 $BE$ 与平面 $PAC$ 所成角为 $\\theta$。</p><p>根据线面角公式：$\\sin\\theta = \\dfrac{|\\vec{BE} \\cdot \\vec{n}|}{|\\vec{BE}|\\,|\\vec{n}|}$</p><p>向量数据：</p><ul><li>$\\vec{BE} = (- \\frac{\\sqrt{2}}{2}, - \\sqrt{2}, \\frac{1}{2})$</li><li>$\\vec{n} = (0, 1, 0)$</li></ul><p>计算数量积与模长：</p>$$\\vec{BE} \\cdot \\vec{n} = - \\sqrt{2}, \\quad |\\vec{BE}| = \\frac{\\sqrt{11}}{2}$$<p>代入公式：</p>$$\\sin\\theta = \\frac{2 \\sqrt{22}}{11}$$<p>所以，直线 $BE$ 与平面 $PAC$ 所成角的正弦值为 $\\frac{2 \\sqrt{22}}{11}$。</p>", "highlight": ["Line_BE", "Plane_PAC", "Normal_Vector"], "cameraPos": {"x": 4, "y": 4.5, "z": 4}}], "model": {"target": [0, 0.45, 0], "initialCamera": [5, 4, 5], "points": {"O": [0.0, 0.0, 0.0], "A": [2.1213203435596424, 0.0, 0.0], "C": [-2.1213203435596424, 0.0, 0.0], "B": [0.0, 0.0, 2.1213203435596424], "D": [0.0, 0.0, -2.1213203435596424], "P": [0.0, 1.5, 0.0], "E": [-1.0606601717798212, 0.75, 0.0]}, "spheres": ["O", "P", "A", "B", "C", "D", "E"], "edges": [{"a": "A", "b": "B"}, {"a": "B", "b": "C"}, {"a": "C", "b": "D"}, {"a": "D", "b": "A", "dashed": true}, {"a": "P", "b": "A"}, {"a": "P", "b": "B"}, {"a": "P", "b": "C"}, {"a": "P", "b": "D"}, {"a": "A", "b": "C", "color": "aux", "dashed": true}, {"a": "B", "b": "D", "color": "aux", "dashed": true, "name": "Line_BD"}], "elements": {"Line_BE": {"type": "line", "a": "B", "b": "E", "color": "emphasis", "depthTest": false}, "Plane_PAC": {"type": "plane", "pts": ["P", "A", "C"]}, "Normal_Vector": {"type": "arrow", "origin": "O", "dir": [0, 0, 1], "length": 1.5, "color": "normal"}, "Axis": {"type": "axes", "size": 3}, "Len_AB": {"type": "measure", "a": "A", "b": "B", "label": "2"}, "Len_AC": {"type": "measure", "a": "A", "b": "C", "label": "2 \\sqrt{2}"}, "Len_PO": {"type": "measure", "a": "P", "b": "O", "label": "1"}}}}</script>
