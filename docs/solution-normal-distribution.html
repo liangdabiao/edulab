@@ -731,7 +731,7 @@ function update(){
     // constant 验证
     if(BOARD.constant && ros.length){
         const cval = ros.find(r => r.id === BOARD.constant.of);
-        if(cval) document.getElementById('constant-val').textContent = '= '+cval.text + ' ' + (BOARD.constant.label||'');
+        if(cval){ const el=document.getElementById('constant-val'); el.innerHTML = '= '+cval.text + ' ' + (BOARD.constant.label||''); renderKatex(el); }
     }
 }
 
