@@ -242,21 +242,27 @@ const camPos = (B.view && B.view.cameraPos) || [5, 4, 8];
 const camTarget = (B.view && B.view.target) || [0, 0, 0];
 camera.position.set(camPos[0], camPos[1], camPos[2]);
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(viewport.clientWidth, viewport.clientHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-viewport.insertBefore(renderer.domElement, viewport.firstChild);
-document.getElementById('splash').style.display='none';
+let renderer, controls;
+try {
+	renderer = new THREE.WebGLRenderer({antialias:true, failIfMajorPerformanceCaveat:false});
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+	renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	viewport.insertBefore(renderer.domElement, viewport.firstChild);
+	document.getElementById('splash').style.display='none';
 
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 1;
-controls.maxDistance = 30;
-controls.update();
+	controls = new THREE.OrbitControls(camera, renderer.domElement);
+	controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
+	controls.enableDamping = true;
+	controls.dampingFactor = 0.08;
+	controls.minDistance = 1;
+	controls.maxDistance = 30;
+	controls.update();
+} catch(e) {
+	viewport.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:18px;text-align:center;padding:20px">⚠ 3D 渲染初始化失败<br><span style="font-size:14px;color:#9ca3af;margin-top:8px">您的浏览器不支持 WebGL，请使用 Chrome/Firefox/Edge 最新版</span></div>';
+	document.getElementById('splash').style.display='none';
+}
 
 // Lights
 const ambient = new THREE.AmbientLight(0xffffff, 0.5);

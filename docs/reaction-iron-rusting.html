@@ -128,7 +128,7 @@ var camera = new THREE.PerspectiveCamera(38, ctr.clientWidth/ctr.clientHeight, 0
 camera.position.set(2, 5, 17);
 camera.lookAt(0, 0.3, 0);
 
-var renderer = new THREE.WebGLRenderer({ antialias:true });
+var renderer = new THREE.WebGLRenderer({ antialias:true, failIfMajorPerformanceCaveat:false });
 renderer.setSize(ctr.clientWidth, ctr.clientHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
