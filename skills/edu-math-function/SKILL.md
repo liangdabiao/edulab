@@ -1,3 +1,18 @@
+---
+name: edu-math-function
+description: >-
+  把一道函数题做成交互教学网页：左栏题面 + 动态控制台（一个可变参数滑块如系数 a / 频率 ω /
+  相位 φ 驱动实时重算的函数值、导数值、定积分面积等，以及"恒等式指示"），中栏 KaTeX 分步解析，
+  右栏 2D Canvas 动态函数图像画板（函数曲线 + 切线 + 区域着色 + 动点 + 网格坐标轴），叠加画笔涂鸦。
+  无外部依赖，模板自包含，只需 Python 3 标准库做字符串替换注入数据。覆盖一次/二次/指数/对数/
+  三角/分段函数等，切线需用户提供导数表达式，面积用梯形法数值积分。形态与 edu-math-vectors /
+  edu-math-stats 平行，但面向函数图像。其他 agent 也可调用本技能生成此类网页。
+  触发词：函数, 函数图像, 二次函数, 抛物线, 三角函数, 正弦, 余弦, 指数函数, 对数函数,
+  导数, 切线, 定积分, 面积, 顶点, 零点, 极值, 解这道函数题; function graph, parabola,
+  trigonometric function, sine, cosine, exponential, logarithm, derivative, tangent,
+  definite integral, area under curve, vertex, zeros, extrema, interactive function page.
+---
+
 # 函数图像 → 交互教学网页
 
 ## 这个技能产出什么

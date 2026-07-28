@@ -427,10 +427,12 @@ function buildConsole(){
             (r.color?`style="color:${r.color}"`:'')+`></span>`+
         `</div>`
     ).join('');
+    renderKatex(roContainer);
 
     if(BOARD.constant){
         document.getElementById('constant-block').classList.remove('hidden');
         document.getElementById('constant-val').innerHTML = '= '+BOARD.constant.label;
+        renderKatex(document.getElementById('constant-block'));
     }
 
     const legend=document.getElementById('legend');

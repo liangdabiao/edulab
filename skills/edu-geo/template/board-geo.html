@@ -746,6 +746,7 @@ SCENES.atmosphere = function(t,args){
     // Seasonal monsoon winds
     var season=args.season||'summer';
     var isSummer=season==='summer';
+    var cy=H/2;   // 季风箭头的中线高度
     ctx.strokeStyle='rgba(71,85,105,0.2)';ctx.lineWidth=1;
     // Land (right) / Sea (left)
     ctx.fillStyle=isSummer?'rgba(251,146,60,0.1)':'rgba(96,165,250,0.1)';

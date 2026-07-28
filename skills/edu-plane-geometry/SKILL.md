@@ -87,8 +87,8 @@ description: >-
     "view": { "xRange": [-1, 7], "yRange": [-1, 7] },
     "points": {
       "P": [0, 0],
-      "Q": ["t", 0],
-      "R": [0, "S-t"]
+      "Q": ["a", 0],
+      "R": [0, "b"]
     },
     "param": {
       "name": "t",
@@ -98,8 +98,9 @@ description: >-
     },
     "scalars": [
       { "name": "a", "expr": "t" },
-      { "name": "b", "expr": "S-t" },
-      { "name": "c", "expr": "sqrt(a*a+b*b)" }
+      { "name": "b", "expr": "4" },                            // 另一直角边 b 固定
+      { "name": "c", "expr": "sqrt(a*a+b*b)" },               // 斜边
+      { "name": "chk", "expr": "a*a+b*b-c*c" }                // 勾股恒等式左侧，应恒为 0
     ],
     "derived": [
       { "type": "polygon", "pts": ["P", "Q", "R"],
@@ -117,6 +118,8 @@ description: >-
         "vertex": "P", "arms": ["Q", "R"], "digits": 1 },
       { "id": "area", "label": "面积", "type": "area_triangle",
         "pts": ["P", "Q", "R"] },
+      // 勾股恒等式验证：a²+b²-c² 应恒等于 0，供 constant 指示器引用
+      { "id": "chk", "label": "$a^2+b^2-c^2$", "type": "expr", "expr": "chk", "digits": 3 },
     ],
     "constant": { "of": "chk", "label": "$a^2+b^2-c^2 \\equiv 0$" },
     "legend": [

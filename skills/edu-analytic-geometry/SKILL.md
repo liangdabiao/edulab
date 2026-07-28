@@ -148,6 +148,6 @@ python3 -B scripts/generate.py all ./out_dir             # 全部题型
 - `template/board.html` — 数据驱动模板（通用 2D 渲染器 + 参数引擎 + 数据岛 `__LESSON_DATA__`）
 - `lib/conics.py` — 圆锥曲线 sympy 定义库（特殊点 / LaTeX / board dict）
 - `lib/analytic_kernel.py` — sympy 精确求解核心（联立·韦达·范围·定值）
-- `scripts/generate.py` — 注入模板 + 5 个 build_* 范本 + 批量/单题出题
+- `scripts/generate.py` — 注入模板 + 6 个 build_* 范本 + 批量/单题出题
 - `references/problem-schema.md` — 数据格式（board 引擎 schema）
 - `references/conventions.md` — 标准式、解法配方表、韦达/换元套路、端点开闭、自检

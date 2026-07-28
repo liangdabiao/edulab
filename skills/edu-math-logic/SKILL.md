@@ -1,3 +1,18 @@
+---
+name: edu-math-logic
+description: >-
+  把一道集合/逻辑题做成交互教学网页：左栏题面 + 动态控制台（集合与逻辑概念文字说明，可选参数
+  滑块），中栏 KaTeX 分步解析，右栏三种逻辑可视化模式，通过按钮切换——文氏图（2-3 个集合的圆圈图、
+  交集着色、元素标签）、真值表（HTML 表格、2^n 行真值组合、表达式自动评估）、逻辑门（Canvas 绘制
+  AND/OR/NOT/NAND/NOR/XOR 门符号）。无外部依赖，模板自包含，只需 Python 3 标准库做字符串替换
+  注入数据，通过 board.logicType 切换渲染模式。形态与 edu-math-function 等平行，但面向集合与
+  逻辑。其他 agent 也可调用本技能生成此类网页。
+  触发词：集合, 逻辑, 集合关系, 文氏图, 韦恩图, 交集, 并集, 补集, 命题逻辑, 真值表, 蕴含,
+  双条件, 逻辑门, 与门, 或门, 非门, 异或, 数字电路, 解这道集合逻辑题; set theory, logic,
+  Venn diagram, intersection, union, complement, propositional logic, truth table,
+  implication, biconditional, logic gate, AND, OR, NOT, XOR, digital circuit.
+---
+
 # 集合逻辑 → 交互教学网页
 
 ## 这个技能产出什么

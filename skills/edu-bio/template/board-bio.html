@@ -947,7 +947,9 @@ SCENES.punnett_square = function(t,args){
     for(var ci=0;ci<n;ci++){
       var cx=sx+(ci+1)*cellW,cy=sy+(ri+1)*cellH;
       var a1=p1[ci],a2=p2[ri];
-      var g=(a1>='A'&&a1<='Z'?a1:a2)+(a2>='A'&&a2<='Z'?a2:a1);
+      // 基因型：显性（大写）在前，隐性（小写）在后
+      var up1=(a1===a1.toUpperCase()),up2=(a2===a2.toUpperCase());
+      var g=up1&&!up2?(a1+a2):up2&&!up1?(a2+a1):(a1+a2);
       var isDom=a1===a1.toUpperCase()&&a2===a2.toUpperCase();
       var isHet=a1!==a2;
       var isHL=highlight.length===0||highlight.some(function(h){return h[0]===ri&&h[1]===ci;});

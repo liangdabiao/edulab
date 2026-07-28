@@ -1,3 +1,18 @@
+---
+name: edu-math-stats
+description: >-
+  把一道概率统计题做成交互教学网页：左栏题面 + 动态控制台（一个可变参数滑块如标准差 σ / 样本量 n /
+  区间端点 驱动实时重算的统计量：均值、标准差、概率、百分位…），中栏 KaTeX 分步解析，右栏 2D Canvas
+  动态统计画板（函数曲线 + 直方图 + 箱线图 + 散点图 + 网格坐标轴），叠加画笔涂鸦。无外部依赖，
+  模板自包含，只需 Python 3 标准库做字符串替换注入数据。覆盖正态分布、指数/均匀分布、直方图、
+  箱线图、散点图与回归、组合数（nCr/nPr/阶乘）等。形态与 edu-math-function / edu-math-vectors
+  平行，但面向概率统计。其他 agent 也可调用本技能生成此类网页。
+  触发词：概率, 统计, 正态分布, 高斯分布, 标准差, 均值, 中位数, 百分位, 直方图, 箱线图,
+  散点图, 回归, 组合数, 排列数, 阶乘, 概率密度, 解这道统计题; probability, statistics,
+  normal distribution, Gaussian, standard deviation, mean, median, percentile, histogram,
+  box plot, scatter plot, regression, combinatorics, permutation, factorial, PDF.
+---
+
 # 概率统计 → 交互教学网页
 
 ## 这个技能产出什么

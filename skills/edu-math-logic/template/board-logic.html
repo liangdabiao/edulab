@@ -102,20 +102,59 @@ const COLORS = {
 const col = c => (c && COLORS[c]) ? COLORS[c] : (c || '#1e293b');
 const logicType = BOARD.logicType || 'venn';
 
-// ===== 真值表求值 =====
+// ===== 表达式引擎（与 edu-math-* 兄弟模板一致）=====
+const MATHENV = {sqrt:Math.sqrt,cbrt:Math.cbrt,abs:Math.abs,sin:Math.sin,cos:Math.cos,tan:Math.tan,
+    asin:Math.asin,acos:Math.acos,atan:Math.atan,atan2:Math.atan2,exp:Math.exp,log:Math.log,
+    pow:Math.pow,min:Math.min,max:Math.max,sign:Math.sign,floor:Math.floor,ceil:Math.ceil,hypot:Math.hypot,PI:Math.PI};
+const _exprCache={};
+function evalExpr(expr, env){
+    if(typeof expr!=='string') return expr;
+    const scope=Object.assign({}, MATHENV, env);
+    const names=Object.keys(scope);
+    const key=expr+'|'+names.join(',');
+    let fn=_exprCache[key];
+    if(!fn){ try{ fn=Function(...names,'"use strict";return ('+expr.replace(/\^/g,'**')+');'); }
+             catch(e){ fn=()=>NaN; } _exprCache[key]=fn; }
+    try{ const v=fn(...names.map(n=>scope[n])); return (typeof v==='number')?v:NaN; }catch(e){ return NaN; }
+}
+
+// ===== 真值表求值（递归下降，正确处理运算符优先级 ¬>∧>∨>⊕>→>↔）=====
+// 旧实现用字符串替换成 JS 的 &&/||/!/<=/=== 再 eval，依赖 JS 运算符优先级
+// 与逻辑学惯例吻合；但混合表达式（如 p∨q→r）会因 <= 优先级高于 || 而算错。
+// 这里改为递归下降求值，不依赖 eval，优先级严格遵循逻辑学约定。
+const LOGIC_PREC = {'↔':1,'→':2,'⊕':3,'∨':4,'∧':5};  // ¬ 作为一元前缀单独处理
 function evalLogic(expr, vars){
-    const env = Object.assign({}, vars);
-    // 替换逻辑运算符
-    let s = expr
-        .replace(/∧/g, '&&').replace(/∨/g, '||').replace(/¬/g, '!')
-        .replace(/⊕/g, '!==')
-        .replace(/→/g, '<=').replace(/↔/g, '===');
-    // Replace variable names
-    for (const k in env) {
-        const re = new RegExp('\\b' + k + '\\b', 'g');
-        s = s.replace(re, env[k] ? 'true' : 'false');
+    // 词法：保留括号、运算符与变量 token（运算符按优先级高到短匹配）
+    const toks = expr.match(/↔|→|⊕|∧|∨|¬|[A-Za-z_]\w*|\(|\)/g);
+    if(!toks) return false;
+    let pos = 0;
+    function peek(){ return toks[pos]; }
+    function next(){ return toks[pos++]; }
+    function parseUnary(){
+        if(peek()==='¬'){ next(); return !parseUnary(); }
+        const t = next();
+        if(t==='('){ const v=parseBin(0); if(peek()===')') next(); return v; }
+        // 变量：vars 里取值，缺失视为 false
+        return !!(vars && vars[t]);
     }
-    try { return !!eval(s); } catch(e) { return false; }
+    function parseBin(minPrec){
+        let left = parseUnary();
+        while(true){
+            const op = peek();
+            if(!op || !(op in LOGIC_PREC) || LOGIC_PREC[op] < minPrec) break;
+            const prec = LOGIC_PREC[op];
+            next();                              // 消耗运算符
+            // 同左结合：下一层门槛 = prec+1（同优先级左结合）
+            const right = parseBin(prec+1);
+            if(op==='∧') left = left && right;
+            else if(op==='∨') left = left || right;
+            else if(op==='⊕') left = left !== right;
+            else if(op==='→') left = (!left) || right;   // 蕴含：a→b ≡ ¬a∨b
+            else if(op==='↔') left = left === right;      // 双条件
+        }
+        return left;
+    }
+    try { return !!parseBin(0); } catch(e){ return false; }
 }
 
 // ===== 文氏图 =====
@@ -346,6 +385,7 @@ function buildConsole(){
             `<span id="ro-${r.id}" class="font-semibold text-right"></span>`+
         `</div>`
     ).join('');
+    renderKatex(roContainer);
 
     if(DATA.steps){
         document.getElementById('solution-body').innerHTML = DATA.steps.map((s,i) =>
@@ -370,18 +410,15 @@ function update(){
     }
     render();
     // Update readouts
-    const scene = { env: { p: p ? parseFloat(document.getElementById('param-slider').value) : 0 } };
-    if (BOARD.param && BOARD.param.name) scene.env[BOARD.param.name] = scene.env.p;
-    (BOARD.scalars||[]).forEach(s => { scene.env[s.name] = null; });
+    const env = { p: p ? parseFloat(document.getElementById('param-slider').value) : 0 };
+    if (BOARD.param && BOARD.param.name) env[BOARD.param.name] = env.p;
+    (BOARD.scalars||[]).forEach(s => { env[s.name] = evalExpr(s.expr, env); });
     (BOARD.readouts||[]).forEach(r => {
         let text = '—';
         const el = document.getElementById('ro-'+r.id);
         if (r.type === 'expr') {
-            try {
-                const env = Object.assign({}, scene.env, {});
-                const val = eval(r.expr.replace(/\^/g,'**'));
-                text = isFinite(val) ? val.toFixed(r.digits||2) : '—';
-            } catch(e) {}
+            const val = evalExpr(r.expr, env);
+            text = isFinite(val) ? val.toFixed(r.digits||2) : '—';
         }
         if (el) el.textContent = text;
     });

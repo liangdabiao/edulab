@@ -87,59 +87,82 @@ description: >-
       "showAxes": true
     },
     "param": {
-      "name": "t",
-      "label": "角度 $\\theta$ (°)",
+      "name": "theta",
+      "label": "轨道角 $\\theta$ (°)",
       "min": 0, "max": 360,
       "step": 1, "value": 0, "unit": "°"
     },
     "scalars": [
-      { "name": "v0", "expr": "5" },
-      { "name": "theta", "expr": "t" },
-      { "name": "vx", "expr": "v0*cos(theta*PI/180)" },
+      { "name": "r", "expr": "2" },                         // 轨道半径
+      { "name": "rad", "expr": "theta*PI/180" },            // 角度转弧度
+      { "name": "px", "expr": "r*cos(rad)" },               // 粒子位置 x
+      { "name": "py", "expr": "0" },                        // 粒子位置 y（在 xz 平面圆周运动）
+      { "name": "pz", "expr": "r*sin(rad)" },               // 粒子位置 z
+      { "name": "vx", "expr": "-r*sin(rad)" },              // 速度 x（切向）
+      { "name": "vy", "expr": "0" },
+      { "name": "vz", "expr": "r*cos(rad)" },               // 速度 z
+      { "name": "vmag", "expr": "sqrt(vx*vx+vy*vy+vz*vz)" },// 速率（恒定）
+      { "name": "B", "expr": "3" },                         // 磁场强度（沿 y 轴）
+      { "name": "q", "expr": "1" },                         // 电荷
+      { "name": "F", "expr": "q*vmag*B" }                   // 洛伦兹力大小（恒定）
     ],
     "objects": [
       {
-        "id": "sphere1",
+        "id": "charge",
         "type": "sphere",
-        "position": [0, 0, 0],
-        "radius": 0.4,
+        "position": ["px", "py", "pz"],   // 表达式坐标：随滑块移动
+        "radius": 0.3,
         "color": "#f87171",
-        "label": "电荷"
+        "label": "电荷 q"
       },
       {
         "id": "v_arrow",
         "type": "arrow",
-        "from": [0, 0, 0],
-        "to": ["vx*2", "vy*2", "vz*2"],
+        "from": ["px", "py", "pz"],
+        "to": ["px+vx*0.4", "py+vy*0.4", "pz+vz*0.4"],   // 速度方向箭头
         "color": "#60a5fa",
         "headLength": 0.3,
         "headWidth": 0.15
       },
       {
-        "id": "trajectory",
+        "id": "B_arrow",
+        "type": "arrow",
+        "from": [0, -2.5, 0],
+        "to": [0, 2.5, 0],                // 磁场方向（沿 y 轴，固定）
+        "color": "#34d399",
+        "headLength": 0.3,
+        "headWidth": 0.15
+      },
+      {
+        "id": "orbit",
         "type": "curve",
-        "expr": { "x": "vx*tau", "y": "vy*tau", "z": "vz*tau" },
-        "tMin": 0, "tMax": 10,
-        "segments": 200,
+        // 圆轨道：用 theta 作曲线参数（注意 curve 的 expr 用的是同一套 scalars 环境，
+        // 这里直接用 cos/sin 画半径 r 的圆）
+        "expr": { "x": "r*cos(theta*PI/180)", "y": "0", "z": "r*sin(theta*PI/180)" },
+        "tMin": 0, "tMax": 360,
+        "segments": 120,
         "color": "#c084fc"
       }
     ],
-    "trace": {
-      "of": ["x_expr", "y_expr", "z_expr"],
-      "samples": 160,
-      "color": "locus"
-    },
     "readouts": [
-      { "id": "v", "label": "速度", "type": "expr", "expr": "sqrt(vx*vx+vy*vy+vz*vz)" }
+      { "id": "v", "label": "速率 $|v|$", "type": "expr", "expr": "vmag", "digits": 2 },
+      { "id": "B", "label": "磁场 $B$", "type": "expr", "expr": "B", "digits": 1 },
+      { "id": "F", "label": "洛伦兹力 $F=qvB$", "type": "expr", "expr": "F", "digits": 2, "highlight": true }
     ],
-    "constant": { "of": "E", "label": "$E \\equiv \\text{常数}$" },
+    "constant": { "of": "F", "label": "$F = qvB \\equiv \\text{常数}$" },
     "legend": [
       { "color": "#f87171", "text": "电荷" },
-      { "color": "#60a5fa", "text": "$\\vec{v}$" }
+      { "color": "#60a5fa", "text": "$\\vec{v}$" },
+      { "color": "#34d399", "text": "$\\vec{B}$" },
+      { "color": "#c084fc", "text": "轨道" }
     ]
   }
 }
 ```
+
+> 注：上面示例**所有表达式变量（r/rad/px/vx/vmag/B/q/F 等）都在 `scalars` 里定义**，
+> `constant.of:"F"` 也指向 readouts 里真实存在的 id `F`。这样照抄即可跑通，
+> 不会出现曲线消失、箭头消失、守恒横幅不显示的问题。
 
 **构建脚本方法**（Python，推荐）：
 

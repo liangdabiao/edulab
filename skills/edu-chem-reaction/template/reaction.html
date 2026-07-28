@@ -178,7 +178,7 @@
 
             <!-- Labels show / hide toggle -->
             <button id="labels-toggle" class="absolute" style="top:1rem;left:1rem;z-index:30;background:rgba(255,255,255,0.85);border:1px solid #e2e8f0;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-size:0.75rem;padding:0.375rem 0.75rem 0.375rem 0.625rem;border-radius:0.5rem;color:#475569;box-shadow:0 1px 2px rgba(0,0,0,0.05);display:flex;align-items:center;gap:0.375rem;cursor:pointer;user-select:none;line-height:1rem;transition:background .15s;font-family:inherit;" title="显示 / 隐藏标签">
-                <svg style="width:0.875rem;height:0.875rem;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <svg id="labels-toggle-icon" style="width:0.875rem;height:0.875rem;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span id="labels-toggle-text">标签</span>
             </button>
 
@@ -347,6 +347,7 @@
         const bondList = [];     // {a,b,order,kind, cyls:[]}
         let flameLight, flameSprite, transitionLight;
         const electronSprites = [];
+        const electronRanges = []; // 与 DATA.electrons 对齐：每条定义的 {start, count}
 
         // ===== Geometry helpers =====
         const geomCache = {};
@@ -474,11 +475,19 @@
         }
 
         function buildElectrons() {
-            (DATA.electrons || []).forEach(() => {
-                const s = new THREE.Sprite(new THREE.SpriteMaterial({
-                    map: radialGlow('#0e7490'), color: 0x0891b2, transparent: true,
-                    blending: THREE.NormalBlending, opacity: 0 }));
-                s.scale.set(0.5, 0.5, 0.5); scene.add(s); electronSprites.push(s);
+            // 每个 electron 定义按其 count 生成对应数量的 sprite（默认 count=1）。
+            // 为 updateElectrons 记录每条定义在 electronSprites 里的起始下标与数量。
+            electronRanges.length = 0;
+            (DATA.electrons || []).forEach((d) => {
+                const n = Math.max(1, d.count || 1);
+                const start = electronSprites.length;
+                for (let k = 0; k < n; k++) {
+                    const s = new THREE.Sprite(new THREE.SpriteMaterial({
+                        map: radialGlow('#0e7490'), color: 0x0891b2, transparent: true,
+                        blending: THREE.NormalBlending, opacity: 0 }));
+                    s.scale.set(0.5, 0.5, 0.5); scene.add(s); electronSprites.push(s);
+                }
+                electronRanges.push({ start, count: n });
             });
         }
 
@@ -609,14 +618,24 @@
             const defs = DATA.electrons || []; if (!defs.length) return;
             const ph = phaseOf(p);
             defs.forEach((d, i) => {
-                const s = electronSprites[i]; if (!atoms[d.from] || !atoms[d.to]) return;
-                if (ph.phase === 2) {
-                    const t = smooth(ph.t);
-                    s.position.lerpVectors(atoms[d.from].cur, atoms[d.to].cur, t);
-                    s.position.y += Math.sin(ph.t * Math.PI) * 0.6;
-                    s.material.opacity = Math.sin(ph.t * Math.PI);
-                    s.visible = true;
-                } else { s.visible = false; }
+                const range = electronRanges[i] || { start: i, count: 1 };
+                const missing = !atoms[d.from] || !atoms[d.to];
+                for (let k = 0; k < range.count; k++) {
+                    const s = electronSprites[range.start + k]; if (!s) continue;
+                    if (missing) { s.visible = false; continue; }
+                    if (ph.phase === 2) {
+                        const t = smooth(ph.t);
+                        s.position.lerpVectors(atoms[d.from].cur, atoms[d.to].cur, t);
+                        s.position.y += Math.sin(ph.t * Math.PI) * 0.6;
+                        // 多个电子时沿弧线横向错开，避免完全重叠
+                        if (range.count > 1) {
+                            const off = (k - (range.count - 1) / 2) * 0.18;
+                            s.position.x += off * Math.sin(ph.t * Math.PI);
+                        }
+                        s.material.opacity = Math.sin(ph.t * Math.PI);
+                        s.visible = true;
+                    } else { s.visible = false; }
+                }
             });
         }
 

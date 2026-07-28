@@ -108,7 +108,9 @@ HTML。只要能用 Python 3（标准库即可）做字符串替换就行，或�
     "view": { "xRange": [-1, 10], "yRange": [-1, 6] },
     "points": {
       "O": [0, 0],
-      "P": ["v0*cos(theta*PI/180)*t", "v0*sin(theta*PI/180)*t-0.5*g*t*t"]
+      "P": ["v0*cos(theta*PI/180)*t", "v0*sin(theta*PI/180)*t-0.5*g*t*t"],
+      // 速度矢量箭头末端 = 当前位置 + 速度方向（缩放），用表达式点驱动
+      "Vtip": ["x+vx*0.3", "y+vy*0.3"]
     },
     "param": {
       "name": "t",
@@ -130,14 +132,11 @@ HTML。只要能用 Python 3（标准库即可）做字符串替换就行，或�
       { "name": "E", "expr": "Ek+Ep" }
     ],
     "derived": [
-      // 质点
-      { "type": "point", "from": "P", "color": "ptA", "label": true },
-      // 轨迹（trace 自动在 derived 中的点采样）
-      // 位移矢量
-      { "type": "vector", "from": "O", "to": "P", "color": "vecA", "label": "$\\vec{r}$" },
-      // 速度矢量
-      { "type": "vector_shift", "name": "v_vec", "at": "P", "dx": "vx", "dy": "vy",
-        "color": "vec", "label": "$\\vec{v}$" },
+      // 质点 P（points 里定义的点默认按浅灰渲染；这里用 vector 叠加箭头更醒目）
+      // 位移矢量：从原点指向质点
+      { "type": "vector", "name": "r_vec", "from": "O", "to": "P", "color": "vecA", "label": "$\\vec{r}$" },
+      // 速度矢量：从质点 P 指向 Vtip（随速度方向变化的箭头）
+      { "type": "vector", "name": "v_vec", "from": "P", "to": "Vtip", "color": "vec", "label": "$\\vec{v}$" },
     ],
     "readouts": [
       { "id": "x", "label": "水平位移 $x$", "type": "expr", "expr": "x", "digits": 2, "color": "vecA" },
@@ -148,7 +147,7 @@ HTML。只要能用 Python 3（标准库即可）做字符串替换就行，或�
       { "id": "Ep", "label": "$E_p = mgy$", "type": "expr", "expr": "Ep", "digits": 2 },
       { "id": "E", "label": "$E = E_k+E_p$", "type": "expr", "expr": "E", "digits": 4, "highlight": true }
     ],
-    // 定值指示（机械能守恒）
+    // 定值指示（机械能守恒）—— of 指向上面 readouts 里真实存在的 id "E"
     "constant": { "of": "E", "label": "$E_k+E_p \\equiv \\text{常数}$" },
     // trace 轨迹
     "trace": { "of": "P", "color": "locus" },
@@ -232,15 +231,19 @@ python3 -B /tmp/build.py && rm -f /tmp/build.py
 
 ### derived 常用 type
 
-> 注意：board.html 的 derived 引擎支持多种构造类型。
+> 注意：质点位置在 `points` 里定义后会自动渲染（默认浅灰）；如需改变颜色/标签，
+> 在 `points` 里用 `{xy, color, label}` 形式声明，而不是用 derived 的 `point`（该 type 未实现）。
+> 速度/力矢量随质点变化时，常用做法：在 `points` 里定义一个"箭头末端"点（坐标用表达式），
+> 再用 `vector` 从质点指向它（见上面抛体示例的 `Vtip`）。
 
 | type | 字段 | 效果 |
 |------|------|------|
-| `point` | `from, color, label` | 标记质点位置 |
-| `segment` | `a, b, color, dashed` | 线段（光线/电场线/边界） |
-| `vector` | `from, to, color, label` | 位移/力/场强矢量 |
+| `segment` | `name, a, b, color, dashed` | 线段（光线/电场线/边界） |
+| `vector` | `name, from, to, color, label` | 位移/力/场强矢量（`name` 必填） |
 | `polygon` | `pts, color, stroke` | 半透明填充（能量条/区域） |
 | `midpoint` | `name, a, b` | 中点 |
+| `line_through_points` | `name, a, b, color` | 过两点直线 |
+| `line_through_slope` | `name, point, slope, color` | 过一点斜率直线 |
 
 ### 颜色语义名
 `curve`(金黄) · `line`(青) · `aux`(灰辅助) · `ptA`(红) · `ptB`(蓝) · `point`(浅灰) ·

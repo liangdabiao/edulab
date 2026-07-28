@@ -13,9 +13,6 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;height:100vh;overflow:hidden}
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;height:100vh;overflow:hidden}
 #viewport{flex:1;position:relative;min-height:0}
 #viewport canvas{display:block;width:100%!important;height:100%!important}
 #sidebar{width:24rem;overflow-y:auto;background:#1e293b;border-right:1px solid #334155;flex-shrink:0}
@@ -187,7 +184,8 @@ function renderReadouts(env){
     const found=ro.find(x=>x.id===B.constant.of);
     if(found && found.scalar!==null){
       cb.style.display='block';
-      document.getElementById('const-value').innerHTML=B.constant.label;
+      // 显示 "label = 当前值"，直观验证守恒量是否随滑块恒定
+      document.getElementById('const-value').innerHTML = B.constant.label + (found.text && found.text!=='—' ? ' = <b>'+found.text+'</b>' : '');
       renderMath(document.getElementById('constant-block'));
     } else { cb.style.display='none'; }
   } else { cb.style.display='none'; }

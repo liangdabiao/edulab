@@ -1222,7 +1222,7 @@ def main(argv):
     if key not in REGISTRY:
         print(f"未知教程 {key}；可用: {', '.join(REGISTRY)}")
         sys.exit(1)
-    out = Path(argv[1]) if len(argv) > 1 else Path.cwd() / f"tutorial-{k}.html"
+    out = Path(argv[1]) if len(argv) > 1 else Path.cwd() / f"tutorial-{key}.html"
     render_html(REGISTRY[key](), out)
     print("written:", out)
 

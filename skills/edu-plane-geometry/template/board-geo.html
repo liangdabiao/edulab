@@ -739,9 +739,9 @@
             document.getElementById('rangebar-cur').textContent = UI.current;
             const rl=document.getElementById('rangebar-range'); rl.innerHTML = BOARD.rangeBar.label||''; }
 
-        // 定值指示器
+        // 定值指示器（label 在此固定显示；当前数值在 update 里随 of 指向的读数刷新）
         if(BOARD.constant){ document.getElementById('constant-block').classList.remove('hidden');
-            document.getElementById('constant-val').innerHTML = '≡ '+(BOARD.constant.label||''); }
+            document.getElementById('constant-val').innerHTML = (BOARD.constant.label||''); }
 
         // 答案区间（参数轴）：高亮 [lo,hi] 子区间
         if(BOARD.answerBand){ const ab=BOARD.answerBand;
@@ -783,6 +783,14 @@
         const scene=buildScene(curParam);
         const ros=computeReadouts(scene);
         ros.forEach(r=>{ const el=document.getElementById('ro-'+r.id); if(el){ el.textContent=r.text; if(r.dyncolor) el.style.color=r.dyncolor; } });
+        // 定值指示器：若有 of 指向的读数，显示 "label = 当前值"，直观验证守恒
+        if(BOARD.constant && BOARD.constant.of){
+            const tracked = ros.find(r=>r.id===BOARD.constant.of);
+            const cv = document.getElementById('constant-val');
+            if(cv && tracked && tracked.text && tracked.text!=='—'){
+                cv.innerHTML = (BOARD.constant.label||'') + ' = <b>'+tracked.text+'</b>';
+            }
+        }
         // 范围条指针
         if(BOARD.rangeBar){ const rb=BOARD.rangeBar; const tracked=ros.find(r=>r.id===rb.of);
             if(tracked && tracked.scalar!==null){ const pct=((tracked.scalar-rb.min)/(rb.max-rb.min))*88+6;

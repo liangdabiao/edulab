@@ -1,3 +1,18 @@
+---
+name: edu-math-vectors
+description: >-
+  把一道二维向量题做成交互教学网页：左栏题面 + 动态控制台（一个可变参数滑块如角度 θ / 长度比
+  驱动实时重算的向量量：模长、点积、夹角、分量…，以及"恒等式指示"），中栏 KaTeX 分步解析，
+  右栏 2D Canvas 动态向量画板（矢量箭头 + 平行四边形 + 分量投影 + 向量链 + 网格坐标轴），
+  叠加画笔涂鸦。无外部依赖，模板自包含，只需 Python 3 标准库做字符串替换注入数据。覆盖向量
+  加减法、平行四边形法则、点积与夹角、向量分解、向量链求和等。形态与 edu-math-function /
+  edu-math-stats 平行，但面向二维向量。其他 agent 也可调用本技能生成此类网页。
+  触发词：向量, 二维向量, 向量加法, 向量减法, 平行四边形法则, 点积, 数量积, 夹角, 向量分解,
+  向量链, 模长, 分量, 投影, 解这道向量题; vector, 2D vector, vector addition, parallelogram
+  rule, dot product, angle between vectors, vector decomposition, magnitude, components,
+  projection, interactive vector page.
+---
+
 # 二维向量 → 交互教学网页
 
 ## 这个技能产出什么
