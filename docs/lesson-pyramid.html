@@ -831,18 +831,24 @@
             camera.position.set(ic[0], ic[1], ic[2]);
 
             // 3. 渲染器
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, failIfMajorPerformanceCaveat: false });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
+            try {
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, failIfMajorPerformanceCaveat: false });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.shadowMap.enabled = true;
+                container.appendChild(renderer.domElement);
 
-            labelRenderer = new CSS2DRenderer();
-            labelRenderer.setSize(container.clientWidth, container.clientHeight);
-            labelRenderer.domElement.style.position = 'absolute';
-            labelRenderer.domElement.style.top = '0px';
-            labelRenderer.domElement.style.pointerEvents = 'none';
-            container.appendChild(labelRenderer.domElement);
+                labelRenderer = new CSS2DRenderer();
+                labelRenderer.setSize(container.clientWidth, container.clientHeight);
+                labelRenderer.domElement.style.position = 'absolute';
+                labelRenderer.domElement.style.top = '0px';
+                labelRenderer.domElement.style.pointerEvents = 'none';
+                container.appendChild(labelRenderer.domElement);
+            } catch(e) {
+                container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:18px;text-align:center;padding:20px">⚠ 3D 渲染初始化失败<br><span style="font-size:14px;color:#9ca3af;margin-top:8px">您的浏览器不支持 WebGL，请使用 Chrome/Firefox/Edge 最新版</span></div>';
+                return;
+            }
+            if (!renderer) return;
 
             // 4. 控制器
             controls = new OrbitControls(camera, renderer.domElement);
@@ -1298,8 +1304,8 @@
             const container = document.getElementById('canvas-container');
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            labelRenderer.setSize(container.clientWidth, container.clientHeight);
+            if (renderer) renderer.setSize(container.clientWidth, container.clientHeight);
+            if (labelRenderer) labelRenderer.setSize(container.clientWidth, container.clientHeight);
 
             // 面板宽度变化后，重新评估公式是否需要常驻横向滚动条
             markScrollableMath(document.getElementById('sidebar'));
@@ -1307,6 +1313,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            if (!renderer || !labelRenderer) return;
             if (targetCameraPosition) {
                 camera.position.lerp(targetCameraPosition, 0.07);
                 controls.target.lerp(cameraTargetPoint, 0.07);

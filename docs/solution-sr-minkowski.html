@@ -4,15 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.tailwindcss.com"></script>
-    <title>3D 物理交互教学</title>
+    <title>狭义相对论 · 闵可夫斯基时空</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js" crossorigin="anonymous"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;height:100vh;overflow:hidden}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;height:100vh;overflow:hidden}
@@ -60,12 +57,166 @@ input[type=range]::-webkit-slider-thumb:hover{background:#818cf8}
 </head>
 <body>
 
-<!-- data island -->
-<script id="lesson-data" type="application/json">__LESSON_DATA__</script>
+<script id="lesson-data" type="application/json">{
+  "lesson": {
+    "title": "狭义相对论 · 闵可夫斯基时空",
+    "problem": "<p>狭义相对论揭示：<strong>时间</strong>与<strong>空间</strong>并非独立，它们统一为四维<strong>时空</strong>（spacetime）。本页面用 3D 闵可夫斯基图展示这一核心思想。</p><p>拖动滑块调节相对速度 \\(\\beta = v/c\\)，观察：</p><ul><li>运动观察者的世界线如何向光锥倾斜</li><li>\\(x'\\) 轴（同时面）如何旋转（同时性的相对性）</li><li>时间膨胀与长度收缩的定量变化</li></ul><p>坐标系：竖直轴 \\(= ct\\)（时间），水平两轴 \\(=\\) 空间</p>"
+  },
+  "steps": [
+    {
+      "title": "光锥 — 因果结构的边界",
+      "content": "<p><strong>光锥</strong>是狭义相对论中最基本的几何结构。</p><ul><li>光锥表面上的点满足 \\(x^2 + y^2 = (ct)^2\\)，即光信号所能到达的时空位置</li><li><strong>未来光锥</strong>（上半部）：从此处发出的光能到达的区域</li><li><strong>过去光锥</strong>（下半部）：能有光信号到达此处的区域</li><li>光锥内部：类时间隔，因果可达</li><li>光锥外部：类空间隔，因果无关</li></ul><p>任何物理对象的世界线必须在光锥内部（速度 < 光速）。</p>"
+    },
+    {
+      "title": "世界线 — 物体在时空中的轨迹",
+      "content": "<p>物体在时空中的运动路径称为<strong>世界线</strong>（worldline）。</p><ul><li><strong style=\"color:#34d399\">绿色竖直线</strong>：静止观察者（\\(x=0\\)），仅随时间流逝向上移动</li><li><strong style=\"color:#f87171\">红色斜线</strong>：运动观察者（速度 \\(\\beta\\)），世界线向光锥倾斜</li><li>倾斜程度反映速度：越接近光锥，速度越接近光速</li><li>拖动滑块改变 \\(\\beta\\)，红色世界线的倾斜度随之变化</li></ul><p>注意：世界线上每一点代表一个<strong>事件</strong>（位置 + 时间）。</p>"
+    },
+    {
+      "title": "洛伦兹变换 — 坐标轴的\"旋转\"",
+      "content": "<p>更换参考系时，时空坐标按下式变换（洛伦兹变换）：</p><p>\\[ct' = \\gamma (ct - \\beta x)\\] \\[x' = \\gamma (x - \\beta ct)\\]</p><p>在闵可夫斯基图中，这表现为坐标轴的<strong>对称倾斜</strong>：</p><ul><li><strong style=\"color:#f87171\">红轴 \\(ct'\\)</strong>：运动观察者的时间轴，向光锥倾斜</li><li><strong style=\"color:#60a5fa\">蓝轴 \\(x'\\)</strong>：运动观察者的空间轴，同样向上倾斜</li><li>两个轴的倾斜角度相同，方向对称</li></ul><p>关键物理后果：<strong>同时性是相对的</strong>——\\(x'\\) 轴上的事件在运动系中同时，在静止系中并不同时。</p>"
+    },
+    {
+      "title": "时间膨胀 — 运动时钟变慢",
+      "content": "<p>运动观察者携带的时钟比静止观察者的时钟走得慢：</p><p>\\[\\Delta t = \\gamma \\Delta \\tau\\]</p><p>其中 \\(\\Delta \\tau\\) 是<strong>固有时</strong>（运动时钟自身的时间），\\(\\Delta t\\) 是静止系测得的时间。</p><ul><li>黄色小球标记运动时钟走 \\(\\tau=1.0\\) 时的时空位置</li><li>其 \\(ct\\) 坐标 = \\(\\gamma\\) — 始终 > 1</li><li>\\(\\beta \\to 0.95\\) 时，\\(\\gamma \\approx 3.2\\)，运动时钟慢 3.2 倍！</li></ul>"
+    },
+    {
+      "title": "长度收缩 — 运动物体变短",
+      "content": "<p>沿运动方向的长度会收缩：</p><p>\\[L = L_0 / \\gamma\\]</p><p>其中 \\(L_0\\) 是<strong>固有长度</strong>（物体静止时的长度）。</p><ul><li>这是空间测量的效应，不是视觉错觉</li><li>只在运动方向收缩，垂直方向不变</li><li>\\(\\beta \\to 0.95\\) 时，长度缩至约 31%</li></ul><p><strong>注意</strong>：由于同时性的相对性，长度测量要求同时测量两端位置——在不同参考系中，\"同时\"的含义不同。</p>"
+    },
+    {
+      "title": "不变量 — 时空间隔",
+      "content": "<p>尽管 \\(\\Delta t\\) 和 \\(\\Delta x\\) 因参考系而异，但下面的<strong>时空间隔</strong>是洛伦兹不变量：</p><p>\\[\\Delta s^2 = (c\\Delta t)^2 - \\Delta x^2 - \\Delta y^2 - \\Delta z^2\\]</p><ul><li>白色曲线为 \\(s^2 = 1\\) 的<strong>校准双曲线</strong></li><li>所有观察者测得同一事件的 \\(\\Delta s^2\\) 相同</li><li>类时间隔 (\\(\\Delta s^2 > 0\\))：因果相关</li><li>类光间隔 (\\(\\Delta s^2 = 0\\))：光信号联系</li><li>类空间隔 (\\(\\Delta s^2 < 0\\))：因果无关</li></ul>"
+    }
+  ],
+  "board3d": {
+    "param": {
+      "name": "beta",
+      "label": "相对速度 \\(\\beta = v/c\\)",
+      "min": 0,
+      "max": 0.95,
+      "step": 0.02,
+      "value": 0.5,
+      "ticks": ["0", "0.25", "0.50", "0.75", "0.95"]
+    },
+    "view": {
+      "cameraPos": [6, 3.5, 6],
+      "target": [0, 1.5, 0],
+      "showGrid": true,
+      "showAxes": true
+    },
+    "scalars": [
+      { "name": "gamma", "expr": "1/sqrt(1-beta*beta)" }
+    ],
+    "readouts": [
+      { "id": "beta", "type": "expr", "label": "\\(\\beta = v/c\\)", "expr": "beta", "digits": 3 },
+      { "id": "gamma", "type": "expr", "label": "\\(\\gamma = 1/\\sqrt{1-\\beta^2}\\)", "expr": "gamma", "digits": 3, "highlight": true },
+      { "id": "time_dil", "type": "expr", "label": "固有时 \\(\\tau=1.0\\) → 静止系 \\(\\Delta t\\)", "expr": "gamma", "digits": 3, "highlight": true, "color": "#fbbf24" },
+      { "id": "len_cont", "type": "expr", "label": "固有长度 \\(L_0=1.0\\) → 运动系 \\(L\\)", "expr": "1/gamma", "digits": 3, "highlight": true, "color": "#f87171" }
+    ],
+    "constant": {
+      "of": "gamma",
+      "label": "洛伦兹因子 \\(\\gamma \\ge 1\\)，恒成立"
+    },
+    "legend": [
+      { "color": "#fbbf24", "text": "光锥（因果边界）" },
+      { "color": "#34d399", "text": "静止观察者世界线" },
+      { "color": "#f87171", "text": "运动观察者 \\(ct'\\) 轴" },
+      { "color": "#60a5fa", "text": "运动观察者 \\(x'\\) 轴" },
+      { "color": "#c084fc", "text": "校准双曲线 \\(s^2 = 1\\)" }
+    ],
+    "trace": {
+      "of": ["beta*gamma*1.0", "gamma*1.0", "0"],
+      "color": "#fbbf24",
+      "samples": 200
+    },
+    "objects": [
+      {
+        "type": "curve",
+        "tMin": 0, "tMax": 1, "segments": 50, "color": "#fbbf24",
+        "expr": { "x": "0.5*cos(2*PI*p)", "y": "0.5", "z": "0.5*sin(2*PI*p)" }
+      },
+      {
+        "type": "curve",
+        "tMin": 0, "tMax": 1, "segments": 50, "color": "#fbbf24",
+        "expr": { "x": "1.0*cos(2*PI*p)", "y": "1.0", "z": "1.0*sin(2*PI*p)" }
+      },
+      {
+        "type": "curve",
+        "tMin": 0, "tMax": 1, "segments": 50, "color": "#fbbf24",
+        "expr": { "x": "1.5*cos(2*PI*p)", "y": "1.5", "z": "1.5*sin(2*PI*p)" }
+      },
+      {
+        "type": "curve",
+        "tMin": 0, "tMax": 1, "segments": 50, "color": "#fbbf24",
+        "expr": { "x": "2.0*cos(2*PI*p)", "y": "2.0", "z": "2.0*sin(2*PI*p)" }
+      },
+      {
+        "type": "curve",
+        "tMin": 0, "tMax": 1, "segments": 50, "color": "#fbbf24",
+        "expr": { "x": "2.5*cos(2*PI*p)", "y": "2.5", "z": "2.5*sin(2*PI*p)" }
+      },
+      {
+        "type": "curve",
+        "tMin": 0, "tMax": 1, "segments": 60, "color": "#fbbf24",
+        "expr": { "x": "3.0*cos(2*PI*p)", "y": "3.0", "z": "3.0*sin(2*PI*p)" }
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0], "to": [3, 3, 0],
+        "color": "#fbbf24", "headLength": 0.15, "headWidth": 0.1
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0], "to": [-3, 3, 0],
+        "color": "#fbbf24", "headLength": 0.15, "headWidth": 0.1
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0], "to": [0, 3, 3],
+        "color": "#fbbf24", "headLength": 0.15, "headWidth": 0.1
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0], "to": [0, 3, -3],
+        "color": "#fbbf24", "headLength": 0.15, "headWidth": 0.1
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0], "to": [0, 3.8, 0],
+        "color": "#34d399", "headLength": 0.3, "headWidth": 0.15
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0],
+        "to": ["beta*3.8", "3.8", 0],
+        "color": "#f87171", "headLength": 0.3, "headWidth": 0.15
+      },
+      {
+        "type": "arrow",
+        "from": [0, 0, 0],
+        "to": ["3.8", "beta*3.8", 0],
+        "color": "#60a5fa", "headLength": 0.3, "headWidth": 0.15
+      },
+      {
+        "type": "curve",
+        "tMin": -1.8, "tMax": 1.8, "segments": 100, "color": "#c084fc",
+        "expr": { "x": "(exp(p)-exp(-p))/2", "y": "(exp(p)+exp(-p))/2", "z": "0" }
+      },
+      {
+        "type": "sphere",
+        "position": [0, 1, 0],
+        "radius": 0.08, "color": "#34d399"
+      },
+      {
+        "type": "sphere",
+        "position": ["beta*gamma*1.0", "gamma*1.0", 0],
+        "radius": 0.14, "color": "#fbbf24"
+      }
+    ]
+  }
+}</script>
 
-<!-- main layout -->
 <div style="display:flex;height:100vh">
-  <!-- sidebar -->
   <div id="sidebar">
     <div class="section">
       <h2 class="text-base font-bold text-indigo-400" id="problem-title"></h2>
@@ -90,7 +241,6 @@ input[type=range]::-webkit-slider-thumb:hover{background:#818cf8}
     </div>
   </div>
 
-  <!-- 3D viewport -->
   <div id="viewport">
     <div id="splash">加载 Three.js 中...</div>
     <div id="controls-overlay">
@@ -100,7 +250,6 @@ input[type=range]::-webkit-slider-thumb:hover{background:#818cf8}
   </div>
 </div>
 
-<!-- steps panel (collapsible overlay) -->
 <div id="steps-panel" style="position:fixed;bottom:0;right:0;width:28rem;max-height:50vh;background:#1e293b;border:1px solid #334155;border-radius:12px 0 0 0;z-index:20;overflow:hidden;transition:transform .3s;box-shadow:-4px 0 20px rgba(0,0,0,.4)">
   <div id="steps-toggle" style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 1rem;cursor:pointer;background:#334155;font-size:.8rem;font-weight:600;color:#e2e8f0">
     <span>详细解析</span>
@@ -110,23 +259,19 @@ input[type=range]::-webkit-slider-thumb:hover{background:#818cf8}
 </div>
 
 <script>
-// ===== Parse lesson data =====
 const DATA = JSON.parse(document.getElementById('lesson-data').textContent);
 const L = DATA.lesson || {};
 const S = DATA.steps || [];
 const B = DATA.board3d || {};
 
-// ===== KaTeX render helper =====
 function renderMath(container){
   if(window.renderMathInElement) renderMathInElement(container, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}]});
 }
 
-// ===== Sidebar: problem =====
 document.getElementById('problem-title').textContent = L.title || '';
 const probDiv = document.getElementById('problem-text');
 if(L.problem){ probDiv.innerHTML = L.problem; renderMath(probDiv); }
 
-// ===== Expression engine (same as board.html) =====
 const MATHENV = {sqrt:Math.sqrt,cbrt:Math.cbrt,abs:Math.abs,sin:Math.sin,cos:Math.cos,tan:Math.tan,
   asin:Math.asin,acos:Math.acos,atan:Math.atan,atan2:Math.atan2,exp:Math.exp,log:Math.log,
   pow:Math.pow,min:Math.min,max:Math.max,sign:Math.sign,floor:Math.floor,ceil:Math.ceil,hypot:Math.hypot,PI:Math.PI};
@@ -150,9 +295,8 @@ function buildEnv(pval){
   return env;
 }
 
-// ===== Readouts =====
 function fmt(v,d){
-  if(v===null||v===undefined||!isFinite(v)) return '—';
+  if(v===null||v===undefined||!isFinite(v)) return '\u2014';
   let s=v.toFixed(d!=null?d:2);
   if(s==='-'+Number(0).toFixed(d)) s=Number(0).toFixed(d);
   return s;
@@ -160,13 +304,13 @@ function fmt(v,d){
 function computeReadouts(env){
   const out=[];
   (B.readouts||[]).forEach(r=>{
-    let text='—', scalar=null;
+    let text='\u2014', scalar=null;
     try{
       if(r.type==='expr'){
         scalar=evalExpr(r.expr, env);
         text=fmt(scalar, r.digits!=null?r.digits:2);
       }
-    }catch(e){ text='—'; }
+    }catch(e){ text='\u2014'; }
     out.push({id:r.id, label:r.label, text, scalar, highlight:!!r.highlight, color:r.color});
   });
   return out;
@@ -180,8 +324,6 @@ function renderReadouts(env){
     return `<div class="readout-row${hl}"><span class="readout-label">${r.label}</span><span class="readout-value"${color}>${r.text}</span></div>`;
   }).join('');
   renderMath(container);
-
-  // constant indicator
   const cb=document.getElementById('constant-block');
   if(B.constant){
     const found=ro.find(x=>x.id===B.constant.of);
@@ -193,7 +335,6 @@ function renderReadouts(env){
   } else { cb.style.display='none'; }
 }
 
-// ===== Legend =====
 (function(){
   const lg=document.getElementById('legend');
   if(B.legend && B.legend.length){
@@ -205,7 +346,6 @@ function renderReadouts(env){
   } else { lg.innerHTML=''; }
 })();
 
-// ===== Param slider =====
 const pDef = B.param || {};
 const paramName = pDef.name || 't';
 const paramMin = pDef.min!=null ? pDef.min : 0;
@@ -232,40 +372,38 @@ if(pDef.ticks && pDef.ticks.length>=2){
   ticksDiv.innerHTML = `<span>${paramMin}${paramUnit}</span><span>${(paramMin+paramMax)/2}${paramUnit}</span><span>${paramMax}${paramUnit}</span>`;
 }
 
-// ===== Three.js setup =====
 const viewport = document.getElementById('viewport');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0f172a);
 scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
 
 const camera = new THREE.PerspectiveCamera(45, viewport.clientWidth/viewport.clientHeight, 0.1, 100);
-const camPos = (B.view && B.view.cameraPos) || [5, 4, 8];
-const camTarget = (B.view && B.view.target) || [0, 0, 0];
+const camPos = (B.view && B.view.cameraPos) || [6, 3.5, 6];
+const camTarget = (B.view && B.view.target) || [0, 1.5, 0];
 camera.position.set(camPos[0], camPos[1], camPos[2]);
 
 let renderer, controls;
 try {
-	renderer = new THREE.WebGLRenderer({antialias:true, failIfMajorPerformanceCaveat:false});
-	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-	renderer.setSize(viewport.clientWidth, viewport.clientHeight);
-	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-	viewport.insertBefore(renderer.domElement, viewport.firstChild);
-	document.getElementById('splash').style.display='none';
+  renderer = new THREE.WebGLRenderer({antialias:true, failIfMajorPerformanceCaveat:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  viewport.insertBefore(renderer.domElement, viewport.firstChild);
+  document.getElementById('splash').style.display='none';
 
-	controls = new THREE.OrbitControls(camera, renderer.domElement);
-	controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
-	controls.enableDamping = true;
-	controls.dampingFactor = 0.08;
-	controls.minDistance = 1;
-	controls.maxDistance = 30;
-	controls.update();
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 1;
+  controls.maxDistance = 30;
+  controls.update();
 } catch(e) {
-	viewport.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:18px;text-align:center;padding:20px">⚠ 3D 渲染初始化失败<br><span style="font-size:14px;color:#9ca3af;margin-top:8px">您的浏览器不支持 WebGL，请使用 Chrome/Firefox/Edge 最新版</span></div>';
-	document.getElementById('splash').style.display='none';
+  viewport.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:18px;text-align:center;padding:20px">\u26a0 3D \u6e32\u67d3\u521d\u59cb\u5316\u5931\u8d25<br><span style="font-size:14px;color:#9ca3af;margin-top:8px">\u60a8\u7684\u6d4f\u89c8\u5668\u4e0d\u652f\u6301 WebGL\uff0c\u8bf7\u4f7f\u7528 Chrome/Firefox/Edge \u6700\u65b0\u7248</span></div>';
+  document.getElementById('splash').style.display='none';
 }
 
-// Lights
 const ambient = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambient);
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
@@ -276,18 +414,16 @@ const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.3);
 fillLight.position.set(-5, -3, -5);
 scene.add(fillLight);
 
-// Grid
 if(B.view && B.view.showGrid !== false){
   const grid = new THREE.GridHelper(16, 16, 0x475569, 0x334155);
   scene.add(grid);
 }
-// Axes
 if(B.view && B.view.showAxes !== false){
-  const axesLen = 2.5;
-  const makeAxis = (dir, color, label) => {
+  const axesLen = 3.5;
+  const makeAxis = (dir, color) => {
     const pts = [new THREE.Vector3(0,0,0), new THREE.Vector3(dir[0]*axesLen, dir[1]*axesLen, dir[2]*axesLen)];
     const g = new THREE.BufferGeometry().setFromPoints(pts);
-    const l = new THREE.Line(g, new THREE.LineBasicMaterial({color, linewidth:2}));
+    const l = new THREE.Line(g, new THREE.LineBasicMaterial({color}));
     scene.add(l);
   };
   makeAxis([1,0,0], 0xf87171);
@@ -295,7 +431,6 @@ if(B.view && B.view.showAxes !== false){
   makeAxis([0,0,1], 0x60a5fa);
 }
 
-// autoRotate state
 let autoRotate = false;
 function toggleAutoRotate(){ if(!controls) return; autoRotate=!autoRotate; controls.autoRotate=autoRotate; controls.autoRotateSpeed=2; }
 function resetCamera(){
@@ -305,10 +440,7 @@ function resetCamera(){
   controls.update();
 }
 
-// ===== 3D Object system =====
-const sceneObjects = []; // Three.js objects to clear on rebuild
-
-// Color mapping
+const sceneObjects = [];
 const COLORS = {
   curve:'#fbbf24', line:'#2dd4bf', aux:'#64748b', ptA:'#f87171', ptB:'#60a5fa',
   point:'#94a3b8', given:'#a78bfa', fixed:'#34d399', vecA:'#f87171', vecB:'#60a5fa',
@@ -325,13 +457,11 @@ function resolvePos(pos, env){
 }
 
 function buildScene3D(pval){
-  // Clear previous objects
   sceneObjects.forEach(o => { scene.remove(o); if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); });
   sceneObjects.length = 0;
 
   const env = buildEnv(pval);
 
-  // Process each object
   (B.objects||[]).forEach(obj => {
     try {
       switch(obj.type){
@@ -349,8 +479,6 @@ function buildScene3D(pval){
           mesh.castShadow = true;
           scene.add(mesh);
           sceneObjects.push(mesh);
-
-          // Outline
           const outlineMat = new THREE.MeshBasicMaterial({
             color: 0x334155,
             side: THREE.BackSide,
@@ -400,10 +528,9 @@ function buildScene3D(pval){
           break;
         }
       }
-    } catch(e) { /* skip invalid object */ }
+    } catch(e) { /* skip */ }
   });
 
-  // Trace trajectory
   if(B.trace && B.param){
     const tr = B.trace;
     const samples = tr.samples || 160;
@@ -416,7 +543,6 @@ function buildScene3D(pval){
     }
     if(tracePts.length > 1){
       const geo = new THREE.BufferGeometry().setFromPoints(tracePts);
-      // Use dashed line for trace
       const mat = new THREE.LineDashedMaterial({ color: col(tr.color) || 0xc084fc, dashSize: 0.08, gapSize: 0.06, linewidth: 1 });
       const line = new THREE.Line(geo, mat);
       line.computeLineDistances();
@@ -425,17 +551,14 @@ function buildScene3D(pval){
     }
   }
 
-  // Update readouts
   renderReadouts(env);
 }
 
-// ===== Slider event =====
 slider.addEventListener('input', function(){
   const v = parseFloat(this.value);
   buildScene3D(v);
 });
 
-// ===== Resize =====
 function onResize(){
   const w = viewport.clientWidth;
   const h = viewport.clientHeight;
@@ -445,7 +568,6 @@ function onResize(){
 }
 window.addEventListener('resize', onResize);
 
-// ===== Animation loop =====
 function animate(){
   requestAnimationFrame(animate);
   if(controls) controls.update();
@@ -453,7 +575,6 @@ function animate(){
 }
 if(renderer) animate();
 
-// ===== Steps =====
 (function(){
   const panel = document.getElementById('steps-body');
   const toggle = document.getElementById('steps-toggle');
@@ -468,7 +589,7 @@ if(renderer) animate();
     panel.innerHTML = S.map((step, i) => {
       const active = i===0 ? 'active' : '';
       return `<div class="step-card ${active}">
-        <div class="step-header" onclick="toggleStep(this)">${step.title||'步骤'+(i+1)}<span class="step-icon">▼</span></div>
+        <div class="step-header" onclick="toggleStep(this)">${step.title||'\u6b65\u9aa4'+(i+1)}<span class="step-icon">\u25bc</span></div>
         <div class="step-body" style="display:${i===0?'block':'none'}">${step.content||''}</div>
       </div>`;
     }).join('');
@@ -485,7 +606,6 @@ window.toggleStep = function(header){
   body.style.display = wasActive ? 'none' : 'block';
 };
 
-// ===== Init =====
 buildScene3D(parseFloat(slider.value));
 onResize();
 </script>

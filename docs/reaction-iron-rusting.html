@@ -128,19 +128,23 @@ var camera = new THREE.PerspectiveCamera(38, ctr.clientWidth/ctr.clientHeight, 0
 camera.position.set(2, 5, 17);
 camera.lookAt(0, 0.3, 0);
 
-var renderer = new THREE.WebGLRenderer({ antialias:true, failIfMajorPerformanceCaveat:false });
-renderer.setSize(ctr.clientWidth, ctr.clientHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-ctr.appendChild(renderer.domElement);
+try {
+	var renderer = new THREE.WebGLRenderer({ antialias:true, failIfMajorPerformanceCaveat:false });
+	renderer.setSize(ctr.clientWidth, ctr.clientHeight);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	ctr.appendChild(renderer.domElement);
 
-var controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.maxDistance = 30;
-controls.minDistance = 4;
-controls.target.set(0, 0.3, 0);
+	var controls = new THREE.OrbitControls(camera, renderer.domElement);
+	controls.enableDamping = true;
+	controls.dampingFactor = 0.08;
+	controls.maxDistance = 30;
+	controls.minDistance = 4;
+	controls.target.set(0, 0.3, 0);
+} catch(e) {
+	ctr.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:18px;text-align:center;padding:20px">⚠ 3D 渲染初始化失败<br><span style="font-size:14px;color:#9ca3af;margin-top:8px">您的浏览器不支持 WebGL，请使用 Chrome/Firefox/Edge 最新版</span></div>';
+}
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 var DL = new THREE.DirectionalLight(0xffffff, 0.95);
@@ -559,9 +563,9 @@ function init(){
   window.addEventListener('resize',function(){
     var w=ctr.clientWidth, h=ctr.clientHeight;
     camera.aspect=w/h; camera.updateProjectionMatrix();
-    renderer.setSize(w,h);
+    if(renderer) renderer.setSize(w,h);
   });
-  (function render(){ controls.update(); renderer.render(scene,camera); requestAnimationFrame(render); })();
+  (function render(){ if(controls) controls.update(); if(renderer) renderer.render(scene,camera); requestAnimationFrame(render); })();
 }
 
 init();
