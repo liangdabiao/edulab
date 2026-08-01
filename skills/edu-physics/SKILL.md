@@ -257,6 +257,15 @@ exp log pow min max sign floor ceil hypot PI`
 三角函数使用**弧度**（角度需先转换：`theta*PI/180`）。
 参数名须是合法 JS 标识符（如 `t`/`v0`/`theta`，不能用 `θ` 等非标识符）。
 
+### KaTeX 公式注意事项
+课程正文（`lesson.problem`、`steps[].content`）及图例（`legend[].text`）中的 KaTeX 公式
+使用 `$...$`（行内）或 `$$...$$`（块级）包裹。
+
+已知不兼容命令：
+- **`\\prescript`** — KaTeX 不支持 `mathtools` 包的 `\\prescript` 命令。
+  ✅ 改用 `{}^{<上标>}_{<下标>}\\text{<基>}`，如：
+  `$\\left({}^{4}_{2}\\text{He}^{2+}\\right)$` → $\left({}^{4}_{2}\text{He}^{2+}\right)$
+
 ### trace 轨迹系统
 在 `board` 中配置 `trace: { of: "点名称", color: "颜色" }` 后，引擎在 param 的 `[min, max]` 区间
 均匀采样 160 步，对指定点绘制轨迹路径。适用于：

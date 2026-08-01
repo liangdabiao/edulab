@@ -1211,6 +1211,142 @@ SCENES.pcr_process = function(t,args){
   }
   function pcr_label(k){return k==='denaturation'?'DNA双链解旋':k==='annealing'?'引物结合':'DNA合成';}
 };
+
+// --- replication_fork: DNA半保留复制叉 ---
+SCENES.replication_fork = function(t,args){
+  const W=cv.width,H=cv.height;
+  const progress=args.progress!==undefined?args.progress:0;
+  drawText(args.title||'DNA 半保留复制 — 复制叉动态推进',W/2,18,'#fff',14);
+
+  // Fork X position: moves right as progress increases
+  const forkMin=W*0.2,forkMax=W*0.8;
+  const forkX=forkMin+progress*(forkMax-forkMin);
+  const cy=H/2;
+  const strandY1=cy-30; // top parent strand
+  const strandY2=cy+30; // bottom parent strand
+  const newY1=cy-65;    // new leading strand
+  const newY2=cy+65;    // new lagging strand
+
+  // ===== Right of fork: unreplicated parent DNA =====
+  const rightX=forkX+30;
+  const endX=W-30;
+  // Top parent strand (blue)
+  ctx.strokeStyle='rgba(59,130,246,0.6)';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(forkX,strandY1);ctx.lineTo(endX,strandY1);ctx.stroke();
+  // Bottom parent strand (blue)
+  ctx.beginPath();ctx.moveTo(forkX,strandY2);ctx.lineTo(endX,strandY2);ctx.stroke();
+  // Base pairs (vertical dashes between strands)
+  ctx.strokeStyle='rgba(148,163,184,0.25)';ctx.lineWidth=1;ctx.setLineDash([3,6]);
+  for(let ix=Math.ceil(forkX/12)*12;ix<endX;ix+=12){
+    ctx.beginPath();ctx.moveTo(ix,strandY1);ctx.lineTo(ix,strandY2);ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  drawText('5\'',forkX-5,strandY1-10,'#3b82f6',10);
+  drawText('3\'',forkX-5,strandY2+18,'#3b82f6',10);
+  drawText('亲代 DNA',endX-5,cy+5,'#64748b',10);
+
+  // ===== Helicase at fork =====
+  const hx=forkX,hy=cy;
+  ctx.fillStyle='rgba(251,191,36,0.3)';ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(hx,hy,16,0,7);ctx.fill();ctx.stroke();
+  // Helicase label
+  drawText('解旋酶',hx,hy+30,'#fbbf24',9);
+  // Unwinding arrows
+  const uwAmp=4+Math.sin(t*3)*2;
+  ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(hx-8,strandY1-uwAmp);ctx.lineTo(hx-3,strandY1-3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(hx-8,strandY2+uwAmp);ctx.lineTo(hx-3,strandY2+3);ctx.stroke();
+
+  // ===== Left of fork: replicated region =====
+  const leftX=forkX-10;
+  const lxMin=40;
+
+  // Leading strand template (top, going 3'→5')
+  ctx.strokeStyle='rgba(59,130,246,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(lxMin,strandY1);ctx.lineTo(leftX,strandY1);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // New leading strand (green, continuous, 5'→3')
+  ctx.strokeStyle='#34d399';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(lxMin,newY1);ctx.lineTo(leftX,newY1);ctx.stroke();
+  // Arrows on leading strand
+  ctx.fillStyle='#34d399';
+  if(forkX-lxMin>60){
+    for(let ax=lxMin+30;ax<leftX-30;ax+=60){
+      ctx.beginPath();ctx.moveTo(ax,newY1-4);ctx.lineTo(ax+8,newY1);ctx.lineTo(ax,newY1+4);ctx.closePath();ctx.fill();
+    }
+  }
+  drawText('5\'',lxMin-5,newY1-8,'#34d399',10);
+  drawText('3\'',lxMin-5,strandY1-8,'#3b82f6',10);
+  drawText('前导链 (连续)',(lxMin+leftX)/2,newY1-15,'#34d399',10);
+
+  // DNA polymerase on leading strand
+  if(forkX-lxMin>40){
+    const polX=leftX-25;
+    ctx.fillStyle='rgba(99,102,241,0.25)';ctx.strokeStyle='#6366f1';ctx.lineWidth=1.5;
+    roundRect(polX-18,newY1-10,36,20,6);ctx.fill();ctx.stroke();
+    drawText('DNA聚合酶',polX,newY1+16,'#6366f1',8);
+  }
+
+  // Lagging strand template (bottom, going 5'→3')
+  ctx.strokeStyle='rgba(59,130,246,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(lxMin,strandY2);ctx.lineTo(leftX,strandY2);ctx.stroke();
+  ctx.setLineDash([]);
+  drawText('5\'',lxMin-5,strandY2+16,'#3b82f6',10);
+  drawText('3\'',lxMin-5,newY2+8,'#f87171',10);
+
+  // New lagging strand (red/orange, discontinuous with Okazaki fragments)
+  const fragLen=Math.max(10,Math.min(40,(forkX-lxMin)/4));
+  const nFrags=Math.max(2,Math.floor((forkX-lxMin)/(fragLen+8)));
+  for(let fi=0;fi<nFrags;fi++){
+    const fx=lxMin+fi*(fragLen+8);
+    if(fx+fragLen>forkX)break;
+    const fragAlpha=args._showAllFrags||fi<nFrags-1||Math.sin(t*2+fi)>-0.3?1:0.3;
+    ctx.strokeStyle='rgba(248,113,113,'+(0.7*fragAlpha)+')';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(fx,newY2);ctx.lineTo(fx+fragLen,newY2);ctx.stroke();
+    // Arrow on fragment
+    ctx.fillStyle='rgba(248,113,113,'+fragAlpha+')';
+    ctx.beginPath();ctx.moveTo(fx+fragLen-3,newY2-3);ctx.lineTo(fx+fragLen+3,newY2);ctx.lineTo(fx+fragLen-3,newY2+3);ctx.closePath();ctx.fill();
+    // Okazaki fragment label (only for first 2)
+    if(fi<2)drawText('冈崎片段',fx+fragLen/2,newY2-12,'rgba(248,113,113,'+(0.8*fragAlpha)+')',8);
+  }
+  drawText('后随链 (不连续 · 冈崎片段)',(lxMin+leftX)/2,newY2+15,'#f87171',10);
+
+  // Ligase
+  if(nFrags>=2){
+    const ligX=lxMin+fragLen+4;
+    ctx.fillStyle='rgba(251,191,36,0.15)';ctx.strokeStyle='#fbbf24';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(ligX,newY2,8,0,7);ctx.fill();ctx.stroke();
+    drawText('连接酶',ligX,newY2+20,'#fbbf24',8);
+  }
+
+  // ===== Direction arrow =====
+  const arrowY=H-55;
+  ctx.strokeStyle='#64748b';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(50,arrowY);ctx.lineTo(W-50,arrowY);ctx.stroke();
+  ctx.fillStyle='#64748b';
+  ctx.beginPath();ctx.moveTo(W-50,arrowY-4);ctx.lineTo(W-42,arrowY);ctx.lineTo(W-50,arrowY+4);ctx.closePath();ctx.fill();
+  drawText('复制叉推进方向',W/2,arrowY-8,'#64748b',10);
+  // Fork position marker
+  ctx.fillStyle='rgba(251,191,36,0.15)';ctx.strokeStyle='#fbbf24';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(forkX,arrowY,6,0,7);ctx.fill();ctx.stroke();
+
+  // ===== Legend =====
+  const legY=H-18;
+  const legs=[
+    ['#3b82f6','亲代 DNA 链'],
+    ['#34d399','新合成前导链'],
+    ['#f87171','冈崎片段(后随链)'],
+    ['#fbbf24','解旋酶/连接酶'],
+  ];
+  let llx=30;
+  legs.forEach(function(l){
+    ctx.fillStyle=l[0];ctx.beginPath();ctx.arc(llx,legY,4,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';
+    ctx.fillText(l[1],llx+8,legY+3);
+    llx+=(l[1].length*7+20);
+  });
+};
 const STEPS=_DATA.steps||[];
 const STEP_DURATION=3.5;
 let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0,paramVal=0;

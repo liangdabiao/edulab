@@ -53,6 +53,7 @@ input[type=range]{accent-color:var(--accent)}
   <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
   <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
   <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="paramArea" style="display:none;margin-left:4px"><label id="paramLabel" style="font-size:12px;color:var(--muted)"></label> <input id="paramSlider" type="range" min="0" max="1" step="0.01" value="0" style="width:120px;vertical-align:middle"> <span id="paramVal" style="font-size:12px;color:var(--ink);font-weight:600;min-width:30px;display:inline-block"></span></span>
   <span id="status" class="status">点击播放或选择步骤</span>
 </div>
 
@@ -305,6 +306,245 @@ const SCENES = {
     }
     drawText((a.acid||a.solution||'')+'溶液',bx,by+bh+10,'#9ab0d0',11);
   },
+
+  // --- hemoglobin: CO-O2 competitive binding ---
+  hemoglobin(t,args){
+    const W=cv.width,H=cv.height;
+    const mode=args.mode||'normal';
+    const progress=args._paramVal!==undefined?args._paramVal:0;
+    const sites=args.sites||4;
+    drawText(args.title||'血红蛋白与气体结合',W/2,25,'#fff',15);
+
+    // Binding site positions (relative to center of canvas)
+    const cx=W/2,cy=H/2-10;
+    const sitePositions=[
+      {x:cx-50,y:cy-40,label:'α₁'},
+      {x:cx+50,y:cy-40,label:'α₂'},
+      {x:cx-50,y:cy+40,label:'β₁'},
+      {x:cx+50,y:cy+40,label:'β₂'},
+    ];
+
+    // Determine how many sites are bound by O2 and CO
+    let o2Bound=0,coBound=0;
+    if(mode==='normal'){
+      o2Bound=Math.round(progress*sites);
+    }else if(mode==='competition'){
+      const totalBound=Math.round(progress*sites);
+      o2Bound=Math.max(0,sites-totalBound);
+      coBound=totalBound;
+    }else if(mode==='blocked'){
+      coBound=Math.round(progress*sites);
+    }else if(mode==='treatment'){
+      const displaced=Math.round(progress*sites);
+      coBound=Math.max(0,sites-displaced);
+      o2Bound=displaced;
+    }
+
+    // Draw hemoglobin molecule (large oval)
+    ctx.save();
+    ctx.shadowColor='rgba(220,38,38,0.3)';ctx.shadowBlur=30;
+    ctx.fillStyle='rgba(185,28,28,0.35)';ctx.strokeStyle='rgba(220,38,38,0.5)';ctx.lineWidth=2.5;
+    roundRect(cx-90,cy-70,180,140,50);ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;
+    drawText('血红蛋白',cx,cy+75,'rgba(248,113,113,0.6)',12);
+
+    // Draw subunit labels
+    ctx.fillStyle='rgba(252,165,165,0.5)';ctx.font='11px sans-serif';ctx.textAlign='center';
+
+    // Draw binding sites and molecules
+    for(let i=0;i<sitePositions.length;i++){
+      const p=sitePositions[i];
+      const isO2=i<o2Bound;
+      const isCO=i>=sites-coBound&&i>=o2Bound;
+
+      // Binding pocket
+      ctx.fillStyle='rgba(0,0,0,0.25)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(p.x,p.y,18,0,7);ctx.fill();ctx.stroke();
+
+      // Molecule binding
+      if(isO2){
+        ctx.shadowColor='#3b82f6';ctx.shadowBlur=16;
+        ctx.fillStyle='#3b82f6';ctx.beginPath();ctx.arc(p.x,p.y,15,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('O₂',p.x,p.y+4);
+      }else if(isCO){
+        ctx.shadowColor='#ef4444';ctx.shadowBlur=16;
+        ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(p.x,p.y,15,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('CO',p.x,p.y+4);
+      }else{
+        // Empty pocket: show floating O2 nearby
+        const angle=t*0.8+i*1.57;
+        const dist=35+Math.sin(t*0.5+i)*8;
+        const fx=p.x+Math.cos(angle)*dist;
+        const fy=p.y+Math.sin(angle)*dist;
+        ctx.fillStyle='rgba(59,130,246,0.5)';ctx.shadowColor='#3b82f6';ctx.shadowBlur=8;
+        ctx.beginPath();ctx.arc(fx,fy,8,0,7);ctx.fill();ctx.shadowBlur=0;
+        ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='7px sans-serif';ctx.textAlign='center';
+        if(mode!=='blocked')ctx.fillText('O₂',fx,fy+3);
+        // Also show floating CO for competition/treatment
+        if(mode==='competition'||mode==='treatment'){
+          const a2=t*1.2+i*2.1;
+          const d2=40+Math.cos(t*0.7+i)*10;
+          const cx2=p.x+Math.cos(a2)*d2;
+          const cy2=p.y+Math.sin(a2)*d2;
+          ctx.fillStyle='rgba(239,68,68,0.5)';ctx.shadowColor='#ef4444';ctx.shadowBlur=8;
+          ctx.beginPath();ctx.arc(cx2,cy2,8,0,7);ctx.fill();ctx.shadowBlur=0;
+          ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='7px sans-serif';ctx.textAlign='center';
+          ctx.fillText('CO',cx2,cy2+3);
+        }
+      }
+      // Site label
+      ctx.fillStyle='rgba(252,165,165,0.5)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.label,p.x,p.y-26);
+    }
+    ctx.restore();
+
+    // Legend
+    const legY=H-55;
+    const legItems=[
+      {color:'#3b82f6',label:'O₂ 氧合'},
+      {color:'#ef4444',label:'CO 结合'},
+      {color:'rgba(59,130,246,0.5)',label:'游离 O₂'},
+    ];
+    let lx=60;
+    legItems.forEach(function(li){
+      ctx.fillStyle=li.color;ctx.beginPath();ctx.arc(lx,legY,7,0,7);ctx.fill();
+      ctx.fillStyle='#9ab0d0';ctx.font='11px sans-serif';ctx.textAlign='left';
+      ctx.fillText(li.label,lx+12,legY+4);
+      lx+=120;
+    });
+
+    // Readouts
+    const roY=H-25;
+    const ro=[
+      'O₂ 结合: '+o2Bound+'/'+sites,
+      'CO 结合: '+coBound+'/'+sites,
+      'Hb 氧饱和度: '+Math.round((o2Bound/sites)*100)+'%',
+    ];
+    ctx.fillStyle='#9ab0d0';ctx.font='11px sans-serif';
+    ro.forEach(function(r,i){ctx.fillText(r,60+i*200,roY);});
+
+    // Mode indicator
+    const modeLabels={normal:'正常氧合',competition:'CO 竞争结合',blocked:'CO 占据',treatment:'高压氧治疗'};
+    drawText('模式: '+ (modeLabels[mode]||mode),W/2,H-10,'#64748b',10);
+  },
+
+  // --- ionization: 碱的电离出 OH⁻ ---
+  ionization(t,args){
+    const W=cv.width,H=cv.height;
+    const a=args||{};
+    const progress=a._paramVal!==undefined?a._paramVal:0;
+    const formula=a.formula||'NaOH';
+    const cation=a.cation||'Na⁺';
+    drawText(a.title||'碱的电离 — 电离出 OH⁻',W/2,25,'#fff',15);
+
+    const n=a.molecules||6;
+    const centerX=W/2,bx=W/2-160,by=H/2+50,bw=320,bh=220;
+
+    // Beaker
+    ctx.strokeStyle='rgba(205,215,234,0.35)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(bx-10,by-bh);ctx.lineTo(bx-10,by+10);
+    ctx.lineTo(bx+bw+10,by+10);ctx.lineTo(bx+bw+10,by-bh);ctx.stroke();
+
+    // Water fill
+    const waterTop=by-bh+55;
+    ctx.fillStyle='rgba(6,182,212,0.08)';
+    ctx.fillRect(bx-10,waterTop,bw+20,by-waterTop+10);
+
+    // Water label
+    ctx.fillStyle='rgba(107,114,128,0.4)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('H₂O',bx+bw/2,waterTop+25);
+
+    // Determine how many molecules have dissociated
+    const dissociatedCount=Math.round(progress*n);
+
+    // Pre-calculate positions for molecules/ions
+    const positions=[];
+    for(let i=0;i<n;i++){
+      const col=i%4;
+      const row=Math.floor(i/4);
+      pos: {
+        const angle=t*0.3+i*1.1;
+        const drift=Math.sin(t*0.5+i*0.7)*3;
+        positions.push({
+          x:bx+60+col*72+drift,
+          y:waterTop+50+row*42+Math.sin(t*0.4+i)*5
+        });
+      }
+    }
+
+    // Draw molecules/ions
+    for(let i=0;i<n;i++){
+      const p=positions[i];
+      const isDissociated=i<dissociatedCount;
+
+      if(isDissociated){
+        // Draw OH⁻ (larger, red, with glow - the star of the show)
+        ctx.shadowColor='#ef4444';ctx.shadowBlur=18;
+        ctx.fillStyle='#ef4444';ctx.beginPath();
+        ctx.arc(p.x-14,p.y,13,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('OH⁻',p.x-14,p.y+4);
+
+        // Draw cation (smaller, grey)
+        ctx.fillStyle='rgba(148,163,184,0.7)';
+        ctx.beginPath();ctx.arc(p.x+14,p.y,9,0,7);ctx.fill();
+        ctx.fillStyle='#cbd5e1';ctx.font='bold 8px sans-serif';ctx.textAlign='center';
+        ctx.fillText(cation,p.x+14,p.y+3);
+
+        // Connection line to show they came from same molecule
+        ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.setLineDash([2,3]);
+        ctx.beginPath();ctx.moveTo(p.x-14,p.y);ctx.lineTo(p.x+14,p.y);ctx.stroke();
+        ctx.setLineDash([]);
+      }else{
+        // Undissociated molecule (floating in water)
+        const bobY=Math.sin(t*0.6+i*0.9)*3;
+        ctx.fillStyle='rgba(167,139,250,0.6)';ctx.shadowColor='#a78bfa';ctx.shadowBlur=6;
+        ctx.beginPath();ctx.arc(p.x,p.y+bobY,16,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#e8eef8';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+        ctx.fillText(formula,p.x,p.y+bobY+3);
+      }
+    }
+
+    // Status line above beaker
+    ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+    if(dissociatedCount===0){
+      ctx.fillText(formula+' 分子在水中，尚未电离',W/2,waterTop-15);
+    }else if(dissociatedCount<n){
+      const remain=n-dissociatedCount;
+      ctx.fillStyle='#fbbf24';ctx.font='bold 13px sans-serif';
+      ctx.fillText('电离出 '+dissociatedCount+' 个 OH⁻  ·  剩余 '+remain+' 个 '+formula+' 分子',W/2,waterTop-15);
+    }else{
+      ctx.fillStyle='#34d399';ctx.font='bold 14px sans-serif';
+      ctx.fillText('✓ 全部电离！溶液中充满 OH⁻',W/2,waterTop-15);
+    }
+
+    // OH⁻ highlight banner at bottom
+    if(dissociatedCount>0){
+      const bY=H-42;
+      ctx.fillStyle='rgba(239,68,68,0.12)';ctx.strokeStyle='rgba(239,68,68,0.3)';ctx.lineWidth=1;
+      roundRect(30,bY-8,W-60,32,6);ctx.fill();ctx.stroke();
+      // OH⁻ icon
+      ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(70,bY+8,8,0,7);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.fillText('OH⁻',70,bY+11);
+      ctx.fillStyle='#fca5a5';ctx.font='bold 12px sans-serif';ctx.textAlign='left';
+      ctx.fillText('碱 → 电离出 OH⁻（阴离子全部是 OH⁻）',85,bY+12);
+    }
+
+    // Legend
+    const lx=60,legY2=H-12;
+    ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(lx,legY2,5,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText('OH⁻ 离子',lx+10,legY2+3);
+    ctx.fillStyle='rgba(148,163,184,0.7)';ctx.beginPath();ctx.arc(lx+100,legY2,5,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText(cation+' 离子',lx+110,legY2+3);
+    ctx.fillStyle='rgba(167,139,250,0.6)';ctx.beginPath();ctx.arc(lx+200,legY2,5,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText(formula+' 分子',lx+210,legY2+3);
+  },
 };
 
 // ===================================================================
@@ -322,6 +562,18 @@ function syncStep(){
   document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
   statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
   stepTime=0;
+  // Param slider
+  const pa=document.getElementById('paramArea'),ps=document.getElementById('paramSlider'),
+        pl=document.getElementById('paramLabel'),pv=document.getElementById('paramVal');
+  const param=(s.sceneArgs&&s.sceneArgs.param);
+  if(param){
+    pa.style.display='inline';
+    pl.textContent=(param.label||param.name||'参数')+': ';
+    ps.min=param.min||0;ps.max=param.max||1;ps.step=param.step||0.01;ps.value=param.value||0;
+    pv.textContent=param.value||'0';
+  }else{pa.style.display='none';}
+  // Reset param value
+  if(!param&&pa.style.display!=='none')pa.style.display='none';
 }
 
 function draw(){
@@ -329,7 +581,14 @@ function draw(){
   const s=STEPS[stepIdx];
   if(!s)return;
   const sceneFn=SCENES[s.scene];
-  if(sceneFn)sceneFn(t,s.sceneArgs||{});
+  const args=s.sceneArgs||{};
+  const param=(args.param);
+  if(param){
+    const sv=document.getElementById('paramSlider').value;
+    args._paramVal=parseFloat(sv);
+    document.getElementById('paramVal').textContent=sv;
+  }
+  if(sceneFn)sceneFn(t,args);
   else {
     drawText('场景: '+s.scene,cv.width/2,cv.height/2-10,'#9ab0d0',16);
     drawText(s.name||'',cv.width/2,cv.height/2+20,'#fff',14);
@@ -361,6 +620,7 @@ resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.te
 stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
 stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
 speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+document.getElementById('paramSlider').oninput=function(){draw();};
 
 // Step bar
 function buildStepbar(){

@@ -233,6 +233,127 @@ SCENES.sort_bars = function(t,args){
   drawText(statusLine,W/2,H-12,stepIdx2>=totalSteps?'#34d399':'#fbbf24',12);
 };
 
+// --- shell_sort: 希尔排序动画 ---
+SCENES.shell_sort = function(t,args){
+  const W=cv.width,H=cv.height;
+  const data=args.data||[];
+  const gapSeq=args.gapSeq||[];
+  const progress=Math.min(1,Math.max(0,args.progress||0));
+  drawText(args.title||'希尔排序过程',W/2,25,'#fff',15);
+  if(!data.length||!gapSeq.length)return;
+
+  const n=data.length;
+
+  // Pre-count total operations across all phases
+  let totalOps=0;
+  {
+    const tmpArr=[...data];
+    for(let gi=0;gi<gapSeq.length;gi++){
+      const gap=gapSeq[gi];
+      for(let i=gap;i<n;i++){
+        const key=tmpArr[i];let j=i;
+        totalOps++;// comp
+        while(j>=gap&&tmpArr[j-gap]>key){
+          tmpArr[j]=tmpArr[j-gap];
+          totalOps++;// shift
+          j-=gap;
+          if(j>=gap)totalOps++;// next comp
+        }
+        if(j!==i){tmpArr[j]=key;totalOps++;}// place
+      }
+    }
+  }
+
+  const opLimit=Math.ceil(progress*totalOps);
+  const playArr=[...data];
+  let opCount=0,done=false;
+  let compI=-1,compJ=-1,shiftFrom=-1,shiftTo=-1;
+  let currentGap=gapSeq[0],currentPhase=-1;
+  let visitedInPhase=[];// sorted indices for this phase
+
+  // Simulate Shell Sort step by step
+  outer:
+  for(let gi=0;gi<gapSeq.length;gi++){
+    const gap=gapSeq[gi];
+    currentPhase=gi;currentGap=gap;
+    visitedInPhase=[];
+
+    for(let i=gap;i<n;i++){
+      const key=playArr[i];
+      let j=i;
+
+      // Comparison
+      if(opCount>=opLimit){compI=j-gap;compJ=j;break outer;}
+      opCount++;
+
+      while(j>=gap&&playArr[j-gap]>key){
+        // Shift
+        if(opCount>=opLimit){shiftFrom=j-gap;shiftTo=j;compI=-1;compJ=-1;break outer;}
+        playArr[j]=playArr[j-gap];
+        opCount++;
+        j-=gap;
+
+        if(j>=gap){
+          if(opCount>=opLimit){compI=j-gap;compJ=j;break outer;}
+          opCount++;
+        }
+      }
+
+      // Place
+      if(j!==i){
+        if(opCount>=opLimit){playArr[j]=key;compI=-1;compJ=-1;break outer;}
+        playArr[j]=key;
+        opCount++;
+      }
+      // Mark as processed in this phase
+      if(opCount<=opLimit)visitedInPhase.push(i);
+    }
+  }
+
+  if(opCount>=totalOps)done=true;
+
+  // Rendering
+  const max=Math.max(...data);
+  const gapW=Math.min(8,W*0.02);
+  const barW=Math.min(50,(W-60-gapW*(n-1))/n);
+  const baseY=H-70;
+  const topGapY=48;
+
+  drawText('gap = '+currentGap+'  (第 '+(currentPhase+1)+' / '+gapSeq.length+' 轮)',W/2,topGapY,'#fbbf24',13);
+
+  // Draw gap connection line between compared elements
+  const connIdx=compI>=0?compI:shiftFrom;
+  const connJdx=compJ>=0?compJ:shiftTo;
+  if(connIdx>=0&&connJdx>=0&&currentGap>0){
+    const x1=30+connIdx*(barW+gapW)+barW/2;
+    const x2=30+connJdx*(barW+gapW)+barW/2;
+    ctx.strokeStyle='rgba(251,191,36,0.3)';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(x1,baseY+5);ctx.lineTo(x2,baseY+5);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  playArr.forEach(function(v,i){
+    const bh=(v/max)*(H-110);
+    const x=30+i*(barW+gapW);
+    const y=baseY-bh;
+    let col;
+    if(i===compI||i===compJ)col='#fbbf24';
+    else if(i===shiftFrom||i===shiftTo)col='#f87171';
+    else if(done)col='#34d399';
+    else if(visitedInPhase.includes(i))col='#818cf8';// processed in current phase
+    else col='#475569';// unprocessed
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=col==='#475569'||col==='#818cf8'?0:6;
+    roundRect(x,y,barW,bh,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(v+'',x+barW/2,y-6,'#e8eef8',10);
+    drawText(i+'',x+barW/2,baseY+15,'#64748b',9);
+  });
+
+  const statusLine=done?'✓ 排序完成！':
+    (shiftFrom>=0?'→ 后移 arr['+shiftFrom+'] → arr['+shiftTo+']':
+    (compI>=0?'⇄ 比较 arr['+compI+'] 和 arr['+compJ+']':'▶ 准备'));
+  drawText(statusLine,W/2,H-12,done?'#34d399':'#fbbf24',12);
+};
+
 // --- search_visual: 查找动画 ---
 SCENES.search_visual = function(t,args){
   const W=cv.width,H=cv.height;
