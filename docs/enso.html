@@ -1,0 +1,1722 @@
+<!doctype html>
+<!--
+  edu-sci-viz · 单文件互动科普页模板
+  ============================================================
+  用法：把本文件复制到工作目录，然后按 SKILL.md 的 8 步流程替换四处内容：
+    1. <title> 与 hero 文案（大标题/lead/CTA/说明）
+    2. 分节叙事 HTML（直觉模型 → 正式定义 → 边界说明 → 来源）
+    3. hero 里的实验台 lab-shell（画布 + 控制区）
+    4. 底部「场景模块」<script>（用你的主题替换「光的折射」）
+  保留：<head> 设计系统 <style>、通用运行时 <script>、importmap。
+  本模板内置「光的折射」作为可运行示例（2D Canvas，零网络依赖）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="厄尔尼诺：切换信风强度观察赤道太平洋暖水东移、温跃层与上升流的联动，并回溯 76 年 Niño 3.4 序列。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>厄尔尼诺：暖水东移 | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(450px, 0.84fr) minmax(700px, 1.55fr);
+        gap: clamp(36px, 4vw, 64px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        /* 陷阱：h1 是 nowrap，字号上限必须保证最长一行放得进左列（约 450px 文字列）。
+           68px 上限 ≈ 每行最多 6 个汉字；行更长的主题，在场景样式里覆盖
+           .scene .hero h1 { white-space: normal } 让标题折行，防止溢出压到右侧实验区。 */
+        font-size: clamp(48px, 3.8vw, 68px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+    <!-- ========== 场景专属样式：厄尔尼诺（新主题请整体替换本块） ========== -->
+    <style>
+      .enso-scene .hero-lead { max-width: 470px; }
+      .enso-scene #enso-canvas { width: 100%; height: 650px; }
+      .enso-scene .enso-preset-label {
+        margin: 16px 0 0;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+      }
+      .enso-scene .enso-presets {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin: 6px 0 8px;
+      }
+      .enso-scene .enso-presets button {
+        padding: 8px 2px;
+        color: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 4px;
+        background: transparent;
+        font-size: 10.5px;
+        line-height: 1.5;
+        transition: border 160ms ease, color 160ms ease;
+      }
+      .enso-scene .enso-presets button:hover,
+      .enso-scene .enso-presets button:focus-visible { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+      .enso-scene .enso-readout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 16px;
+        margin: 20px 0 4px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+      }
+      .enso-scene .enso-readout span { color: rgba(255, 255, 255, 0.62); }
+      .enso-scene .enso-readout output { display: block; margin-top: 3px; color: #fff; font-family: var(--mono); font-size: 11.5px; }
+      .enso-scene .enso-oni-strong { color: #ffb52b !important; font-size: 13px; }
+      .enso-scene .enso-oni-neg { color: #7cc4ff !important; }
+      .enso-scene .enso-copy { max-width: 780px; }
+      .enso-scene .enso-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.8; }
+      .enso-scene .def-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin: 34px 0 26px;
+      }
+      .enso-scene .def-stats > div {
+        padding: 18px;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        background: var(--paper-2);
+      }
+      .enso-scene .def-stats span { display: block; margin-bottom: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--red); }
+      .enso-scene .def-stats strong { display: block; margin-bottom: 6px; font-family: var(--serif); font-size: 23px; }
+      .enso-scene .def-stats em { display: block; font-style: normal; font-size: 12px; line-height: 1.55; color: var(--muted); }
+      /* 直觉区：时间序列图 + 影响侧栏 */
+      .enso-scene .enso-intuition {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+        gap: clamp(24px, 3vw, 44px);
+        align-items: start;
+        margin-top: 10px;
+      }
+      .enso-scene .intu-card {
+        padding: 18px;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(23, 15, 5, 0.08);
+      }
+      .enso-scene .intu-canvas-wrap { position: relative; }
+      .enso-scene #enso-series { display: block; width: 100%; height: 400px; }
+      .enso-scene .series-controls { padding: 14px 4px 2px; }
+      .enso-scene .series-control { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+      .enso-scene .series-control output { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+      .enso-scene .series-note { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: rgba(7, 24, 45, 0.6); }
+      .enso-scene .intu-side { padding: 4px 2px; }
+      .enso-scene .intu-side h3 { margin-bottom: 14px; font-family: var(--serif); font-size: 22px; line-height: 1.3; }
+      .enso-scene .enso-effects { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+      .enso-scene .enso-effects li { position: relative; padding: 13px 2px 13px 22px; border-bottom: 1px solid var(--rule); font-size: 14px; line-height: 1.7; }
+      .enso-scene .enso-effects li::before { content: ""; position: absolute; top: 21px; left: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+      @media (max-width: 900px) { .enso-scene .def-stats { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 1240px) {
+        .enso-scene .enso-intuition { grid-template-columns: 1fr; }
+        .enso-scene #enso-canvas { height: 620px; }
+      }
+      @media (max-width: 620px) {
+        .enso-scene #enso-canvas { height: 460px; }
+        .enso-scene .lab-canvas-wrap { height: 460px; }
+        .enso-scene #enso-series { height: 340px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#enso-intuition">直觉</a>
+        <a href="#enso-definition">定义</a>
+        <a href="#enso-limits">边界</a>
+        <a href="#enso-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+    <main id="main" class="enso-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 09 / CLIMATE LAB</p>
+          <h1>厄尔尼诺：<br />暖水东移</h1>
+          <p class="hero-lead">
+            东太平洋海表温度不过高出常年一两度，半个地球的雨带、旱情与渔场却跟着改道。
+            让信风停一停，看暖水怎样涌向东岸。
+          </p>
+          <a class="primary-action" href="#enso-intuition">
+            开始实验
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            切换 强拉尼娜 / 正常 / 厄尔尼诺，或直接拖动贸易风强度<br />
+            观察暖池位置、温跃层起伏与秘鲁上升流的联动。
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="厄尔尼诺 赤道太平洋剖面交互实验">
+          <div class="lab-canvas-wrap">
+            <canvas id="enso-canvas" aria-label="赤道太平洋东西剖面：暖池、温跃层、信风与上升流"></canvas>
+            <div class="canvas-caption">
+              <span>赤道太平洋剖面 · 印尼 — 秘鲁</span>
+              <span id="enso-canvas-status">接近常态 · 信风正常</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="海况参数">
+            <h2>海况参数</h2>
+
+            <p class="enso-preset-label">工况预设</p>
+            <div class="enso-presets" role="group" aria-label="工况预设">
+              <button data-enso-wind="-100" type="button">强拉尼娜<br />−1.8℃</button>
+              <button data-enso-wind="-40" type="button">正常<br />0.0℃</button>
+              <button data-enso-wind="20" type="button">弱厄尔尼诺<br />+1.1℃</button>
+              <button data-enso-wind="100" type="button">强厄尔尼诺<br />+2.5℃</button>
+            </div>
+
+            <label class="control-row" for="enso-wind">
+              <span>贸易风强度</span>
+              <output id="enso-wind-output">东风 100%</output>
+            </label>
+            <input id="enso-wind" type="range" min="-100" max="100" step="1" value="-40" />
+
+            <div class="enso-readout" aria-live="polite">
+              <div><span>Niño 3.4 指数</span><output id="enso-oni-output">0.0 ℃</output></div>
+              <div><span>沃克环流</span><output id="enso-walker-output">正常</output></div>
+              <div><span>秘鲁上升流</span><output id="enso-upwell-output">偏强</output></div>
+              <div><span>西太暖池</span><output id="enso-pool-output">居中</output></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="enso-intuition" aria-labelledby="enso-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="enso-intuition-title">直觉模型：一缸水，两股风</h2>
+            <p>把滑杆从 1950 拖到 2026，先感受它几年一个来回的呼吸。</p>
+          </div>
+        </div>
+        <div class="enso-copy">
+          <p>
+            厄尔尼诺的本质，是一盆水被推斜了、又松了手。平时赤道东太平洋常年刮东风（信风），
+            把表层暖水不断向西推到印尼一侧：西太平洋积起一片约 29℃ 的"暖池"，海面比东边高约半米；
+            东太平洋（秘鲁外海）只好从深处上翻冷水来补充，海面只有 23℃ 上下，却养出了全球最肥的渔场。
+          </p>
+          <p>
+            一旦东风变弱甚至反转，堆在西边的暖水便失去支撑，顺着坡度一泻向东——像拔掉浴缸塞子。
+            大片暖水涌到南美沿岸，温跃层在东边被压深，秘鲁的冷水上升流停摆。渔获的崩塌快得惊人：
+            1972 年那次，秘鲁鳀鱼年渔获从约 2000 万吨跌到 200 万吨。这就是一次厄尔尼诺。
+          </p>
+          <p>
+            下面这张 76 年的序列把"周期感"摆在你眼前：红柱是厄尔尼诺（暖水东移），蓝柱是拉尼娜
+            （暖水被推得更靠西）。拖动滑杆选中某一年，右侧会列出那一年典型的全球影响。
+          </p>
+        </div>
+        <div class="enso-intuition">
+          <div class="intu-card">
+            <div class="intu-canvas-wrap">
+              <canvas id="enso-series" aria-label="1950-2026 年 Niño 3.4 指数时间序列"></canvas>
+            </div>
+            <div class="series-controls">
+              <label class="series-control" for="enso-year">
+                <span>查看年份</span>
+                <output id="enso-year-output">2015</output>
+              </label>
+              <input id="enso-year" type="range" min="1950" max="2026" step="1" value="2015" />
+              <p class="series-note">
+                纵轴为 Niño 3.4 区海温距平（示意合成，非实测月值）。红柱 = 厄尔尼诺，蓝柱 = 拉尼娜；
+                ±0.5℃ 为事件判据线。
+              </p>
+            </div>
+          </div>
+          <aside class="intu-side" aria-label="该年份对应的典型影响">
+            <h3 id="enso-state-title">强厄尔尼诺 · 2015</h3>
+            <ul class="enso-effects" id="enso-effects"></ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="enso-definition" aria-labelledby="enso-definition-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="enso-definition-title">正式定义：ENSO、ONI 与遥相关</h2>
+            <p>先给"厄尔尼诺"一个可测量的判定，再解释它凭什么影响全球。</p>
+          </div>
+        </div>
+        <div class="enso-copy">
+          <p>
+            ENSO（厄尔尼诺—南方涛动）是热带太平洋上"海洋"与"大气"的耦合振荡：海洋一侧是
+            厄尔尼诺 / 拉尼娜（海表温度异常），大气一侧是南方涛动（东西太平洋海平面气压的跷跷板）。
+            两者互为因果——东风变弱会松开暖水，暖水东移又会进一步削弱东风，构成一个自我维持的过程。
+          </p>
+          <p>
+            判断强弱最常用的指标叫 ONI（Oceanic Niño Index）：取 Niño 3.4 区（5°N–5°S，170°W–120°W）
+            海表温度对 30 年气候平均的距平，再做 3 个月滑动平均。ONI ≥ +0.5℃ 且持续 5 个滑动月，
+            记为一次厄尔尼诺事件；≤ −0.5℃ 且持续，记为拉尼娜。观测史上最强的是 1982–83、1997–98
+            与 2015–16（并列），2023–24 也被归为强事件。
+          </p>
+          <p>
+            暖水东移凭什么改全球天气？因为海面最热的位置一旦移到中、东太平洋，热带对流（雷雨带）就跟着东移。
+            雷雨带像一杆大烟囱，扰动沿高空向东、向两极传播成"遥相关"：印尼与澳大利亚转入干旱并爆发山火，
+            秘鲁与厄瓜多尔暴雨成灾（降水可达常年的十倍），印度季风雨减弱，美国加州偏湿，非洲南部干旱。
+            拉尼娜大体把这张图反过来。
+          </p>
+        </div>
+        <div class="def-stats" role="list">
+          <div><span>监测区</span><strong>Niño 3.4</strong><em>5°N–5°S · 170°W–120°W</em></div>
+          <div><span>厄尔尼诺判据</span><strong>ONI ≥ +0.5℃</strong><em>3 个月滑动 · 持续 5 个月</em></div>
+          <div><span>周期</span><strong>2–7 年</strong><em>事件持续 9–12 个月</em></div>
+          <div><span>最强事件</span><strong>82 / 97 / 15</strong><em>2023–24 亦属强事件</em></div>
+        </div>
+      </section>
+
+      <section class="limits section-pad" id="enso-limits" aria-labelledby="enso-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="enso-limits-title">这个模型简化了什么</h2>
+            <p>剖面与序列都是示意图，真实 ENSO 比这复杂得多。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>简化 1</span>
+            <h3>二维剖面是示意</h3>
+            <p>
+              真实赤道太平洋有岛屿、赤道潜流与三维环流，信风并不均匀，这里画成均匀箭头；
+              温跃层的起伏还受缓慢内波与开尔文波的调制。
+            </p>
+          </article>
+          <article>
+            <span>简化 2</span>
+            <h3>上升流一笔带过</h3>
+            <p>
+              秘鲁沿岸的冷水上翻由埃克曼输运（风应力与科氏力共同作用）驱动，并非"海底冷水直接顶上来"；
+              页面只用一个气泡动画示意其强弱。
+            </p>
+          </article>
+          <article>
+            <span>简化 3</span>
+            <h3>ONI 序列是合成近似</h3>
+            <p>
+              历史曲线用高斯峰近似主要事件，不是 NOAA 的真实月值观测；且事件判定还要求持续 5 个月，
+              这里只按单年数值作示意分类。
+            </p>
+          </article>
+          <article>
+            <span>简化 4</span>
+            <h3>遥相关是典型形态</h3>
+            <p>
+              每次事件的强度、季节与大气内部变率都会改变影响范围：2023–24 的影响分布与 1997–98
+              并不相同，页面只展示最具代表性的形态。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" id="enso-sources" aria-labelledby="enso-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="enso-sources-title">来源与核验路径</h2>
+            <p>ENSO 的定义、判据与历史事件以下列资料为准。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php" target="_blank" rel="noreferrer">
+            <span role="cell">官方</span>
+            <strong role="cell">NOAA CPC · Oceanic Niño Index (ONI)</strong>
+            <span role="cell">ONI 定义、±0.5℃ 判据与历史事件表</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.climate.gov/news-features/blogs/enso/what-el-niño-southern-oscillation-enso-nutshell" target="_blank" rel="noreferrer">
+            <span role="cell">科普</span>
+            <strong role="cell">climate.gov · ENSO in a Nutshell</strong>
+            <span role="cell">ENSO 机制、沃克环流与常见问答</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/El_Ni%C3%B1o" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · El Niño</strong>
+            <span role="cell">历史事件（1982-83 / 1997-98 / 2015-16）、遥相关与渔场影响</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Walker_circulation" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Walker circulation</strong>
+            <span role="cell">沃克环流与南方涛动的气压跷跷板</span>
+          </a>
+          <a class="source-row" role="row" href="https://rwu.pressbooks.pub/webboceanography/chapter/9-6-el-nino-and-la-nina/" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">Web-based Oceanography 9.6 · El Niño and La Niña</strong>
+            <span role="cell">剖面机制、秘鲁渔业（1972 鳀鱼渔获崩塌）</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          页面预设数值（Niño 3.4 距平、海温、风强）为教学示意口径；ONI 时间序列为高斯峰合成，非实测月值，
+          真实数据以 NOAA CPC 为准。事件强度并列（1982-83 / 1997-98 / 2015-16）取自官方与百科的并列表述。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+    <!--
+      Three.js 走 CDN importmap。纯 2D 场景（如本示例）无需引入；
+      3D 场景在「场景模块」里 `import * as THREE from "three"` 即可，浏览器会自动按需加载。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // 职责：阅读进度条、暂停/继续开关、统一 requestAnimationFrame 渲染循环。
+      // 场景模块只需在 window.SciScene 上暴露 update(dt)，本循环每帧调用。
+      // ============================================================
+      (function () {
+        // 阅读进度
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        // 暂停/继续：只停自动运动，不破坏滑杆与 3D 拖动
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        // 渲染循环：帧间隔封顶 50ms，避免切后台后跳变
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+    <script>
+      // ============================================================
+      // 场景模块：厄尔尼诺（hero 太平洋剖面 + 直觉区 ONI 时间序列）
+      // 两个 2D Canvas 场景，共用 window.SciScene.update(dt)。
+      // ============================================================
+      (function () {
+        "use strict";
+
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const MONO = "'SFMono-Regular', Consolas, 'Liberation Mono', monospace";
+
+        function fitCanvas(cv, g, minH) {
+          const r = cv.getBoundingClientRect();
+          const w = Math.max(120, r.width);
+          const h = Math.max(minH, r.height || minH);
+          const d = Math.min(window.devicePixelRatio || 1, 2);
+          if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) {
+            cv.width = Math.round(w * d);
+            cv.height = Math.round(h * d);
+            g.setTransform(d, 0, 0, d, 0, 0);
+          }
+          g.clearRect(0, 0, w, h);
+          return { w, h };
+        }
+
+        function arrow(g, x0, y0, x1, y1, color, lw) {
+          g.save();
+          g.strokeStyle = color;
+          g.fillStyle = color;
+          g.lineWidth = lw || 1.5;
+          g.lineCap = "round";
+          g.beginPath();
+          g.moveTo(x0, y0);
+          g.lineTo(x1, y1);
+          g.stroke();
+          const a = Math.atan2(y1 - y0, x1 - x0);
+          const hl = 6.5;
+          g.beginPath();
+          g.moveTo(x1, y1);
+          g.lineTo(x1 - hl * Math.cos(a - 0.42), y1 - hl * Math.sin(a - 0.42));
+          g.moveTo(x1, y1);
+          g.lineTo(x1 - hl * Math.cos(a + 0.42), y1 - hl * Math.sin(a + 0.42));
+          g.stroke();
+          g.restore();
+        }
+
+        // ============================================================
+        // 场景 1：hero 赤道太平洋剖面
+        // ============================================================
+        const heroCv = document.getElementById("enso-canvas");
+        const heroCtx = heroCv.getContext("2d");
+
+        let wind = -40;   // 贸易风强度：负 = 东风（正常），正 = 西风异常（厄尔尼诺）
+        let time = 0;     // 动画时钟
+
+        function windToOni(w) {
+          if (w >= -40) return (w + 40) * (2.5 / 140);  // -40→0，+100→+2.5
+          return (w + 40) * (1.8 / 60);                 // -40→0，-100→-1.8
+        }
+
+        function heroState() {
+          const e = windToOni(wind);
+          const E = clamp(e / 2.2, -1, 1);      // -1 拉尼娜 … +1 厄尔尼诺
+          const p = (E + 1) / 2;                // 0 拉尼娜 … 1 厄尔尼诺
+          const front = 0.5 + E * 0.45;         // 暖水东界（0..1，西→东；厄尔尼诺时东移变大）
+          return { e, E, p, front };
+        }
+
+        // 水色 LUT（暖水→冷水，64 级）
+        const coolS = { r: 46, g: 108, b: 150 };
+        const warmS = { r: 214, g: 142, b: 52 };
+        const coldStr = "rgb(10,43,72)";
+        const LUT = [];
+        for (let i = 0; i <= 63; i++) {
+          LUT.push(
+            "rgb(" + Math.round(lerp(coolS.r, warmS.r, i / 63)) + "," +
+            Math.round(lerp(coolS.g, warmS.g, i / 63)) + "," +
+            Math.round(lerp(coolS.b, warmS.b, i / 63)) + ")"
+          );
+        }
+
+        function cloud(g, cx, cy, s, alpha) {
+          g.save();
+          g.globalAlpha = alpha;
+          g.fillStyle = "#f2e7cf";
+          const bs = [[0, 0, 6], [8, 2.5, 5], [-8, 2.5, 5], [2, 4, 7]];
+          g.beginPath();
+          for (const b of bs) g.arc(cx + b[0] * s, cy + b[1] * s, b[2] * s, 0, Math.PI * 2);
+          g.fill();
+          g.restore();
+        }
+
+        function rain(g, x0, x1, y0, y1, alpha) {
+          g.save();
+          g.globalAlpha = alpha;
+          g.strokeStyle = "#9fd2ff";
+          g.lineWidth = 1;
+          for (let i = 0; i < 30; i++) {
+            const x = x0 + ((i * 37) % 101) / 100 * (x1 - x0);
+            const y = y0 + ((i * 53) % 101) / 100 * (y1 - y0);
+            g.beginPath();
+            g.moveTo(x, y);
+            g.lineTo(x - 4, y + 9);
+            g.stroke();
+          }
+          g.restore();
+        }
+
+        function drawHero() {
+          const { w: W, h: H } = fitCanvas(heroCv, heroCtx, 480);
+          const g = heroCtx;
+
+          const landW = Math.max(44, Math.round(W * 0.085));
+          const oceanL = landW;
+          const oceanR = W - landW;
+          const oceanW = oceanR - oceanL;
+          const yS = Math.round(H * 0.40);
+          const waterH = H - yS - Math.round(H * 0.045);
+
+          const { e, E, p, front } = heroState();
+          const dw = lerp(0.42, 0.24, p);
+          const de = lerp(0.03, 0.30, p);
+          const thermDepth = (fx) => { const u = fx * fx * (3 - 2 * fx); return dw + (de - dw) * u; };
+          function colT(fx) {
+            if (fx <= front) return 1;
+            const base = 0.68 * p;                    // 东侧基线温度：随厄尔尼诺变暖
+            return lerp(base, 1, Math.exp(-(fx - front) * 5));
+          }
+
+          // --- 逐列水色：暖层 + 冷层 ---
+          for (let x = oceanL; x < oceanR; x++) {
+            const fx = (x - oceanL) / oceanW;
+            const th = thermDepth(fx) * waterH;
+            g.fillStyle = LUT[Math.round(clamp(colT(fx), 0, 1) * 63)];
+            g.fillRect(x, yS, 1, th);
+            g.fillStyle = coldStr;
+            g.fillRect(x, yS + th, 1, Math.max(0, waterH - th));
+          }
+
+          // --- 海面波浪线 ---
+          g.save();
+          g.strokeStyle = "rgba(255,255,255,0.4)";
+          g.lineWidth = 1.2;
+          g.beginPath();
+          for (let x = oceanL; x <= oceanR; x += 2) {
+            const y = yS + Math.sin(x * 0.03 + time * 1.6) * 1.4;
+            if (x === oceanL) g.moveTo(x, y); else g.lineTo(x, y);
+          }
+          g.stroke();
+          g.restore();
+
+          // --- 温跃层曲线 + 标签 ---
+          g.save();
+          g.strokeStyle = "rgba(255,255,255,0.85)";
+          g.lineWidth = 1.5;
+          g.setLineDash([6, 4]);
+          g.beginPath();
+          for (let x = oceanL; x <= oceanR; x += 2) {
+            const fx = (x - oceanL) / oceanW;
+            const y = yS + thermDepth(fx) * waterH;
+            if (x === oceanL) g.moveTo(x, y); else g.lineTo(x, y);
+          }
+          g.stroke();
+          g.setLineDash([]);
+          const tlFx = 0.68;
+          const tlY = yS + thermDepth(tlFx) * waterH;
+          g.fillStyle = "rgba(255,255,255,0.92)";
+          g.font = "10px " + MONO;
+          g.fillText("温跃层", oceanL + tlFx * oceanW - 18, tlY - 8);
+          g.restore();
+
+          // --- 海表温度标注 ---
+          g.save();
+          g.font = "10px " + MONO;
+          g.fillStyle = "rgba(255,255,255,0.75)";
+          const tE = colT(1);
+          const eTemp = Math.round(22.5 + tE * 5.5);
+          g.fillText("~29℃", oceanL + 10, yS - 8);
+          g.fillText("~" + eTemp + "℃", oceanR - 48, yS - 8);
+          g.restore();
+
+          // --- 信风/贸易风箭头 ---
+          const wf = wind / 100;
+          const wStr = Math.abs(wf);
+          if (wStr > 0.03) {
+            const nArr = 6;
+            const aColor = "rgba(255,255,255," + (0.35 + 0.55 * wStr) + ")";
+            for (let i = 0; i < nArr; i++) {
+              const x = oceanL + (i + 0.5) / nArr * oceanW;
+              const y = yS - 16;
+              const len = 24 * wStr + 6;
+              if (wf < 0) arrow(g, x, y, x - len, y, aColor, 1.6);
+              else arrow(g, x, y, x + len, y, aColor, 1.6);
+            }
+            g.fillStyle = "rgba(255,255,255,0.6)";
+            g.font = "10px " + MONO;
+            g.fillText(wf < 0 ? "贸易风（东风）" : "西风异常", oceanL + 8, yS - 30);
+          } else {
+            g.fillStyle = "rgba(255,255,255,0.45)";
+            g.font = "10px " + MONO;
+            g.fillText("风平 · 暖水停滞", oceanL + 8, yS - 30);
+          }
+
+          // --- 沃克环流：虚线环，强度随厄尔尼诺减弱 ---
+          const loopCx = oceanL + clamp(front / 2, 0.12, 0.5) * oceanW;
+          const loopCy = yS * 0.45;
+          const rx = oceanW * 0.24;
+          const ry = yS * 0.30;
+          const wOp = Math.max(0, 1 - p * 0.78);
+          if (wOp > 0.05) {
+            g.save();
+            g.strokeStyle = "rgba(255,255,255," + (0.5 * wOp) + ")";
+            g.fillStyle = "rgba(255,255,255," + (0.5 * wOp) + ")";
+            g.lineWidth = 1.4;
+            g.setLineDash([5, 5]);
+            g.beginPath();
+            g.ellipse(loopCx, loopCy, rx, ry, 0, 0, Math.PI * 2);
+            g.stroke();
+            g.setLineDash([]);
+            arrow(g, loopCx - rx * 0.95, loopCy - 2, loopCx - rx * 0.95, loopCy - ry * 0.8, "rgba(255,255,255," + (0.55 * wOp) + ")", 1.3);
+            arrow(g, loopCx + rx * 0.95, loopCy + 2, loopCx + rx * 0.95, loopCy + ry * 0.8, "rgba(255,255,255," + (0.55 * wOp) + ")", 1.3);
+            if (wOp > 0.3) {
+              g.font = "10px " + MONO;
+              g.fillText("沃克环流", loopCx - 30, loopCy - ry - 8);
+            }
+            g.restore();
+            // 上升一侧的云
+            cloud(g, loopCx - rx * 0.9, loopCy - ry + 10, 1, 0.5 * wOp + 0.2);
+          }
+
+          // --- 陆地（印尼侧 / 秘鲁侧） ---
+          const landBody = "#20354a";
+          const landTop = "#33506b";
+          const yLandTop = yS - 12;
+          function drawLand(x0, w, label, flip) {
+            g.fillStyle = landBody;
+            g.fillRect(x0, yLandTop, w, H - yLandTop);
+            g.fillStyle = landTop;
+            g.fillRect(x0, yLandTop, w, 10);
+            g.fillStyle = "rgba(255,255,255,0.28)";
+            g.fillRect(flip ? x0 : x0 + w - 1.5, yLandTop, 1.5, H - yLandTop);
+            g.save();
+            g.translate(x0 + w / 2, (yLandTop + H) / 2);
+            g.rotate(-Math.PI / 2);
+            g.fillStyle = "rgba(255,255,255,0.7)";
+            g.font = "11px " + MONO;
+            g.textAlign = "center";
+            g.fillText(label, 0, 4);
+            g.restore();
+          }
+          drawLand(0, landW, "印度尼西亚", true);
+          drawLand(oceanR, landW, "南美·秘鲁", false);
+
+          // --- 秘鲁上升流（气泡从深处上翻，厄尔尼诺时几乎消失） ---
+          const upAmt = 1 - p;
+          const nBub = Math.round(2 + upAmt * 4);
+          g.save();
+          for (let i = 0; i < nBub; i++) {
+            const ph = (i / nBub + time * 0.14) % 1;
+            const bx = oceanR - 10 - (i % 3) * 8;
+            const by = yS + waterH * (0.82 - ph * 0.72);
+            g.globalAlpha = 0.28 + 0.3 * upAmt;
+            g.fillStyle = "#9fd8ff";
+            g.beginPath();
+            g.arc(bx, by, 1.6 + (i % 3), 0, Math.PI * 2);
+            g.fill();
+          }
+          g.restore();
+          if (upAmt < 0.3) {
+            g.save();
+            g.fillStyle = "rgba(255,160,60,0.85)";
+            g.font = "10px " + MONO;
+            g.fillText("上升流几乎停止", oceanR - 108, yS + waterH * 0.55);
+            g.restore();
+          } else if (upAmt > 0.55) {
+            g.save();
+            g.fillStyle = "rgba(160,220,255,0.8)";
+            g.font = "10px " + MONO;
+            g.fillText("上升流强", oceanR - 70, yS + waterH * 0.55);
+            g.restore();
+          }
+
+          // --- 厄尔尼诺期间的秘鲁暴雨 + 印尼干旱 ---
+          if (p > 0.45) {
+            rain(g, oceanR + 4, W - 4, yS - 24, yS + 60, 0.3 + 0.5 * p);
+            cloud(g, W - landW / 2, yS - 34, 1.1, 0.4 + 0.5 * p);
+          }
+          if (p > 0.55) {
+            g.save();
+            g.strokeStyle = "#f2c14e";
+            g.lineWidth = 1.6;
+            g.beginPath();
+            g.arc(oceanL + 6, yLandTop - 24, 9, 0, Math.PI * 2);
+            g.stroke();
+            for (let k = 0; k < 8; k++) {
+              const a = k / 8 * Math.PI * 2 + time * 0.6;
+              g.beginPath();
+              g.moveTo(oceanL + 6 + Math.cos(a) * 9, yLandTop - 24 + Math.sin(a) * 9);
+              g.lineTo(oceanL + 6 + Math.cos(a) * 13, yLandTop - 24 + Math.sin(a) * 13);
+              g.stroke();
+            }
+            g.fillStyle = "#f2c14e";
+            g.font = "10px " + MONO;
+            g.fillText("印尼干旱", oceanL + 22, yLandTop - 20);
+            g.restore();
+          }
+        }
+
+        // ============================================================
+        // 场景 2：直觉区 ONI 时间序列（浅色图）
+        // ============================================================
+        const srCv = document.getElementById("enso-series");
+        const srCtx = srCv.getContext("2d");
+        let selYear = 2015;
+
+        const EVENTS = [ // 厄尔尼诺正峰
+          { y: 1951, a: 0.9 }, { y: 1957, a: 1.7 }, { y: 1965, a: 1.6 }, { y: 1969, a: 1.0 },
+          { y: 1972, a: 2.1 }, { y: 1976, a: 0.8 }, { y: 1982, a: 2.2 }, { y: 1987, a: 1.5 },
+          { y: 1991, a: 1.7 }, { y: 1994, a: 0.7 }, { y: 1997, a: 2.3 }, { y: 2002, a: 1.4 },
+          { y: 2006, a: 0.8 }, { y: 2009, a: 1.5 }, { y: 2015, a: 2.6 }, { y: 2018, a: 0.8 }, { y: 2023, a: 2.0 }
+        ];
+        const LAGOS = [ // 拉尼娜负峰
+          { y: 1954, a: -1.5 }, { y: 1964, a: -1.1 }, { y: 1970, a: -1.3 }, { y: 1973, a: -2.0 },
+          { y: 1975, a: -1.5 }, { y: 1988, a: -1.8 }, { y: 1995, a: -0.9 }, { y: 1998, a: -1.6 },
+          { y: 2000, a: -0.7 }, { y: 2007, a: -1.4 }, { y: 2010, a: -1.5 }, { y: 2011, a: -1.3 },
+          { y: 2020, a: -1.2 }, { y: 2021, a: -1.0 }
+        ];
+        function gauss(x, c, s, a) { const d = (x - c) / s; return a * Math.exp(-0.5 * d * d); }
+        function oniAt(y) {
+          let v = 0;
+          for (const ev of EVENTS) v += gauss(y, ev.y, 0.62, ev.a);
+          for (const la of LAGOS) v += gauss(y, la.y, 0.62, la.a);
+          return v;
+        }
+
+        function classify(v) {
+          if (v >= 1.5) return "强厄尔尼诺";
+          if (v >= 0.5) return "厄尔尼诺";
+          if (v <= -1.5) return "强拉尼娜";
+          if (v <= -0.5) return "拉尼娜";
+          return "接近常态";
+        }
+
+        const EFFECTS = {
+          "强厄尔尼诺": [
+            "南美秘鲁—厄瓜多尔暴雨，降水可达常年的十倍",
+            "印尼、澳大利亚转入干旱并多发山火",
+            "常伴全球最热年份（1982 / 1997 / 2015 / 2023）"
+          ],
+          "厄尔尼诺": [
+            "西太平洋降雨减弱，印度季风雨偏弱",
+            "美国加州与西南部偏湿",
+            "西北太平洋台风偏少"
+          ],
+          "接近常态": [
+            "信风把暖水堆在印尼一侧，沃克环流正常",
+            "秘鲁上升流带来全球最肥的渔场",
+            "海温距平接近零，无系统性异常"
+          ],
+          "拉尼娜": [
+            "西太平洋更暖、印尼多雨",
+            "大西洋飓风季偏活跃",
+            "秘鲁沿岸偏干、上升流更强"
+          ],
+          "强拉尼娜": [
+            "印尼、澳大利亚洪涝偏多",
+            "非洲南部与南美干旱",
+            "常伴更强的大西洋飓风季（1988 / 2010）"
+          ]
+        };
+
+        const MAJOR = [
+          { y: 1982, l: "1982-83" }, { y: 1997, l: "1997-98" },
+          { y: 2015, l: "2015-16" }, { y: 2023, l: "2023-24" }
+        ];
+
+        function barColor(v) {
+          if (v >= 0.5) return "rgba(180,31,36,0.9)";
+          if (v > 0) return "rgba(229,165,38,0.55)";
+          if (v <= -0.5) return "rgba(47,111,159,0.9)";
+          return "rgba(145,165,184,0.5)";
+        }
+
+        function drawSeries() {
+          const { w: W, h: H } = fitCanvas(srCv, srCtx, 300);
+          const g = srCtx;
+          const padL = 46, padR = 12, padT = 26, padB = 34;
+          const plotW = W - padL - padR;
+          const plotH = H - padT - padB;
+          const yMin = -2.8, yMax = 2.8;
+          const yScale = plotH / (yMax - yMin);
+          const Y = (v) => padT + plotH - (v - yMin) * yScale;
+          const X = (y) => padL + (y - 1950) / (2026 - 1950) * plotW;
+
+          // 网格 + 零线
+          g.font = "10px " + MONO;
+          for (let k = -2; k <= 2; k++) {
+            const y = Y(k);
+            g.save();
+            g.strokeStyle = k === 0 ? "rgba(7,24,45,0.5)" : "rgba(7,24,45,0.14)";
+            g.lineWidth = k === 0 ? 1.4 : 1;
+            g.setLineDash(k === 0 ? [] : [2, 3]);
+            g.beginPath();
+            g.moveTo(padL, y);
+            g.lineTo(padL + plotW, y);
+            g.stroke();
+            g.restore();
+            g.fillStyle = "rgba(7,24,45,0.55)";
+            g.textAlign = "right";
+            g.fillText((k > 0 ? "+" : "") + k, padL - 6, y + 3);
+          }
+
+          // 年度柱
+          const nYears = 2026 - 1950 + 1;
+          const barW = plotW / nYears * 0.62;
+          for (let yr = 1950; yr <= 2026; yr++) {
+            const v = oniAt(yr);
+            const x = X(yr) - barW / 2;
+            g.fillStyle = barColor(v);
+            if (v >= 0) g.fillRect(x, Y(v), barW, Y(0) - Y(v));
+            else g.fillRect(x, Y(0), barW, Y(v) - Y(0));
+          }
+
+          // 平滑曲线
+          g.save();
+          g.strokeStyle = "rgba(7,24,45,0.85)";
+          g.lineWidth = 1.6;
+          g.beginPath();
+          for (let yr = 1950; yr <= 2026; yr += 0.2) {
+            const y = Y(oniAt(yr));
+            if (yr <= 1950.01) g.moveTo(X(yr), y); else g.lineTo(X(yr), y);
+          }
+          g.stroke();
+          g.restore();
+
+          // 重大事件标签
+          g.textAlign = "center";
+          for (const m of MAJOR) {
+            const v = oniAt(m.y);
+            const y = Y(Math.max(v, 0) + 0.42);
+            g.fillStyle = "#b41f24";
+            g.font = "bold 10px " + MONO;
+            g.fillText(m.l, X(m.y), y);
+            g.strokeStyle = "rgba(180,31,36,0.35)";
+            g.beginPath();
+            g.moveTo(X(m.y), y + 3);
+            g.lineTo(X(m.y), Y(v) - 4);
+            g.stroke();
+          }
+
+          // 选中年份标记
+          const sv = oniAt(selYear);
+          g.save();
+          g.strokeStyle = "rgba(229,165,38,0.9)";
+          g.lineWidth = 2;
+          g.beginPath();
+          g.moveTo(X(selYear), padT);
+          g.lineTo(X(selYear), padT + plotH);
+          g.stroke();
+          g.fillStyle = "#e5a526";
+          g.beginPath();
+          g.arc(X(selYear), Y(sv), 5, 0, Math.PI * 2);
+          g.fill();
+          g.strokeStyle = "#7a5a10";
+          g.lineWidth = 1.5;
+          g.stroke();
+          g.restore();
+
+          // 标题
+          g.fillStyle = "rgba(7,24,45,0.7)";
+          g.font = "11px " + MONO;
+          g.textAlign = "left";
+          g.fillText("Niño 3.4 海温距平（示意）", padL, 16);
+        }
+
+        // ============================================================
+        // 控件绑定
+        // ============================================================
+        const windSlider = document.getElementById("enso-wind");
+        const windOut = document.getElementById("enso-wind-output");
+        const oniOut = document.getElementById("enso-oni-output");
+        const walkerOut = document.getElementById("enso-walker-output");
+        const upwellOut = document.getElementById("enso-upwell-output");
+        const poolOut = document.getElementById("enso-pool-output");
+        const statusEl = document.getElementById("enso-canvas-status");
+
+        function fmtOni(v) {
+          return (v > 0 ? "+" : "") + v.toFixed(1) + " ℃";
+        }
+
+        function updateReadouts() {
+          const { e, p, front } = heroState();
+          windOut.textContent = wind < 0 ? "东风 " + Math.round(-wind) + "%"
+            : wind > 0 ? "西风 " + Math.round(wind) + "%" : "东风 0%";
+          oniOut.textContent = fmtOni(e);
+          oniOut.className = e >= 0.5 ? "enso-oni-strong" : e <= -0.5 ? "enso-oni-neg" : "";
+          walkerOut.textContent = e <= -0.5 ? "增强" : e <= 0.2 ? "正常" : e <= 1.0 ? "减弱" : e <= 1.8 ? "明显减弱" : "近于崩溃";
+          const up = 1 - p;
+          upwellOut.textContent = up > 0.7 ? "偏强" : up > 0.4 ? "正常" : up > 0.15 ? "减弱" : "几乎停止";
+          poolOut.textContent = front >= 0.7 ? "暖池东扩（涌向秘鲁）" : front >= 0.35 ? "暖池居中" : "暖池贴西岸";
+          statusEl.textContent = e >= 0.5 ? "厄尔尼诺 · 信风偏弱"
+            : e <= -0.5 ? "拉尼娜 · 信风偏强" : "接近常态 · 信风正常";
+        }
+
+        windSlider.addEventListener("input", () => {
+          wind = parseFloat(windSlider.value);
+          updateReadouts();
+        });
+
+        document.querySelectorAll(".enso-presets button").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            wind = parseFloat(btn.dataset.ensoWind);
+            windSlider.value = wind;
+            updateReadouts();
+          });
+        });
+
+        const yearSlider = document.getElementById("enso-year");
+        const yearOut = document.getElementById("enso-year-output");
+        const stateTitle = document.getElementById("enso-state-title");
+        const effectsEl = document.getElementById("enso-effects");
+
+        function updateSeriesUI() {
+          const v = oniAt(selYear);
+          yearOut.textContent = selYear;
+          stateTitle.textContent = classify(v) + " · " + selYear;
+          effectsEl.innerHTML = "";
+          for (const txt of EFFECTS[classify(v)]) {
+            const li = document.createElement("li");
+            li.textContent = txt;
+            effectsEl.appendChild(li);
+          }
+          drawSeries();
+        }
+
+        yearSlider.addEventListener("input", () => {
+          selYear = parseInt(yearSlider.value, 10);
+          updateSeriesUI();
+        });
+
+        // ============================================================
+        // 响应式：尺寸变化时重绘
+        // ============================================================
+        if (typeof ResizeObserver !== "undefined") {
+          const ro = new ResizeObserver(() => { drawHero(); drawSeries(); });
+          ro.observe(heroCv);
+          ro.observe(srCv);
+        }
+        window.addEventListener("resize", () => { drawHero(); drawSeries(); });
+
+        // ============================================================
+        // 初始化 + 对外接口
+        // ============================================================
+        updateReadouts();
+        updateSeriesUI();
+        drawHero();
+
+        window.SciScene = {
+          update(dt) {
+            if (!window.__sciPaused) time += dt;
+            drawHero();
+          }
+        };
+      })();
+    </script>
+
+  </body>
+</html>

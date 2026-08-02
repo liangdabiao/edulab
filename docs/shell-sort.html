@@ -1,0 +1,1431 @@
+<!doctype html>
+<!--
+  edu-sci-viz · 单文件互动科普页模板
+  ============================================================
+  用法：把本文件复制到工作目录，然后按 SKILL.md 的 8 步流程替换四处内容：
+    1. <title> 与 hero 文案（大标题/lead/CTA/说明）
+    2. 分节叙事 HTML（直觉模型 → 正式定义 → 边界说明 → 来源）
+    3. hero 里的实验台 lab-shell（画布 + 控制区）
+    4. 底部「场景模块」<script>（用你的主题替换「希尔排序」）
+  保留：<head> 设计系统 <style>、通用运行时 <script>、importmap。
+  本文件内置「希尔排序」作为可运行示例（2D Canvas，零网络依赖）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="希尔排序：选间隔序列、调速度，看元素隔空分列插入，为何先粗排再细排更快。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>希尔排序 | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(450px, 0.84fr) minmax(700px, 1.55fr);
+        gap: clamp(36px, 4vw, 64px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        /* 陷阱：h1 是 nowrap，字号上限必须保证最长一行放得进左列（约 450px 文字列）。
+           68px 上限 ≈ 每行最多 6 个汉字；行更长的主题，在场景样式里覆盖
+           .scene .hero h1 { white-space: normal } 让标题折行，防止溢出压到右侧实验区。 */
+        font-size: clamp(48px, 3.8vw, 68px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+
+    <!-- ========== 场景专属样式：希尔排序（新主题请整体替换本块） ========== -->
+    <style>
+      .ss-scene .hero-lead { max-width: 460px; }
+      .ss-scene #ss-canvas { width: 100%; height: 650px; }
+      .ss-scene .ss-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.75; }
+      .ss-scene .ss-preset-label {
+        margin: 18px 0 6px;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+      }
+      .ss-scene .lab-actions button:first-child { grid-column: 1 / -1; }
+      .ss-scene .ss-readout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 18px;
+        margin: 18px 0 4px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+      }
+      .ss-scene .ss-readout span { color: rgba(255, 255, 255, 0.62); }
+      .ss-scene .ss-readout output { display: block; margin-top: 2px; color: #fff; font-family: var(--mono); }
+      .ss-scene .ss-wide { grid-column: 1 / -1; }
+      .ss-scene .ss-gap output { color: #ffb52b; font-size: 13px; }
+      .ss-scene .ss-status output { color: #8fd0ff; }
+      .ss-scene .ss-metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-top: 14px;
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .ss-scene .ss-metrics div { padding: 22px 0; }
+      .ss-scene .ss-metrics div + div { padding-left: 22px; border-left: 1px solid var(--rule); }
+      .ss-scene .ss-metrics span { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
+      .ss-scene .ss-metrics strong { font-family: var(--serif); font-size: 30px; font-weight: 500; }
+      .ss-scene .ss-note { margin-top: 22px; padding-top: 16px; color: var(--muted); border-top: 1px solid var(--rule); font-size: 12px; }
+      @media (max-width: 1240px) { .ss-scene #ss-canvas { height: 620px; } }
+      @media (max-width: 620px) { .ss-scene #ss-canvas { height: 460px; } .ss-scene .lab-canvas-wrap { height: 460px; } }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#ss-intuition">直觉</a>
+        <a href="#ss-limits">边界</a>
+        <a href="#ss-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+<main id="main" class="ss-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 09 / ALGORITHM LAB</p>
+          <h1>隔空插入，<br />先粗后细</h1>
+          <p class="hero-lead">
+            插入排序在近乎有序时飞快。希尔排序先隔开大步"粗排"，再不断收窄间隔，
+            把乱序快速变成近乎有序——最后一趟间隔为 1，才是普通插入排序。
+          </p>
+          <a class="primary-action" href="#ss-intuition">
+            开始实验
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            选间隔序列 · 拖速度看"隔空插入" · 单步走一格，观察比较与交换<br />
+            从大步到小步，为什么"先粗排"能省掉大量搬动。
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="希尔排序交互实验">
+          <div class="lab-canvas-wrap">
+            <canvas id="ss-canvas" aria-label="希尔排序柱状图：隔空分列插入排序演示"></canvas>
+            <div class="canvas-caption">
+              <span>希尔排序 · 间隔 h 递减到 1</span>
+              <span id="ss-canvas-status">就绪 · 点击开始</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="排序参数">
+            <h2>排序参数</h2>
+
+            <label class="control-row" for="ss-n">
+              <span>数组规模 <i>n</i></span>
+              <output id="ss-n-output">16</output>
+            </label>
+            <input id="ss-n" type="range" min="8" max="40" step="1" value="16" />
+
+            <label class="control-row" for="ss-speed">
+              <span>播放速度</span>
+              <output id="ss-speed-output">1.0×</output>
+            </label>
+            <input id="ss-speed" type="range" min="0.5" max="8" step="0.1" value="1" />
+
+            <p class="ss-preset-label">间隔序列（h 递减到 1）</p>
+            <div class="segmented" role="group" aria-label="间隔序列">
+              <button data-ss-gap="shell" type="button" class="is-active">希尔</button>
+              <button data-ss-gap="knuth" type="button">Knuth</button>
+              <button data-ss-gap="sedgewick" type="button">Sedgewick</button>
+              <button data-ss-gap="insertion" type="button">只插排</button>
+            </div>
+
+            <div class="lab-actions">
+              <button id="ss-start" class="accent-button" type="button">▶ 开始</button>
+              <button id="ss-step" type="button">单步</button>
+              <button id="ss-reset" type="button">↺ 重排</button>
+            </div>
+
+            <div class="ss-readout" aria-live="polite">
+              <div class="ss-wide ss-gap"><span>当前间隔 h</span><output id="ss-gap">—</output></div>
+              <div><span>趟数</span><output id="ss-pass">—</output></div>
+              <div><span>当前子列</span><output id="ss-col">—</output></div>
+              <div><span>比较次数</span><output id="ss-cmp">0</output></div>
+              <div><span>交换次数</span><output id="ss-swap">0</output></div>
+              <div class="ss-wide ss-status"><span>状态</span><output id="ss-status">就绪</output></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="ss-intuition" aria-labelledby="ss-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="ss-intuition-title">直觉模型：先跳着排，省下最后一趟</h2>
+            <p>插入排序"怕乱不怕近"。希尔排序用大步先消灭远距离的乱，再步步逼近。</p>
+          </div>
+        </div>
+        <div class="ss-copy">
+          <p>
+            插入排序的软肋是"搬得太久"：一个元素要挪到正确位置，只能和紧挨着的邻居一格一格换，
+            一趟下来平均要移动 O(n) 步，整体 O(n²)。但它有个被忽略的优点——如果数组本来就近乎有序，
+            每趟只需要少数几次比较就能把元素归位，几乎不搬动。
+          </p>
+          <p>
+            希尔排序（1959，Donald Shell）把这两件事接起来：先让间隔 h 很大，比如 h = n/2。
+            此时数组被看成 h 列交错的子序列，对每一列单独做一次插入排序。元素隔着 h 个位置就能交换，
+            "远距离的乱"一趟就被压到大致位置——这正是插入排序最怕、也最费力的那部分。
+          </p>
+          <p>
+            然后间隔减半、再减半……每趟都在更细的粒度上把数组进一步理顺，最后 h = 1 时就是普通插入排序。
+            但此刻数组已经"近乎有序"，最后这一趟只需少量搬动。先粗后细，让每一趟都做最省力的事。
+          </p>
+        </div>
+      </section>
+
+      <section class="section-pad" aria-labelledby="ss-def-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="ss-def-title">正式定义：间隔序列决定性能</h2>
+            <p>希尔排序的正确性只需"序列以 1 结尾"；复杂度却几乎完全由间隔序列决定。</p>
+          </div>
+        </div>
+        <div class="definition-grid">
+          <div class="definition-copy">
+            <h3>定义</h3>
+            <p>
+              对间隔序列 h₀ &gt; h₁ &gt; … &gt; hₘ = 1，依次做 m 趟"间隔为 h 的分列插入排序"：
+              对每个余类 c = 0,1,…,h−1，把位置 c, c+h, c+2h, … 的元素当作一列，列内做插入排序。
+              任意含 1 的递减序列都能把数组排对；序列怎么选，只影响快慢。
+            </p>
+          </div>
+          <div class="formula-box">
+            <span>间隔序列</span>
+            <div class="formula">h<span style="font-size:0.55em">k</span> = ?</div>
+            <p>
+              希尔 ⌊n/2⌋,⌊n/4⌋… → 最坏 Θ(n²)<br />
+              Knuth (3<sup>k</sup>−1)/2 → Θ(n<sup>3/2</sup>)<br />
+              Sedgewick 4<sup>k</sup>+3·2<sup>k−1</sup>+1 → O(n<sup>4/3</sup>)<br />
+              Pratt → O(n log²n)
+            </p>
+          </div>
+          <div>
+            <div class="ss-metrics">
+              <div><span>辅助空间</span><strong>O(1)</strong></div>
+              <div><span>稳定性</span><strong>不稳定</strong></div>
+            </div>
+            <p class="ss-note">
+              远距离交换会打乱相等元素的相对顺序，所以希尔排序不稳定。
+              页面"只插排"预设即间隔序列只有 [1] 的普通插入排序（稳定），可作对照。
+            </p>
+          </div>
+        </div>
+        <div class="distinction-rail" style="margin-top:56px">
+          <article>
+            <span>区分一</span>
+            <h3>插入排序 vs 希尔排序</h3>
+            <p>希尔排序是插入排序的一般化：间隔取 1 时退化为普通插入排序。区别只在"一步能跨多远"。</p>
+          </article>
+          <article>
+            <span>区分二</span>
+            <h3>间隔序列定复杂度</h3>
+            <p>同一数组、不同序列，最坏从 Θ(n²) 差到 O(n log²n)。至今若干常见序列的平均复杂度仍是开放问题。</p>
+          </article>
+          <article>
+            <span>区分三</span>
+            <h3>"近乎有序"是引擎</h3>
+            <p>插入排序在近乎有序输入上接近 O(n)；希尔排序每趟都在制造这种输入，让最后一步省力。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="limits section-pad" aria-labelledby="ss-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="ss-limits-title">这个模型简化了什么</h2>
+            <p>柱状图演示的是教学版希尔排序，有三处与实现细节不同。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>简化 1</span>
+            <h3>用交换代替移位</h3>
+            <p>
+              页面用"隔 h 交换"呈现插入排序，计数口径是"比较/交换"。教科书常用的移位实现每次写入更少，
+              计的是"比较/移动"，两类数字不能直接对比。
+            </p>
+          </article>
+          <article>
+            <span>简化 2</span>
+            <h3>小规模 n ≤ 40</h3>
+            <p>
+              大 O 是渐近行为，在 n 很小时未必体现。页面刻意限制规模以便看清每一步；
+              真实排序的规模差异远大于演示。
+            </p>
+          </article>
+          <article>
+            <span>简化 3</span>
+            <h3>只给了四种序列</h3>
+            <p>
+              希尔、Knuth、Sedgewick 与"只插排"只是代表。Hibbard、Pratt、Ciura 等序列各有优劣；
+              Pratt 最坏 O(n log²n) 但趟数多，实际反而常更慢。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" aria-labelledby="ss-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="ss-sources-title">来源与核验路径</h2>
+            <p>间隔序列与复杂度上界以下列资料为准。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Shellsort" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Shellsort</strong>
+            <span role="cell">历史、间隔序列表与复杂度上界</span>
+          </a>
+          <a class="source-row" role="row" href="https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/Shell.html" target="_blank" rel="noreferrer">
+            <span role="cell">教材</span>
+            <strong role="cell">Princeton algs4 · Shell</strong>
+            <span role="cell">Sedgewick &amp; Wayne 的希尔排序实现与 Knuth 序列</span>
+          </a>
+          <a class="source-row" role="row" href="https://oeis.org/A033622" target="_blank" rel="noreferrer">
+            <span role="cell">数据库</span>
+            <strong role="cell">OEIS A033622 · Sedgewick 序列</strong>
+            <span role="cell">Sedgewick 1986 序列的前若干项</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.compsci.hunter.cuny.edu/~sweiss/course_materials/csci335/lecture_notes/chapter07.pdf" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">Hunter College · Sorting 讲义</strong>
+            <span role="cell">希尔排序复杂度与常见间隔序列</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          预设序列：希尔 ⌊n/2⌋、Knuth (3<sup>k</sup>−1)/2、Sedgewick(1982) 4<sup>k</sup>+3·2<sup>k−1</sup>+1（前缀 1）、只插排 [1]。
+          最坏上界：希尔 Θ(n²)、Hibbard/Knuth Θ(n<sup>3/2</sup>)、Sedgewick O(n<sup>4/3</sup>)、Pratt O(n log²n)；
+          平均复杂度对若干序列仍开放，页面给出的是已发表上界。
+        </p>
+      </section>
+    </main>
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+
+    <!--
+      Three.js 走 CDN importmap。纯 2D 场景（如本示例）无需引入；
+      3D 场景在「场景模块」里 `import * as THREE from "three"` 即可，浏览器会自动按需加载。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // 职责：阅读进度条、暂停/继续开关、统一 requestAnimationFrame 渲染循环。
+      // 场景模块只需在 window.SciScene 上暴露 update(dt)，本循环每帧调用。
+      // ============================================================
+      (function () {
+        // 阅读进度
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        // 暂停/继续：只停自动运动，不破坏滑杆与 3D 拖动
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        // 渲染循环：帧间隔封顶 50ms，避免切后台后跳变
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+
+    <script>
+      // ============================================================
+      // 场景模块：希尔排序（新主题请整体替换本块）
+      // 约定：脚本顶层做初始化（找画布、绑滑杆）；window.SciScene.update(dt)
+      // 每帧被通用运行时调用。检查 window.__sciPaused 以停止自动运动。
+      // ============================================================
+      (function () {
+        const canvas = document.getElementById("ss-canvas");
+        const $ = (sel) => document.querySelector(sel);
+        const ctx = canvas.getContext("2d");
+
+        function setCanvasSize(canvas, width, height) {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const nextWidth = Math.max(1, Math.floor(width * dpr));
+          const nextHeight = Math.max(1, Math.floor(height * dpr));
+          if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+            canvas.width = nextWidth;
+            canvas.height = nextHeight;
+          }
+          return dpr;
+        }
+
+        // ---- 间隔序列 ----
+        const GAP_SETS = {
+          shell: (n) => {
+            const s = [];
+            for (let h = Math.floor(n / 2); h >= 1; h = Math.floor(h / 2)) s.push(h);
+            return s;
+          },
+          knuth: (n) => {
+            const s = [];
+            for (let h = 1; h < n; h = 3 * h + 1) s.push(h);
+            return s.reverse();
+          },
+          sedgewick: (n) => {
+            const s = [1];
+            for (let k = 1; ; k++) {
+              const h = Math.pow(4, k) + 3 * Math.pow(2, k - 1) + 1;
+              if (h >= n) break;
+              s.push(h);
+            }
+            return s.reverse();
+          },
+          insertion: () => [1],
+        };
+
+        // ---- 状态 ----
+        const state = {
+          arr: [],
+          n: 16,
+          gaps: [],
+          gapSet: "shell",
+          gapIdx: 0,
+          col: 0,
+          j: -1,
+          key: -1,
+          compI: -1,
+          phase: "idle",
+          sub: "compare",
+          swapAnim: null,
+          cmp: 0,
+          swp: 0,
+          speed: 1,
+          timer: 0,
+          stepOnce: false,
+          stepDur: 0.55,
+          swapDur: 0.45,
+        };
+
+        function shuffle(n) {
+          const a = Array.from({ length: n }, (_, i) => i + 1);
+          for (let i = n - 1; i > 0; i--) {
+            const r = Math.floor(Math.random() * (i + 1));
+            const t = a[i];
+            a[i] = a[r];
+            a[r] = t;
+          }
+          return a;
+        }
+
+        function reset() {
+          state.n = Math.max(8, Math.min(40, Number($("#ss-n").value) || 16));
+          state.arr = shuffle(state.n);
+          state.gaps = GAP_SETS[state.gapSet](state.n);
+          state.gapIdx = 0;
+          state.col = 0;
+          state.j = state.col;
+          state.key = -1;
+          state.compI = -1;
+          state.phase = "idle";
+          state.sub = "compare";
+          state.swapAnim = null;
+          state.cmp = 0;
+          state.swp = 0;
+          state.timer = 0;
+          state.stepOnce = false;
+          refresh();
+        }
+
+        // 前进到当前子列的下一插入位置；子列/趟结束则顺次切换
+        function nextInsertion() {
+          let h = state.gaps[state.gapIdx];
+          state.j += h;
+          while (state.j >= state.n) {
+            state.col++;
+            if (state.col >= h) {
+              state.gapIdx++;
+              if (state.gapIdx >= state.gaps.length) {
+                finish();
+                return;
+              }
+              state.col = 0;
+              h = state.gaps[state.gapIdx]; // 跨趟：用新间隔重算插入位置
+            }
+            state.j = state.col + h;
+          }
+          state.key = state.j;
+          state.compI = -1;
+        }
+
+        function finish() {
+          state.phase = "done";
+          state.key = -1;
+          state.compI = -1;
+          state.col = 0;
+          state.gapIdx = Math.max(0, state.gaps.length - 1); // 读出口显示末趟，而非越界
+          refresh();
+        }
+
+        // 一个原子动作：比较；必要时触发交换动画
+        function doStep() {
+          if (state.phase !== "running") return;
+          const h = state.gaps[state.gapIdx];
+          if (state.j <= state.col) {
+            nextInsertion();
+            refresh();
+            return;
+          }
+          const a = state.j - h;
+          const b = state.j;
+          state.compI = a;
+          state.key = b;
+          state.cmp++;
+          if (state.arr[a] > state.arr[b]) {
+            state.sub = "swapping";
+            state.swapAnim = { a: a, b: b, t: 0 };
+          } else {
+            // 元素已归位：前进到子列下一个插入位置（nextInsertion 内部 j += h）
+            nextInsertion();
+          }
+          refresh();
+        }
+
+        function update(dt) {
+          // 完成进行中的交换动画（不受暂停影响，保证视觉闭合）
+          if (state.swapAnim) {
+            const s = state.swapAnim;
+            s.t += (dt * state.speed) / state.swapDur;
+            if (s.t >= 1) {
+              const t = state.arr[s.a];
+              state.arr[s.a] = state.arr[s.b];
+              state.arr[s.b] = t;
+              state.swp++;
+              state.swapAnim = null;
+              state.sub = "compare";
+              state.j -= state.gaps[state.gapIdx];
+              state.key = state.j;
+              state.compI = -1;
+              refresh();
+            }
+            draw();
+            return;
+          }
+
+          if (state.phase === "running" && (state.stepOnce || !window.__sciPaused)) {
+            state.timer -= dt;
+            if (state.timer <= 0) {
+              state.timer = state.stepDur / state.speed;
+              const single = state.stepOnce;
+              state.stepOnce = false;
+              doStep();
+              if (single && state.phase === "running") {
+                state.phase = "paused"; // 先执行再暂停：doStep 内部有 running 守卫
+                refresh();
+              }
+            }
+          }
+          draw();
+        }
+
+        // ---- 绘制 ----
+        function easeInOut(t) {
+          return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        }
+
+        function draw() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = setCanvasSize(canvas, rect.width, rect.height);
+          const W = rect.width;
+          const H = rect.height;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, W, H);
+
+          const n = state.n;
+          if (!n) return;
+          const padX = 18;
+          const padTop = 30;
+          const padBot = 34;
+          const slotW = (W - padX * 2) / n;
+          const barW = Math.max(2, slotW * 0.6);
+          const maxVal = n;
+          const baseY = H - padBot;
+          const maxH = H - padTop - padBot;
+          const h = state.gaps[state.gapIdx];
+          const active = state.phase === "running" || state.phase === "paused";
+          const col = state.col;
+
+          const xOf = (i) => padX + slotW * (i + 0.5);
+          const hOf = (v) => (v / maxVal) * maxH;
+          const inCol = (i) => h > 0 && i >= col && (i - col) % h === 0;
+
+          // 当前子列成员：基线下的琥珀刻度
+          if (active && h) {
+            ctx.fillStyle = "rgba(229, 165, 38, 0.7)";
+            for (let i = col; i < n; i += h) {
+              ctx.fillRect(xOf(i) - 1, baseY + 3, 2, 6);
+            }
+          }
+
+          // 柱条
+          for (let i = 0; i < n; i++) {
+            let cx = xOf(i);
+            if (state.swapAnim) {
+              const s = state.swapAnim;
+              if (i === s.a) cx = xOf(s.a + (s.b - s.a) * easeInOut(s.t));
+              else if (i === s.b) cx = xOf(s.b + (s.a - s.b) * easeInOut(s.t));
+            }
+            const bh = hOf(state.arr[i]);
+            let fill = "rgba(122, 170, 214, 0.5)";
+            if (state.phase === "done") fill = "#a8cbe9";
+            else if (active) {
+              if (state.swapAnim && (i === state.swapAnim.a || i === state.swapAnim.b)) fill = "#ff7a6b";
+              else if (i === state.key) fill = "#e5a526";
+              else if (i === state.compI) fill = "#e33a32";
+              else if (inCol(i)) fill = "rgba(160, 205, 240, 0.85)";
+            }
+            ctx.fillStyle = fill;
+            ctx.fillRect(cx - barW / 2, baseY - bh, barW, bh);
+
+            // 数值标签
+            if (slotW >= 13) {
+              ctx.fillStyle = state.phase === "done" ? "rgba(7,24,45,0.85)" : "#e8f1fa";
+              ctx.font = "10px Consolas, monospace";
+              ctx.textAlign = "center";
+              ctx.fillText(String(state.arr[i]), cx, baseY + 15);
+            }
+          }
+        }
+
+        // ---- 读写 ----
+        function refresh() {
+          const gap = state.gaps[state.gapIdx];
+          $("#ss-gap").textContent = gap !== undefined ? gap : "—";
+          $("#ss-pass").textContent = state.gaps.length ? state.gapIdx + 1 + " / " + state.gaps.length : "—";
+          $("#ss-col").textContent = gap ? state.col + 1 + " / " + gap : "—";
+          $("#ss-cmp").textContent = state.cmp;
+          $("#ss-swap").textContent = state.swp;
+          const st = { idle: "就绪", running: "排序中…", paused: "已暂停", done: "完成 ✓" };
+          $("#ss-status").textContent = st[state.phase];
+          const cap = $("#ss-canvas-status");
+          if (state.phase === "done") cap.textContent = "排序完成 ✓ · " + state.cmp + " 比较 / " + state.swp + " 交换";
+          else if (state.phase === "idle") cap.textContent = "就绪 · 点击开始";
+          else cap.textContent = "间隔 h = " + gap + " · 第 " + (state.gapIdx + 1) + "/" + state.gaps.length + " 趟 · 子列 " + (state.col + 1) + "/" + gap;
+          const b = $("#ss-start");
+          const label = state.phase === "running" ? "⏸ 暂停" : state.phase === "done" ? "↻ 再来" : state.phase === "paused" ? "▶ 继续" : "▶ 开始";
+          if (b.textContent !== label) b.textContent = label;
+        }
+
+        // ---- 事件 ----
+        $("#ss-start").addEventListener("click", () => {
+          if (state.phase === "idle" || state.phase === "done") {
+            if (state.phase === "done") reset();
+            state.phase = "running";
+          } else if (state.phase === "running") {
+            state.phase = "paused";
+          } else {
+            state.phase = "running";
+          }
+          refresh();
+        });
+
+        $("#ss-step").addEventListener("click", () => {
+          if (state.phase === "done" || state.swapAnim) return;
+          if (state.phase === "idle") reset();
+          state.timer = 0;
+          state.stepOnce = true;
+          state.phase = "running";
+          refresh();
+        });
+
+        $("#ss-reset").addEventListener("click", reset);
+
+        $("#ss-n").addEventListener("input", () => {
+          $("#ss-n-output").textContent = Number($("#ss-n").value);
+          reset();
+        });
+
+        $("#ss-speed").addEventListener("input", () => {
+          state.speed = Number($("#ss-speed").value);
+          $("#ss-speed-output").textContent = state.speed.toFixed(1) + "×";
+        });
+
+        document.querySelectorAll("[data-ss-gap]").forEach((b) => {
+          b.addEventListener("click", () => {
+            document.querySelectorAll("[data-ss-gap]").forEach((x) => x.classList.remove("is-active"));
+            b.classList.add("is-active");
+            state.gapSet = b.dataset.ssGap;
+            reset();
+          });
+        });
+
+        // ---- 初始化 ----
+        reset();
+        new ResizeObserver(draw).observe(canvas);
+        window.SciScene = { update: update };
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="pageTitle">化学交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#a78bfa;--accent2:#06b6d4;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.back{color:var(--accent);text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;white-space:nowrap;background:rgba(167,139,250,.06)}
+.back:hover{background:rgba(167,139,250,.14)}
+.title{font-size:15px;font-weight:600}.subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(167,139,250,.06),transparent)}
+.card{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--bad)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;min-width:0}
+canvas{background:#06101f;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+.panel{width:340px;flex:none;padding:14px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(167,139,250,.2);color:#ddd6fe;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px;color:var(--ink)}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:80px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent);border-color:var(--accent);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--accent)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:200px}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<div class="cards" id="cards"></div>
+<main>
+  <div class="stage"><canvas id="cv"></canvas></div>
+  <aside class="panel"><h2 id="panelTitle"></h2><p class="body" id="panelBody"></p><div class="points" id="panelPoints"></div></aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="paramArea" style="display:none;margin-left:4px"><label id="paramLabel" style="font-size:12px;color:var(--muted)"></label> <input id="paramSlider" type="range" min="0" max="1" step="0.01" value="0" style="width:120px;vertical-align:middle"> <span id="paramVal" style="font-size:12px;color:var(--ink);font-weight:600;min-width:30px;display:inline-block"></span></span>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+// ===================================================================
+// 0) Data (injected by Python generator)
+// ===================================================================
+const _DATA = {"meta": {"title": "碱的共性", "subtitle": "电离出 OH⁻ · 使指示剂变色 · 与酸中和 · 与盐反应", "language": "zh-CN", "accent": "sky"}, "cards": [{"num": 1, "title": "定义", "body": "电离出的阴离子<br>全部是 OH⁻"}, {"num": 2, "title": "指示剂", "body": "使石蕊变蓝<br>酚酞变红"}, {"num": 3, "title": "中和反应", "body": "碱 + 酸 → 盐 + H₂O"}, {"num": 4, "title": "与盐反应", "body": "碱 + 盐 → 新碱 + 新盐"}], "steps": [{"tag": "概念", "name": "碱的定义", "body": "<p><strong>碱</strong>：在水溶液中电离出的阴离子<strong>全部是 OH⁻</strong> 的化合物。</p><p>NaOH = Na⁺ + OH⁻<br>Ca(OH)₂ = Ca²⁺ + 2OH⁻<br>KOH = K⁺ + OH⁻</p><p>这是碱的<strong>本质特征</strong>——所有碱的共同点就是都能电离出 OH⁻。</p>", "points": {"title": "碱的要点", "items": ["阴离子全部是 OH⁻（定义核心）", "阳离子是金属离子（或 NH₄⁺）", "命名：氢氧化某", "有腐蚀性，使用时注意安全"]}, "scene": "concept", "sceneArgs": {"title": "碱 = 阴离子全部是 OH⁻", "items": [{"label": "NaOH", "desc": "氢氧化钠\nNa⁺ + OH⁻", "color": "#6366f1"}, {"label": "Ca(OH)₂", "desc": "氢氧化钙\nCa²⁺ + 2OH⁻", "color": "#06b6d4"}, {"label": "KOH", "desc": "氢氧化钾\nK⁺ + OH⁻", "color": "#34d399"}, {"label": "NH₃·H₂O", "desc": "氨水\nNH₄⁺ + OH⁻", "color": "#fbbf24"}]}}, {"tag": "动画", "name": "碱的电离出 OH⁻", "body": "<p>拖动滑块观察 NaOH 在水中逐步电离的过程：</p><p>NaOH → Na⁺ + OH⁻</p><p>电离出的<strong>阴离子全部是 OH⁻</strong>，这就是碱的<strong>本质</strong>。</p><p>注意 OH⁻（红色）是碱的共同特征离子！</p>", "points": {"title": "观察要点", "items": ["NaOH 分子在水中逐渐解离", "电离出 Na⁺ 和 OH⁻ 两种离子", "阴离子全部是 OH⁻（碱的定义）", "OH⁻ 浓度决定碱性强弱"]}, "scene": "ionization", "sceneArgs": {"formula": "NaOH", "cation": "Na⁺", "title": "NaOH 的电离 — 电离出 OH⁻", "molecules": 8, "param": {"name": "电离进度", "min": 0, "max": 1, "step": 0.01, "value": 0}}}, {"tag": "概念", "name": "常见碱", "body": "<p><strong>氢氧化钠（NaOH）</strong>：俗称烧碱/火碱/苛性钠，强碱，吸水潮解，用于造纸/肥皂。</p><p><strong>氢氧化钙（Ca(OH)₂）</strong>：俗称熟石灰/消石灰，微溶于水，用于改良酸性土壤。</p><p><strong>氢氧化钾（KOH）</strong>：强碱，性质与 NaOH 相似，用于制皂/电池。</p><p><strong>氨水（NH₃·H₂O）</strong>：弱碱，NH₃·H₂O ⇌ NH₄⁺ + OH⁻，有刺激性气味。</p>", "points": {"title": "常见碱速记", "items": ["NaOH — 烧碱/火碱，强碱，潮解", "Ca(OH)₂ — 熟石灰，微溶，改良土壤", "KOH — 强碱，性质似 NaOH", "NH₃·H₂O — 氨水，弱碱，挥发性"]}, "scene": "concept", "sceneArgs": {"title": "四种常见碱", "items": [{"label": "NaOH", "desc": "烧碱·火碱\n强碱·潮解", "color": "#6366f1"}, {"label": "Ca(OH)₂", "desc": "熟石灰\n微溶·改良土壤", "color": "#06b6d4"}, {"label": "KOH", "desc": "苛性钾\n强碱·似 NaOH", "color": "#34d399"}, {"label": "NH₃·H₂O", "desc": "氨水\n弱碱·挥发性", "color": "#fbbf24"}]}}, {"tag": "概念", "name": "使指示剂变色", "body": "<p><strong>共性 1</strong>：碱溶液能使指示剂变色——因为 OH⁻ 的存在。</p><p>• <strong>紫色石蕊试液</strong> → 变<strong>蓝色</strong></p><p>• <strong>无色酚酞试液</strong> → 变<strong>红色</strong></p><p>• pH 试纸 → pH > 7</p><p>（注意：不溶性碱如 Cu(OH)₂ 不能使指示剂变色，因为它们不溶于水，无法电离出 OH⁻）</p>", "points": {"title": "指示剂变色规律", "items": ["石蕊：酸红碱蓝（紫色 → 蓝色）", "酚酞：酸无碱红（无色 → 红色）", "pH 试纸：pH < 7 酸，=7 中，>7 碱", "前提：碱必须可溶于水"]}, "scene": "concept", "sceneArgs": {"title": "碱使指示剂变色", "items": [{"label": "石蕊", "desc": "紫色 → 蓝色\nOH⁻ 使之变蓝", "color": "#6366f1"}, {"label": "酚酞", "desc": "无色 → 红色\nOH⁻ 使之变红", "color": "#ef4444"}, {"label": "pH 试纸", "desc": "pH > 7\n碱性范围", "color": "#06b6d4"}, {"label": "前提", "desc": "必须可溶\n不溶性碱不行", "color": "#fbbf24"}]}}, {"tag": "概念", "name": "与酸中和反应", "body": "<p><strong>共性 2</strong>：碱与酸发生<strong>中和反应</strong>，生成盐和水。</p><p>NaOH + HCl → NaCl + H₂O</p><p>Ca(OH)₂ + 2HCl → CaCl₂ + 2H₂O</p><p>2NaOH + H₂SO₄ → Na₂SO₄ + 2H₂O</p><p><strong>本质</strong>：OH⁻ + H⁺ → H₂O（这就是中和反应的实质！）</p>", "points": {"title": "中和反应要点", "items": ["通式：碱 + 酸 → 盐 + 水", "本质：H⁺ + OH⁻ → H₂O", "实际应用：改良酸性土壤", "应用：处理酸性工业废水"]}, "scene": "beaker_reaction", "sceneArgs": {"metal": "NaOH", "acid": "HCl", "title": "NaOH + HCl → NaCl + H₂O", "intensity": "medium", "gas": "", "product": ""}}, {"tag": "概念", "name": "与盐反应", "body": "<p><strong>共性 3</strong>：碱与某些盐发生复分解反应，生成<strong>新碱 + 新盐</strong>。</p><p>条件：反应物均可溶，生成物有沉淀/气体/水。</p><p>2NaOH + CuSO₄ → Cu(OH)₂↓（蓝色沉淀）+ Na₂SO₄</p><p>3NaOH + FeCl₃ → Fe(OH)₃↓（红褐色沉淀）+ 3NaCl</p><p>Ca(OH)₂ + Na₂CO₃ → CaCO₃↓（白色沉淀）+ 2NaOH（工业制碱）</p>", "points": {"title": "碱与盐反应条件", "items": ["反应物：碱和盐都必须可溶", "生成物：有沉淀/气体/水之一", "Cu(OH)₂ 蓝色沉淀（特征反应）", "Fe(OH)₃ 红褐色沉淀（特征反应）"]}, "scene": "concept", "sceneArgs": {"title": "碱与盐的复分解反应", "items": [{"label": "CuSO₄", "desc": "2NaOH+CuSO₄→\nCu(OH)₂↓蓝沉淀", "color": "#6366f1"}, {"label": "FeCl₃", "desc": "3NaOH+FeCl₃→\nFe(OH)₃↓红褐", "color": "#f87171"}, {"label": "Na₂CO₃", "desc": "Ca(OH)₂+Na₂CO₃→\nCaCO₃↓白沉淀", "color": "#34d399"}, {"label": "条件", "desc": "反应物可溶\n生成沉淀/气/水", "color": "#fbbf24"}]}}, {"tag": "总结", "name": "要点回顾", "body": "<p><strong>碱的共性（核心总结）</strong></p><p>1. <strong>本质</strong>：电离出的阴离子全部是 OH⁻</p><p>2. <strong>指示剂</strong>：石蕊变蓝、酚酞变红、pH>7</p><p>3. <strong>中和</strong>：碱 + 酸 → 盐 + 水（H⁺+OH⁻→H₂O）</p><p>4. <strong>与盐</strong>：碱 + 盐 → 新碱 + 新盐（需可溶）</p><p>口诀：碱溶 OH⁻，石蓝酚红，中和盐，沉淀见</p>", "points": {"title": "口诀", "items": ["碱溶 OH⁻ 是本质", "石蓝酚红指示剂", "中和酸碱盐和水", "与盐反应沉淀出"]}, "scene": "summary_grid", "sceneArgs": {"title": "碱的共性 — 核心知识点", "items": [{"icon": "⚡", "title": "本质", "desc": "电离出 OH⁻\n阴离子全是 OH⁻", "color": "#6366f1"}, {"icon": "🎨", "title": "指示剂", "desc": "石蕊变蓝\n酚酞变红", "color": "#06b6d4"}, {"icon": "🧪", "title": "中和", "desc": "碱+酸→盐+水\nH⁺+OH⁻→H₂O", "color": "#34d399"}, {"icon": "🔄", "title": "与盐", "desc": "碱+盐→新碱+新盐\n需可溶+沉淀", "color": "#fbbf24"}, {"icon": "📋", "title": "常见", "desc": "NaOH Ca(OH)₂\nKOH NH₃·H₂O", "color": "#f87171"}]}}]};
+const ACCENT = _DATA.meta?.accent || 'violet';
+const ACCENT_MAP = {
+  amber:'#f59e0b',violet:'#a78bfa',emerald:'#34d399',cyan:'#06b6d4',
+  indigo:'#6366f1',sky:'#0ea5e9',red:'#ef4444',green:'#22c55e',
+  orange:'#f97316',slate:'#64748b',pink:'#ec4899'
+};
+document.documentElement.style.setProperty('--accent', ACCENT_MAP[ACCENT] || '#a78bfa');
+document.documentElement.style.setProperty('--accent2', ACCENT_MAP[ACCENT]==='#06b6d4'?'#a78bfa':'#06b6d4');
+document.getElementById('pageTitle').textContent=_DATA.meta.title+' · 交互课程';
+document.getElementById('topbar').innerHTML='<span class="title">'+_DATA.meta.title+'</span><span class="subtitle">'+_DATA.meta.subtitle+'</span>';
+
+// Cards
+const cardsEl=document.getElementById('cards');
+if(_DATA.cards&&_DATA.cards.length){
+  _DATA.cards.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='card'+(i>0?' s'+(i+1):'');
+    d.innerHTML='<div class="num">'+c.num+'</div><h4>'+c.title+'</h4><div class="v">'+c.body+'</div>';
+    cardsEl.appendChild(d);
+  });
+}else cardsEl.style.display='none';
+
+// Canvas
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),statusEl=document.getElementById('status');
+const STEPS=_DATA.steps||[];
+const STEP_DURATION=3.5;
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0;
+
+function fit(){
+  const r=cv.parentElement.getBoundingClientRect();
+  cv.width=Math.max(460,Math.min(1000,r.width-12));
+  cv.height=Math.max(380,Math.min(600,r.height-12));
+}
+window.addEventListener('resize',()=>{fit();draw();});fit();
+
+// ===================================================================
+// 1) Drawing helpers
+// ===================================================================
+function drawText(t,x,y,c,fs,a,b){
+  ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';
+  ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function glow(color,blur,fn){
+  ctx.save();ctx.shadowColor=color;ctx.shadowBlur=blur||10;fn();ctx.restore();
+}
+
+// ===================================================================
+// 2) Built-in scene draw functions
+// ===================================================================
+const SCENES = {
+  // --- Concept (4-panel card display) ---
+  concept(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    drawText(a.title||'核心概念',W/2,35,'#fff',16);
+    const items=a.items||[];const n=items.length;
+    const cw=Math.min(180,(W-80)/n-10);
+    items.forEach((m,i)=>{
+      const x=40+i*(cw+10);const y=75;
+      ctx.fillStyle=(m.color||'#a78bfa')+'22';ctx.strokeStyle=m.color||'#a78bfa';ctx.lineWidth=2;
+      roundRect(x,y,cw,Math.min(H-140,220),12);ctx.fill();ctx.stroke();
+      drawText(m.label,x+cw/2,y+40,m.color||'#fff',20);
+      const lines=(m.desc||'').split('\n');
+      lines.forEach((ln,j)=>drawText(ln,x+cw/2,y+80+j*20,'#e8eef8',13));
+    });
+  },
+
+  // --- Valences grid ---
+  valences(t,args){
+    const W=cv.width,H=cv.height;const els=(args&&args.elements)||[];
+    drawText('常见元素化合价',W/2,30,'#fff',16);
+    const cols=Math.min(4,Math.ceil(els.length/2));
+    const cw=Math.min(160,(W-60)/cols-6);const ch=Math.min(80,(H-140)/Math.ceil(els.length/cols)-4);
+    els.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=30+col*(cw+6),y=60+row*(ch+4);
+      ctx.fillStyle=m.color||'#a78bfa';ctx.beginPath();ctx.arc(x+30,y+ch/2,22,0,7);ctx.fill();
+      drawText(m.el,x+30,y+ch/2,'#fff',16);
+      drawText(m.v,x+60,y+ch/2-8,m.color||'#fbbf24',14,'left');
+      drawText(m.example||'',x+60,y+ch/2+12,'#9ab0d0',11,'left');
+      ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+      ctx.strokeRect(x,y,cw,ch);
+    });
+  },
+
+  // --- Steps diagram (flow chart) ---
+  steps_diagram(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    const steps=a.steps||[];const active=a.active;
+    drawText('配平五步法',W/2,30,'#fff',16);
+    const n=steps.length;const gap=Math.min(140,(W-40)/n-8);
+    const sx=(W-(n*gap+20))/2;
+    steps.forEach((s,i)=>{
+      const x=sx+i*(gap+20)+10,y=H/2-40;
+      const isActive=active<0||i===active;
+      ctx.fillStyle=isActive?'rgba(167,139,250,0.25)':'rgba(100,116,139,0.12)';
+      ctx.strokeStyle=isActive?'#a78bfa':'#475569';
+      ctx.lineWidth=isActive?2.5:1.5;
+      roundRect(x,y,gap-20,80,40);ctx.fill();ctx.stroke();
+      drawText((i+1)+'',x+(gap-20)/2,y+20,isActive?'#a78bfa':'#64748b',isActive?18:14);
+      drawText(s,x+(gap-20)/2,y+55,isActive?'#fff':'#9ab0d0',isActive?15:12);
+      // Arrow
+      if(i<n-1){
+        ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(x+gap-20,y+40);ctx.lineTo(x+gap+5,y+40);ctx.stroke();
+      }
+    });
+  },
+
+  // --- Redox bridge (双线桥) ---
+  redox_bridge(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    ctx.fillStyle='rgba(167,139,250,0.08)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;
+    roundRect(30,30,W-60,70,10);ctx.fill();ctx.stroke();
+    drawText(a.equation||'',W/2,65,'#fff',20);
+    const brs=a.bridges||[];
+    brs.forEach((b,i)=>{
+      const side=b.side||'top';
+      const yBase=side==='top'?110:H/2+60;
+      const color=b.color||(side==='top'?'#34d399':'#ef4444');
+      const lx=W*0.25, rx=W*0.75;
+      // Arrow arc
+      ctx.strokeStyle=color;ctx.lineWidth=2.5;
+      ctx.beginPath();
+      const midY=yBase+(side==='top'?30:-30);
+      ctx.moveTo(lx,yBase);ctx.quadraticCurveTo((lx+rx)/2,midY,rx,yBase);
+      ctx.stroke();
+      // Label
+      const labelX=(lx+rx)/2,labelY=(yBase+midY)/2;
+      ctx.fillStyle=color;ctx.font='bold 13px sans-serif';
+      ctx.textAlign='center';ctx.fillText(b.label||'',labelX,labelY-8);
+      ctx.fillStyle='#e8eef8';ctx.font='11px sans-serif';
+      ctx.fillText(b.desc||'',labelX,labelY+10);
+      // Start/end labels
+      drawText(b.from+(b.fromV?'('+b.fromV+')':''),lx-60,yBase,'#fff',12);
+      drawText(b.to+(b.toV?'('+b.toV+')':''),rx+60,yBase,'#fff',12);
+    });
+    drawText('双线桥：同元素间连线，标注电子转移',W/2,H-25,'#9ab0d0',12);
+  },
+
+  // --- Equation display ---
+  equation(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};const eqs=a.equations||[];
+    drawText('化学方程式',W/2,35,'#fff',16);
+    eqs.forEach((eq,i)=>{
+      const y=80+i*70;
+      ctx.fillStyle='rgba(255,255,255,0.04)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+      roundRect(60,y-20,W-120,50,8);ctx.fill();ctx.stroke();
+      drawText(eq,W/2,y+5,'#e8eef8',eq.startsWith('  ↳')?15:17);
+    });
+  },
+
+  // --- Summary grid ---
+  summary_grid(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    const items=a.items||[];const cols=Math.min(3,items.length);
+    const cw=Math.min(200,(W-60)/cols-8);
+    items.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=30+col*(cw+8),y=45+row*Math.min(155,(H-80)/Math.ceil(items.length/cols)-4);
+      ctx.fillStyle=(m.color||'#a78bfa')+'22';ctx.strokeStyle=m.color||'#a78bfa';ctx.lineWidth=2;
+      roundRect(x,y,cw,Math.min(H-90,140),12);ctx.fill();ctx.stroke();
+      drawText(m.icon||'●',x+cw/2,y+35,m.color||'#fff',30);
+      drawText(m.title||'',x+cw/2,y+75,'#fff',16);
+      ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+      const desc=(m.desc||'').split('\n');
+      desc.forEach((ln,j)=>ctx.fillText(ln,x+cw/2,y+98+j*16));
+    });
+  },
+
+  // --- Activity series ---
+  activity_series(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};const series=a.series||[];
+    drawText('金属活动性顺序',W/2,35,'#fff',16);
+    const n=series.length;const gap=Math.min(70,(W-40)/n);
+    const sx=(W-(n*gap+20))/2;
+    series.forEach((m,i)=>{
+      const x=sx+i*gap+10,y=H/2-40;
+      const active=m.active!==false;
+      ctx.fillStyle=active?'rgba(52,211,153,0.2)':'rgba(100,116,139,0.12)';
+      ctx.strokeStyle=active?'#34d399':'#475569';ctx.lineWidth=active?2:1.5;
+      roundRect(x,y,gap-10,80,8);ctx.fill();ctx.stroke();
+      drawText(m.el,x+(gap-10)/2,y+35,active?'#34d399':'#64748b',active?15:12);
+      // Arrow
+      if(i<n-1){
+        ctx.fillStyle='#475569';
+        ctx.beginPath();ctx.moveTo(x+gap-10,y+40);ctx.lineTo(x+gap+3,y+36);
+        ctx.lineTo(x+gap+3,y+44);ctx.closePath();ctx.fill();
+      }
+    });
+    drawText('K Ca Na Mg Al Zn Fe Sn Pb (H) Cu Hg Ag Pt Au',W/2,H-60,'#9ab0d0',11);
+    drawText('← 活动性增强',10,H/2+5,'#34d399',11,'left');
+    drawText('活动性减弱 →',W-10,H/2+5,'#f87171',11,'right');
+  },
+
+  // --- Beaker reaction (animated) ---
+  beaker_reaction(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    drawText((a.metal||'')+'与'+(a.acid||a.solution||'')+'反应',W/2,30,'#fff',16);
+    const bx=W/2,by=H/2+40,bw=240,bh=180;
+    // Beaker
+    ctx.strokeStyle='rgba(205,215,234,0.4)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(bx-bw/2-8,by-bh);ctx.lineTo(bx-bw/2-8,by+8);
+    ctx.lineTo(bx+bw/2+8,by+8);ctx.lineTo(bx+bw/2+8,by-bh);ctx.stroke();
+    const waterY=by-bh+50;
+    const intensity=a.intensity||'medium';
+    // Liquid
+    ctx.fillStyle='rgba(6,182,212,0.15)';
+    ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    // Metal piece
+    const mX=bx-20+Math.sin(t*2)*30,mY=waterY+20+Math.sin(t*3)*3;
+    ctx.fillStyle='#94a3b8';ctx.shadowColor='#94a3b8';ctx.shadowBlur=6;
+    roundRect(mX-15,mY-6,30,12,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(a.metal||'',mX,mY,'#fff',12);
+    // Bubbles (gas)
+    const bubCount=intensity==='violent'?12:intensity==='slow'?3:6;
+    for(let i=0;i<bubCount;i++){
+      const ph=(t*1.5+i*0.25)%2.5;
+      if(ph<2){
+        const bx2=mX+(i%5-2)*6+Math.sin(ph*6+i)*3;
+        const by2=mY-ph*50;
+        const r=1.5+ph*2;
+        ctx.fillStyle='rgba(125,211,252,'+Math.min(0.6,1-ph/2.5)+')';
+        ctx.beginPath();ctx.arc(bx2,by2,Math.min(r,8),0,7);ctx.fill();
+      }
+    }
+    // Gas label
+    if(a.gas)drawText(a.gas+'↑',mX+20,mY-10,'#34d399',11);
+    // Solution color change
+    if(a.product&&a.product.includes('Fe')){
+      ctx.fillStyle='rgba(52,211,153,0.08)';
+      ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    }
+    // Precipitate
+    if(a.precipitate){
+      ctx.fillStyle='#fb923c';ctx.shadowColor='#fb923c';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(bx+bw/4,by-10+Math.sin(t*2)*2,8,0,7);ctx.fill();
+      ctx.shadowBlur=0;
+      drawText(a.precipitate,bx+bw/4,by-20,'#fb923c',11);
+    }
+    drawText((a.acid||a.solution||'')+'溶液',bx,by+bh+10,'#9ab0d0',11);
+  },
+
+  // --- hemoglobin: CO-O2 competitive binding ---
+  hemoglobin(t,args){
+    const W=cv.width,H=cv.height;
+    const mode=args.mode||'normal';
+    const progress=args._paramVal!==undefined?args._paramVal:0;
+    const sites=args.sites||4;
+    drawText(args.title||'血红蛋白与气体结合',W/2,25,'#fff',15);
+
+    // Binding site positions (relative to center of canvas)
+    const cx=W/2,cy=H/2-10;
+    const sitePositions=[
+      {x:cx-50,y:cy-40,label:'α₁'},
+      {x:cx+50,y:cy-40,label:'α₂'},
+      {x:cx-50,y:cy+40,label:'β₁'},
+      {x:cx+50,y:cy+40,label:'β₂'},
+    ];
+
+    // Determine how many sites are bound by O2 and CO
+    let o2Bound=0,coBound=0;
+    if(mode==='normal'){
+      o2Bound=Math.round(progress*sites);
+    }else if(mode==='competition'){
+      const totalBound=Math.round(progress*sites);
+      o2Bound=Math.max(0,sites-totalBound);
+      coBound=totalBound;
+    }else if(mode==='blocked'){
+      coBound=Math.round(progress*sites);
+    }else if(mode==='treatment'){
+      const displaced=Math.round(progress*sites);
+      coBound=Math.max(0,sites-displaced);
+      o2Bound=displaced;
+    }
+
+    // Draw hemoglobin molecule (large oval)
+    ctx.save();
+    ctx.shadowColor='rgba(220,38,38,0.3)';ctx.shadowBlur=30;
+    ctx.fillStyle='rgba(185,28,28,0.35)';ctx.strokeStyle='rgba(220,38,38,0.5)';ctx.lineWidth=2.5;
+    roundRect(cx-90,cy-70,180,140,50);ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;
+    drawText('血红蛋白',cx,cy+75,'rgba(248,113,113,0.6)',12);
+
+    // Draw subunit labels
+    ctx.fillStyle='rgba(252,165,165,0.5)';ctx.font='11px sans-serif';ctx.textAlign='center';
+
+    // Draw binding sites and molecules
+    for(let i=0;i<sitePositions.length;i++){
+      const p=sitePositions[i];
+      const isO2=i<o2Bound;
+      const isCO=i>=sites-coBound&&i>=o2Bound;
+
+      // Binding pocket
+      ctx.fillStyle='rgba(0,0,0,0.25)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(p.x,p.y,18,0,7);ctx.fill();ctx.stroke();
+
+      // Molecule binding
+      if(isO2){
+        ctx.shadowColor='#3b82f6';ctx.shadowBlur=16;
+        ctx.fillStyle='#3b82f6';ctx.beginPath();ctx.arc(p.x,p.y,15,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('O₂',p.x,p.y+4);
+      }else if(isCO){
+        ctx.shadowColor='#ef4444';ctx.shadowBlur=16;
+        ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(p.x,p.y,15,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('CO',p.x,p.y+4);
+      }else{
+        // Empty pocket: show floating O2 nearby
+        const angle=t*0.8+i*1.57;
+        const dist=35+Math.sin(t*0.5+i)*8;
+        const fx=p.x+Math.cos(angle)*dist;
+        const fy=p.y+Math.sin(angle)*dist;
+        ctx.fillStyle='rgba(59,130,246,0.5)';ctx.shadowColor='#3b82f6';ctx.shadowBlur=8;
+        ctx.beginPath();ctx.arc(fx,fy,8,0,7);ctx.fill();ctx.shadowBlur=0;
+        ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='7px sans-serif';ctx.textAlign='center';
+        if(mode!=='blocked')ctx.fillText('O₂',fx,fy+3);
+        // Also show floating CO for competition/treatment
+        if(mode==='competition'||mode==='treatment'){
+          const a2=t*1.2+i*2.1;
+          const d2=40+Math.cos(t*0.7+i)*10;
+          const cx2=p.x+Math.cos(a2)*d2;
+          const cy2=p.y+Math.sin(a2)*d2;
+          ctx.fillStyle='rgba(239,68,68,0.5)';ctx.shadowColor='#ef4444';ctx.shadowBlur=8;
+          ctx.beginPath();ctx.arc(cx2,cy2,8,0,7);ctx.fill();ctx.shadowBlur=0;
+          ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='7px sans-serif';ctx.textAlign='center';
+          ctx.fillText('CO',cx2,cy2+3);
+        }
+      }
+      // Site label
+      ctx.fillStyle='rgba(252,165,165,0.5)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.label,p.x,p.y-26);
+    }
+    ctx.restore();
+
+    // Legend
+    const legY=H-55;
+    const legItems=[
+      {color:'#3b82f6',label:'O₂ 氧合'},
+      {color:'#ef4444',label:'CO 结合'},
+      {color:'rgba(59,130,246,0.5)',label:'游离 O₂'},
+    ];
+    let lx=60;
+    legItems.forEach(function(li){
+      ctx.fillStyle=li.color;ctx.beginPath();ctx.arc(lx,legY,7,0,7);ctx.fill();
+      ctx.fillStyle='#9ab0d0';ctx.font='11px sans-serif';ctx.textAlign='left';
+      ctx.fillText(li.label,lx+12,legY+4);
+      lx+=120;
+    });
+
+    // Readouts
+    const roY=H-25;
+    const ro=[
+      'O₂ 结合: '+o2Bound+'/'+sites,
+      'CO 结合: '+coBound+'/'+sites,
+      'Hb 氧饱和度: '+Math.round((o2Bound/sites)*100)+'%',
+    ];
+    ctx.fillStyle='#9ab0d0';ctx.font='11px sans-serif';
+    ro.forEach(function(r,i){ctx.fillText(r,60+i*200,roY);});
+
+    // Mode indicator
+    const modeLabels={normal:'正常氧合',competition:'CO 竞争结合',blocked:'CO 占据',treatment:'高压氧治疗'};
+    drawText('模式: '+ (modeLabels[mode]||mode),W/2,H-10,'#64748b',10);
+  },
+
+  // --- ionization: 碱的电离出 OH⁻ ---
+  ionization(t,args){
+    const W=cv.width,H=cv.height;
+    const a=args||{};
+    const progress=a._paramVal!==undefined?a._paramVal:0;
+    const formula=a.formula||'NaOH';
+    const cation=a.cation||'Na⁺';
+    drawText(a.title||'碱的电离 — 电离出 OH⁻',W/2,25,'#fff',15);
+
+    const n=a.molecules||6;
+    const centerX=W/2,bx=W/2-160,by=H/2+50,bw=320,bh=220;
+
+    // Beaker
+    ctx.strokeStyle='rgba(205,215,234,0.35)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(bx-10,by-bh);ctx.lineTo(bx-10,by+10);
+    ctx.lineTo(bx+bw+10,by+10);ctx.lineTo(bx+bw+10,by-bh);ctx.stroke();
+
+    // Water fill
+    const waterTop=by-bh+55;
+    ctx.fillStyle='rgba(6,182,212,0.08)';
+    ctx.fillRect(bx-10,waterTop,bw+20,by-waterTop+10);
+
+    // Water label
+    ctx.fillStyle='rgba(107,114,128,0.4)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('H₂O',bx+bw/2,waterTop+25);
+
+    // Determine how many molecules have dissociated
+    const dissociatedCount=Math.round(progress*n);
+
+    // Pre-calculate positions for molecules/ions
+    const positions=[];
+    for(let i=0;i<n;i++){
+      const col=i%4;
+      const row=Math.floor(i/4);
+      pos: {
+        const angle=t*0.3+i*1.1;
+        const drift=Math.sin(t*0.5+i*0.7)*3;
+        positions.push({
+          x:bx+60+col*72+drift,
+          y:waterTop+50+row*42+Math.sin(t*0.4+i)*5
+        });
+      }
+    }
+
+    // Draw molecules/ions
+    for(let i=0;i<n;i++){
+      const p=positions[i];
+      const isDissociated=i<dissociatedCount;
+
+      if(isDissociated){
+        // Draw OH⁻ (larger, red, with glow - the star of the show)
+        ctx.shadowColor='#ef4444';ctx.shadowBlur=18;
+        ctx.fillStyle='#ef4444';ctx.beginPath();
+        ctx.arc(p.x-14,p.y,13,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('OH⁻',p.x-14,p.y+4);
+
+        // Draw cation (smaller, grey)
+        ctx.fillStyle='rgba(148,163,184,0.7)';
+        ctx.beginPath();ctx.arc(p.x+14,p.y,9,0,7);ctx.fill();
+        ctx.fillStyle='#cbd5e1';ctx.font='bold 8px sans-serif';ctx.textAlign='center';
+        ctx.fillText(cation,p.x+14,p.y+3);
+
+        // Connection line to show they came from same molecule
+        ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.setLineDash([2,3]);
+        ctx.beginPath();ctx.moveTo(p.x-14,p.y);ctx.lineTo(p.x+14,p.y);ctx.stroke();
+        ctx.setLineDash([]);
+      }else{
+        // Undissociated molecule (floating in water)
+        const bobY=Math.sin(t*0.6+i*0.9)*3;
+        ctx.fillStyle='rgba(167,139,250,0.6)';ctx.shadowColor='#a78bfa';ctx.shadowBlur=6;
+        ctx.beginPath();ctx.arc(p.x,p.y+bobY,16,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#e8eef8';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+        ctx.fillText(formula,p.x,p.y+bobY+3);
+      }
+    }
+
+    // Status line above beaker
+    ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+    if(dissociatedCount===0){
+      ctx.fillText(formula+' 分子在水中，尚未电离',W/2,waterTop-15);
+    }else if(dissociatedCount<n){
+      const remain=n-dissociatedCount;
+      ctx.fillStyle='#fbbf24';ctx.font='bold 13px sans-serif';
+      ctx.fillText('电离出 '+dissociatedCount+' 个 OH⁻  ·  剩余 '+remain+' 个 '+formula+' 分子',W/2,waterTop-15);
+    }else{
+      ctx.fillStyle='#34d399';ctx.font='bold 14px sans-serif';
+      ctx.fillText('✓ 全部电离！溶液中充满 OH⁻',W/2,waterTop-15);
+    }
+
+    // OH⁻ highlight banner at bottom
+    if(dissociatedCount>0){
+      const bY=H-42;
+      ctx.fillStyle='rgba(239,68,68,0.12)';ctx.strokeStyle='rgba(239,68,68,0.3)';ctx.lineWidth=1;
+      roundRect(30,bY-8,W-60,32,6);ctx.fill();ctx.stroke();
+      // OH⁻ icon
+      ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(70,bY+8,8,0,7);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.fillText('OH⁻',70,bY+11);
+      ctx.fillStyle='#fca5a5';ctx.font='bold 12px sans-serif';ctx.textAlign='left';
+      ctx.fillText('碱 → 电离出 OH⁻（阴离子全部是 OH⁻）',85,bY+12);
+    }
+
+    // Legend
+    const lx=60,legY2=H-12;
+    ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(lx,legY2,5,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText('OH⁻ 离子',lx+10,legY2+3);
+    ctx.fillStyle='rgba(148,163,184,0.7)';ctx.beginPath();ctx.arc(lx+100,legY2,5,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText(cation+' 离子',lx+110,legY2+3);
+    ctx.fillStyle='rgba(167,139,250,0.6)';ctx.beginPath();ctx.arc(lx+200,legY2,5,0,7);ctx.fill();
+    ctx.fillStyle='#9ab0d0';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillText(formula+' 分子',lx+210,legY2+3);
+  },
+};
+
+// ===================================================================
+// 3) Sync & render
+// ===================================================================
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  document.getElementById('panelTitle').innerHTML='<span class="badge">'+s.tag+'</span> '+s.name;
+  document.getElementById('panelBody').innerHTML=s.body||'';
+  const ptsEl=document.getElementById('panelPoints');
+  if(s.points){
+    ptsEl.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+((s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join(''))+'</ul>';
+  }else ptsEl.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+  // Param slider
+  const pa=document.getElementById('paramArea'),ps=document.getElementById('paramSlider'),
+        pl=document.getElementById('paramLabel'),pv=document.getElementById('paramVal');
+  const param=(s.sceneArgs&&s.sceneArgs.param);
+  if(param){
+    pa.style.display='inline';
+    pl.textContent=(param.label||param.name||'参数')+': ';
+    ps.min=param.min||0;ps.max=param.max||1;ps.step=param.step||0.01;ps.value=param.value||0;
+    pv.textContent=param.value||'0';
+  }else{pa.style.display='none';}
+  // Reset param value
+  if(!param&&pa.style.display!=='none')pa.style.display='none';
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sceneFn=SCENES[s.scene];
+  const args=s.sceneArgs||{};
+  const param=(args.param);
+  if(param){
+    const sv=document.getElementById('paramSlider').value;
+    args._paramVal=parseFloat(sv);
+    document.getElementById('paramVal').textContent=sv;
+  }
+  if(sceneFn)sceneFn(t,args);
+  else {
+    drawText('场景: '+s.scene,cv.width/2,cv.height/2-10,'#9ab0d0',16);
+    drawText(s.name||'',cv.width/2,cv.height/2+20,'#fff',14);
+  }
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  stepTime+=dt*speed;
+  if(stepTime>=STEP_DURATION){
+    if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+    else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// ===================================================================
+// 4) Controls
+// ===================================================================
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+const speedInp=document.getElementById('speedInp');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+document.getElementById('paramSlider').oninput=function(){draw();};
+
+// Step bar
+function buildStepbar(){
+  const bar=document.getElementById('stepbar');bar.innerHTML='';
+  STEPS.forEach(function(s,i){
+    const el=document.createElement('div');
+    el.className='step'+(i===stepIdx?' active':'');
+    el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>9?s.name.slice(0,8)+'…':s.name||'')+'</div>';
+    el.onclick=function(){stepIdx=i;syncStep();draw();};
+    bar.appendChild(el);
+  });
+}
+buildStepbar();syncStep();requestAnimationFrame(loop);
+</script>
+</body>
+</html>

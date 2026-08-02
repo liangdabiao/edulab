@@ -1,0 +1,1591 @@
+<!doctype html>
+<!--
+  edu-sci-viz · 单文件互动科普页模板
+  ============================================================
+  用法：把本文件复制到工作目录，然后按 SKILL.md 的 8 步流程替换四处内容：
+    1. <title> 与 hero 文案（大标题/lead/CTA/说明）
+    2. 分节叙事 HTML（直觉模型 → 正式定义 → 边界说明 → 来源）
+    3. hero 里的实验台 lab-shell（画布 + 控制区）
+    4. 底部「场景模块」<script>（用你的主题替换「光的折射」）
+  保留：<head> 设计系统 <style>、通用运行时 <script>、importmap。
+  本模板内置「光的折射」作为可运行示例（2D Canvas，零网络依赖）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="免疫调节：三道防线与特异性免疫——播放固有免疫吞噬、抗原呈递、体液免疫、细胞免疫、清除记忆五阶段动画，再用二次免疫抗体曲线看疫苗为什么有效。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>免疫调节：三道防线 · 特异性免疫 · 二次免疫 | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(450px, 0.84fr) minmax(700px, 1.55fr);
+        gap: clamp(36px, 4vw, 64px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        /* 陷阱：h1 是 nowrap，字号上限必须保证最长一行放得进左列（约 450px 文字列）。
+           68px 上限 ≈ 每行最多 6 个汉字；行更长的主题，在场景样式里覆盖
+           .scene .hero h1 { white-space: normal } 让标题折行，防止溢出压到右侧实验区。 */
+        font-size: clamp(48px, 3.8vw, 68px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+    <!-- ========== 场景专属样式：免疫调节（新主题请整体替换本块） ========== -->
+    <style>
+      .imm-scene .hero-lead { max-width: 460px; }
+      /* 单栏 hero：文案在上、实验台全宽 → 画布更大，画布内文字放大后更清晰 */
+      .imm-scene .hero { grid-template-columns: 1fr; align-items: start; gap: clamp(28px, 3vw, 46px); }
+      .imm-scene .hero-copy { max-width: 880px; }
+      .imm-scene .hero-copy h1 { white-space: normal; }
+      .imm-scene .lab-shell { width: 100%; }
+      .imm-scene #imm-canvas { width: 100%; height: 650px; }
+      .imm-scene .imm-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 2px; }
+      .imm-scene .imm-presets button {
+        padding: 8px 2px; color: rgba(255, 255, 255, 0.75); border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 4px; background: transparent; font-size: 11px; line-height: 1.5;
+        transition: border 160ms ease, color 160ms ease;
+      }
+      .imm-scene .imm-presets button:hover,
+      .imm-scene .imm-presets button:focus-visible { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+      .imm-scene .lab-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
+      .imm-scene .lab-actions button {
+        display: inline-flex; gap: 7px; align-items: center; justify-content: center;
+        min-height: 38px; padding: 0 8px; color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34); border-radius: 3px;
+        background: transparent; font-size: 11px;
+      }
+      .imm-scene .lab-actions button:hover,
+      .imm-scene .lab-actions button:focus-visible { color: #fff; border-color: #fff; }
+      .imm-scene .lab-actions .accent-button { border-color: var(--red-bright); background: var(--red-bright); }
+      .imm-scene .lab-actions .full { grid-column: 1 / -1; }
+      .imm-scene .lab-actions svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+      .imm-scene .imm-readout {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px;
+        margin: 18px 0 4px; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.18); font-size: 12px;
+      }
+      .imm-scene .imm-readout span { color: rgba(255, 255, 255, 0.62); }
+      .imm-scene .imm-readout output { display: block; margin-top: 2px; color: #fff; font-family: var(--mono); }
+      .imm-scene .imm-readout .imm-wide { grid-column: 1 / -1; }
+      .imm-scene .imm-readout .imm-wide output { color: #ffb52b; font-size: 13px; }
+      /* 直觉区 */
+      .imm-scene .imm-copy { max-width: 780px; }
+      .imm-scene .imm-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.8; }
+      .imm-scene .imm-curve-card { margin-top: 30px; padding: 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: #fff; box-shadow: 0 1px 3px rgba(23, 15, 5, 0.08); }
+      .imm-scene .imm-curve-card h3 { margin: 0 0 4px; font-family: var(--serif); font-size: 22px; }
+      .imm-scene .imm-curve-card .imm-curve-sub { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+      .imm-scene #imm-curve { display: block; width: 100%; height: 440px; background: #fff; }
+      .imm-scene .imm-curve-ctrl { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-top: 14px; }
+      .imm-scene .imm-curve-ctrl .control-row { margin: 0; }
+      .imm-scene .imm-curve-ctrl output { color: var(--ink); }
+      .imm-scene .imm-curve-ctrl button {
+        min-height: 38px; padding: 0 16px; color: var(--red); border: 1px solid var(--red);
+        border-radius: 3px; background: var(--paper); font-size: 11px;
+      }
+      .imm-scene .imm-curve-ctrl button:hover,
+      .imm-scene .imm-curve-ctrl button:focus-visible { background: var(--red); color: #fff; }
+      .imm-scene .imm-curve-readout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+      .imm-scene .imm-curve-readout > div { padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); }
+      .imm-scene .imm-curve-readout span { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--red); }
+      .imm-scene .imm-curve-readout output { display: block; font-family: var(--mono); font-size: 13px; line-height: 1.5; color: var(--ink); }
+      .imm-scene .imm-curve-note { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: rgba(7, 24, 45, 0.6); }
+      /* 定义区 */
+      .imm-scene .def-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 34px 0 26px; }
+      .imm-scene .def-stats > div { padding: 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); }
+      .imm-scene .def-stats span { display: block; margin-bottom: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--red); }
+      .imm-scene .def-stats strong { display: block; margin-bottom: 6px; font-family: var(--serif); font-size: 22px; }
+      .imm-scene .def-stats em { display: block; font-style: normal; font-size: 12px; line-height: 1.55; color: var(--muted); }
+      .imm-scene .eq-block { margin-top: 6px; padding: 18px 20px; border-left: 3px solid var(--red); background: var(--paper-2); font-family: var(--mono); font-size: 15px; line-height: 2.1; }
+      .imm-scene .eq-block .eq { display: block; font-size: 15px; }
+      .imm-scene .eq-block .eq b { font-family: var(--serif); font-weight: 700; }
+      .imm-scene .eq-block .dim { color: rgba(7, 24, 45, 0.5); font-size: 12px; margin-left: 8px; }
+      .imm-scene .eq-block .tag { color: var(--red); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; margin-right: 8px; }
+      .imm-scene .gamma-table { width: 100%; margin: 22px 0 6px; border-collapse: collapse; }
+      .imm-scene .gamma-table th, .imm-scene .gamma-table td { padding: 9px 12px; border: 1px solid var(--rule); text-align: left; font-size: 13px; line-height: 1.55; vertical-align: top; }
+      .imm-scene .gamma-table th { background: var(--paper-2); font-family: var(--mono); font-weight: 700; }
+      .imm-scene .gamma-table td { font-size: 13px; }
+      .imm-scene .gamma-table thead th { text-align: center; }
+      .imm-scene .gamma-table tbody tr:first-child th { color: var(--red); }
+      @media (max-width: 900px) { .imm-scene .def-stats { grid-template-columns: repeat(2, 1fr); } .imm-scene .imm-curve-readout { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 620px) {
+        .imm-scene #imm-canvas { height: 460px; }
+        .imm-scene .lab-canvas-wrap { height: 460px; }
+        .imm-scene #imm-curve { height: 360px; }
+        .imm-scene .imm-readout { grid-template-columns: 1fr; }
+        .imm-scene .imm-presets { grid-template-columns: repeat(2, 1fr); }
+        .imm-scene .imm-curve-ctrl { grid-template-columns: 1fr; }
+        .imm-scene .gamma-table { width: 100%; table-layout: fixed; }
+        .imm-scene .gamma-table th, .imm-scene .gamma-table td { padding: 6px 4px; font-size: 11px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#imm-intuition">直觉</a>
+        <a href="#imm-definition">定义</a>
+        <a href="#imm-limits">边界</a>
+        <a href="#imm-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+    <main id="main" class="imm-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 15 / BIOLOGY LAB</p>
+          <h1>免疫调节：三道防线 · 特异性免疫 · 二次免疫</h1>
+          <p class="hero-lead">
+            病原体闯进来，身体先筑墙、再清扫，最后派特种兵。第三道防线「特异性免疫」还会记住敌人——
+            下次再见，又快又狠。看一次完整的免疫应答：固有免疫吞噬 → 抗原呈递 → 体液免疫出抗体 → 细胞免疫裂解靶细胞。
+          </p>
+          <a class="primary-action" href="#imm-intuition">
+            开始实验
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            播放免疫应答流程动画 · 每个阶段点亮对应的细胞与分子<br />
+            颜色：红 病原体 · 蓝绿 吞噬细胞 · 蓝 辅助性T · 绿 B细胞 · 琥珀 抗体 · 紫 细胞毒性T · 粉 靶细胞。可用「单步」逐阶段看。
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="免疫应答交互实验">
+          <div class="lab-canvas-wrap">
+            <canvas id="imm-canvas" aria-label="免疫应答：三道防线与特异性免疫动画"></canvas>
+            <div class="canvas-caption">
+              <span>免疫应答流程 · 固有免疫 → 呈递 → 体液免疫 → 细胞免疫 → 清除与记忆</span>
+              <span id="imm-canvas-status">阶段：第二道防线 · 固有免疫</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="免疫应答参数">
+            <h2>免疫应答参数</h2>
+
+            <div class="imm-presets" role="group" aria-label="免疫应答阶段预设">
+              <button data-imm-phase="innate" type="button">固有免疫<br />第一二道防线</button>
+              <button data-imm-phase="humoral" type="button">体液免疫<br />抗体中和</button>
+              <button data-imm-phase="cellular" type="button">细胞免疫<br />裂解靶细胞</button>
+              <button data-imm-phase="clear" type="button">清除记忆<br />二次待命</button>
+            </div>
+
+            <label class="control-row" for="imm-speed">
+              <span>播放速度</span>
+              <output id="imm-speed-output">1×</output>
+            </label>
+            <input id="imm-speed" type="range" min="0.5" max="3" step="0.5" value="1" />
+
+            <div class="lab-actions" role="group" aria-label="免疫应答控制">
+              <button class="accent-button" id="imm-play" type="button" aria-pressed="true">⏸ 暂停</button>
+              <button id="imm-step" type="button">
+                单步
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l10 8-10 8V4zM19 5v14" /></svg>
+              </button>
+              <button class="full" id="imm-reset" type="button">
+                从头再来
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4" /></svg>
+              </button>
+            </div>
+
+            <div class="imm-readout" aria-live="polite">
+              <div class="imm-wide"><span>当前阶段</span><output id="imm-status-output">第二道防线 · 吞噬细胞吞噬病原体</output></div>
+              <div><span>防线 / 机制</span><output id="imm-line-output">第二道防线（非特异性）</output></div>
+              <div><span>主力</span><output id="imm-force-output">吞噬细胞 · 溶菌酶</output></div>
+              <div><span>免疫类型</span><output id="imm-type-output">非特异性免疫</output></div>
+              <div><span>记忆细胞</span><output id="imm-memory-output">尚未生成</output></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="imm-intuition" aria-labelledby="imm-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="imm-intuition-title">直觉模型：为什么打过疫苗就不怕了</h2>
+            <p>初次免疫慢吞吞，二次免疫快又狠——差的就是一群「记忆细胞」。</p>
+          </div>
+        </div>
+        <div class="imm-copy">
+          <p>
+            第一次遇到一种病原体，免疫系统要先识别、再扩军，大约 5–7 天后抗体才开始出现、14 天左右才到峰值，
+            而且峰值不高、消退也慢——这段时间你可能已经在生病了。
+          </p>
+          <p>
+            可一旦打赢，B 细胞和 T 细胞里各留了一小队「记忆细胞」。28 天后再遇到同一种病原体，
+            它们直接成军，抗体 2 天就出现、峰值比初次高好几倍。病人往往还没感觉，病原体就被清了。
+            疫苗就是让你「先打一场必赢的小仗」，白赚一队记忆细胞。
+          </p>
+        </div>
+
+        <div class="imm-curve-card">
+          <h3>二次免疫：抗体又快又高</h3>
+          <p class="imm-curve-sub">拖时间轴（或点重播自动播放）：第 0 天初次感染，第 28 天再次感染——对比两条曲线的峰值与斜率。</p>
+          <canvas id="imm-curve" aria-label="初次与二次免疫应答的抗体浓度曲线"></canvas>
+          <div class="imm-curve-ctrl">
+            <label class="control-row" for="imm-t">
+              <span>时间轴（天）</span>
+              <output id="imm-day-output">第 0 天</output>
+            </label>
+            <input id="imm-t" type="range" min="0" max="60" step="0.5" value="0" />
+            <button id="imm-curve-play" type="button" aria-pressed="false">播放 ▶</button>
+            <button id="imm-curve-reset" type="button">回到第 0 天 ↺</button>
+          </div>
+          <div class="imm-curve-readout" aria-live="polite">
+            <div><span>初次免疫</span><output id="imm-p1">潜伏期 ≈ 5 天 · 峰值日第 14 天 · 峰值 1.0</output></div>
+            <div><span>二次免疫</span><output id="imm-p2">潜伏期 ≈ 2 天 · 峰值日第 36 天 · 峰值 ≈ 4.5</output></div>
+            <div><span>结论</span><output id="imm-p3">更快（潜伏期短）· 更强（峰值高）——记忆细胞</output></div>
+          </div>
+          <p class="imm-curve-note">疫苗原理：先让你接触无害的抗原（减毒/灭活病毒或抗原片段），产生记忆细胞；真病原体再来时，免疫系统第二次出击又快又狠，往往还没发病就被清除。曲线为示意图：数值为便于比较的相对量，非实测浓度。</p>
+        </div>
+      </section>
+
+      <section class="section-pad" id="imm-definition" aria-labelledby="imm-definition-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="imm-definition-title">正式定义：稳态靠「神经—体液—免疫」网络</h2>
+            <p>人体内环境稳态由神经调节、体液调节、免疫调节共同维持；生态系统则靠负反馈自我调节。</p>
+          </div>
+        </div>
+        <div class="imm-copy">
+          <p>
+            免疫调节只是四大调节中的一席。神经调节靠反射弧，快而准；体液调节靠激素经体液运输，慢而广；
+            免疫调节靠免疫细胞与分子识别「非己」，特异性强、还带记忆；生态系统层面，捕食者—猎物的数量波动
+            靠负反馈互相牵制，维持相对稳定。下面把它们放进一张表对照。
+          </p>
+        </div>
+        <div class="eq-block">
+          <span class="eq"><span class="tag">框架</span>稳态 ← 神经调节 + 体液调节 + 免疫调节（神经—体液—免疫调节网络）</span>
+          <span class="eq"><span class="tag">三道</span>第一道 皮肤黏膜屏障 → 第二道 吞噬细胞/杀菌物质 → 第三道 特异性免疫</span>
+          <span class="eq"><span class="tag">体液</span>B细胞 → 浆细胞 → 抗体：中和游离抗原（留 记忆B细胞）</span>
+          <span class="eq"><span class="tag">细胞</span>细胞毒性T细胞 → 穿孔素裂解被感染细胞（留 记忆T细胞）</span>
+          <span class="eq"><span class="tag">二次</span>记忆细胞再遇抗原：增殖快、抗体早且高 → 更快更强</span>
+          <span class="eq"><span class="tag">生态</span>生态系统自我调节 ← 负反馈（捕食者—猎物相互制约）</span>
+        </div>
+        <div class="def-stats" role="list">
+          <div><span>稳态</span><strong>神经—体液—免疫网络</strong><em>人体内环境稳定的三重保障</em></div>
+          <div><span>三道防线</span><strong>2 非特异 + 1 特异</strong><em>皮肤黏膜 / 吞噬·杀菌 / 特异性免疫</em></div>
+          <div><span>特异性免疫</span><strong>识别「非己」</strong><em>体液免疫 + 细胞免疫，均有记忆</em></div>
+          <div><span>记忆细胞</span><strong>更快更强</strong><em>二次免疫潜伏期短、峰值高（疫苗原理）</em></div>
+          <div><span>神经调节</span><strong>快而准</strong><em>反射弧 · 神经冲动，范围小、作用时间短</em></div>
+          <div><span>体液调节</span><strong>慢而广</strong><em>激素经体液运输，范围大、作用时间长</em></div>
+        </div>
+        <table class="gamma-table" aria-label="四大调节系统对比">
+          <caption>调节系统同场对照：神经 · 体液 · 免疫 · 生态系统</caption>
+          <thead><tr><th>系统</th><th>调节对象</th><th>途径 / 方式</th><th>特点</th><th>实例</th></tr></thead>
+          <tbody>
+            <tr><th>神经调节</th><td>人体器官活动</td><td>反射弧 · 神经冲动</td><td>快、准、范围小、时短</td><td>膝跳反射、缩手反射</td></tr>
+            <tr><th>体液调节</th><td>代谢 · 生长发育</td><td>激素 · 经体液运输</td><td>慢、范围广、时长</td><td>甲状腺激素、胰岛素</td></tr>
+            <tr><th>免疫调节</th><td>病原体 · 异常细胞</td><td>免疫细胞与免疫分子</td><td>特异性、记忆性</td><td>抗体清除病原体</td></tr>
+            <tr><th>生态系统调节</th><td>群落 · 环境</td><td>负反馈自我调节</td><td>波动、相对稳定</td><td>捕食者—猎物数量</td></tr>
+          </tbody>
+        </table>
+        <table class="gamma-table" aria-label="体液免疫与细胞免疫对比">
+          <caption>特异性免疫的两条通道：体液免疫 vs 细胞免疫</caption>
+          <thead><tr><th>项目</th><th>体液免疫</th><th>细胞免疫</th></tr></thead>
+          <tbody>
+            <tr><th>作战对象</th><td>游离于体液的抗原</td><td>被病原体侵入的宿主细胞</td></tr>
+            <tr><th>主力</th><td>B细胞 → 浆细胞 → 抗体</td><td>细胞毒性T细胞 → 穿孔素</td></tr>
+            <tr><th>记忆细胞</th><td>记忆B细胞</td><td>记忆T细胞</td></tr>
+            <tr><th>清除方式</th><td>抗体结合 → 沉淀/凝集 → 吞噬清除</td><td>裂解靶细胞 → 暴露抗原 → 再清除</td></tr>
+            <tr><th>联系</th><td colspan="2">辅助性T细胞介导（分泌细胞因子），两条通道协同作战</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="limits section-pad" id="imm-limits" aria-labelledby="imm-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="imm-limits-title">这个模型简化了什么</h2>
+            <p>免疫是把双刃剑：太强、太弱、认错敌人，都会出问题。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>简化 1</span>
+            <h3>过强 → 过敏反应</h3>
+            <p>免疫系统对花粉、尘螨等无害抗原过度应答，释放组胺引起红肿、瘙痒甚至休克。对策是避免接触，而不是「增强免疫」。</p>
+          </article>
+          <article>
+            <span>简化 2</span>
+            <h3>认错 → 自身免疫病</h3>
+            <p>免疫细胞把自身组织当成「非己」攻击：类风湿关节炎、I 型糖尿病等。治疗常用免疫抑制剂，让火力收一收。</p>
+          </article>
+          <article>
+            <span>简化 3</span>
+            <h3>过弱 → 免疫缺陷</h3>
+            <p>HIV 专攻辅助性T细胞，等于拆掉「司令塔」，免疫网络崩溃，病人死于机会性感染。本页的完整流程在体内多数场合由数十种细胞因子精密调度，远比我画的示意复杂。</p>
+          </article>
+          <article>
+            <span>简化 4</span>
+            <h3>人工免疫的两条路</h3>
+            <p>疫苗 = 主动免疫（减毒/灭活抗原 → 记忆细胞）；抗血清 = 被动免疫（直接注入抗体，见效快但无记忆）。曲线数值是相对示意，非实测。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" id="imm-sources" aria-labelledby="imm-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="imm-sources-title">来源与核验路径</h2>
+            <p>三道防线、体液/细胞免疫、二次免疫与疫苗原理以下列资料为准。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Immune_system" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Immune system</strong>
+            <span role="cell">固有/适应性免疫、体液/细胞免疫的分层结构</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.niaid.nih.gov/research/immune-system-overview" target="_blank" rel="noreferrer">
+            <span role="cell">机构</span>
+            <strong role="cell">NIAID · Immune System Overview</strong>
+            <span role="cell">免疫应答时间线、记忆细胞与二次应答的机制</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.who.int/health-topics/vaccines" target="_blank" rel="noreferrer">
+            <span role="cell">机构</span>
+            <strong role="cell">WHO · Vaccines and Immunization</strong>
+            <span role="cell">疫苗=主动免疫的原理与免疫规划</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.khanacademy.org/test-prep/mcat/biomolecules/intro-to-immunology/a/adaptive-immunity" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">Khan Academy · Adaptive Immunity</strong>
+            <span role="cell">初次 vs 二次应答的抗体曲线、记忆细胞作用</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.zhihu.com/question/28291573" target="_blank" rel="noreferrer">
+            <span role="cell">教材</span>
+            <strong role="cell">人教版高中生物选择性必修 1《稳态与调节》</strong>
+            <span role="cell">三道防线、神经—体液—免疫调节网络、过敏/自身免疫/免疫缺陷的框架表述</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          数值口径：曲线为相对示意图——初次免疫取潜伏期约 5 天、峰值日第 14 天、相对峰值 1.0；
+          二次免疫取再感染（第 28 天）后潜伏期约 2 天、峰值日第 36 天、相对峰值约 4.5，用于传达「更快更强」的量级，
+          非实测抗体滴度。三道防线、体液/细胞免疫分工、过敏与自身免疫与免疫缺陷的分类为通行教材口径。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+    <!--
+      Three.js 走 CDN importmap。纯 2D 场景（如本示例）无需引入；
+      3D 场景在「场景模块」里 `import * as THREE from "three"` 即可，浏览器会自动按需加载。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // 职责：阅读进度条、暂停/继续开关、统一 requestAnimationFrame 渲染循环。
+      // 场景模块只需在 window.SciScene 上暴露 update(dt)，本循环每帧调用。
+      // ============================================================
+      (function () {
+        // 阅读进度
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        // 暂停/继续：只停自动运动，不破坏滑杆与 3D 拖动
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        // 渲染循环：帧间隔封顶 50ms，避免切后台后跳变
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+    <script>
+      // ============================================================
+      // 场景模块：免疫调节
+      // 约定：脚本顶层做初始化（找画布、绑滑杆）；window.SciScene.update(dt)
+      // 每帧被通用运行时调用。检查 window.__sciPaused 以停止自动运动。
+      // hero：免疫应答五阶段状态机（固有免疫→呈递→体液→细胞→清除记忆，循环）；
+      // 直觉区：二次免疫抗体浓度曲线（初次 vs 再次感染）。
+      // ============================================================
+      (function () {
+        "use strict";
+
+        const $ = (id) => document.getElementById(id);
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const MONO = "Consolas, 'SFMono-Regular', monospace";
+        const PF = (w, px) => (clamp(w / 68, 12, 26) * px) / 11;
+        const cp = (a, b, t) => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) });
+
+        // ---------- hero：免疫应答示意（深海军蓝画布） ----------
+        const cv = $("imm-canvas");
+        const g = cv.getContext("2d", { willReadFrequently: true });
+        let W = 0, H = 0, DPR = 1;
+
+        const PHASES = [
+          { id: "innate",   dur: 2.6, status: "第二道防线 · 吞噬细胞吞噬病原体", line: "第二道防线（非特异性）", force: "吞噬细胞 · 溶菌酶", type: "非特异性免疫" },
+          { id: "present",  dur: 2.6, status: "抗原呈递 · 巨噬细胞把抗原交给辅助性T", line: "第二 → 第三道（桥接）", force: "巨噬细胞 → 辅助性T细胞", type: "固有 → 适应性桥接" },
+          { id: "humoral",  dur: 4.0, status: "体液免疫 · B细胞→浆细胞→抗体中和游离抗原", line: "第三道 · 体液免疫", force: "B细胞 · 浆细胞 · 抗体", type: "特异性免疫（体液）" },
+          { id: "cellular", dur: 4.0, status: "细胞免疫 · 细胞毒性T裂解被感染细胞", line: "第三道 · 细胞免疫", force: "细胞毒性T细胞 · 穿孔素", type: "特异性免疫（细胞）" },
+          { id: "clear",    dur: 3.2, status: "清除完成 · 记忆细胞待命（二次免疫更快更强）", line: "第三道 · 记忆", force: "抗体 + 记忆B/T细胞", type: "特异性免疫（记忆）" },
+        ];
+        const imm = { idx: 0, phaseT: 0, speed: 1, playing: true };
+
+        const N = {
+          P:  { fx: 0.09, fy: 0.30 },
+          M:  { fx: 0.31, fy: 0.42 },
+          T:  { fx: 0.53, fy: 0.26 },
+          B:  { fx: 0.67, fy: 0.30 },
+          PC: { fx: 0.84, fy: 0.26 },
+          FA: { fx: 0.42, fy: 0.60 },
+          CT: { fx: 0.60, fy: 0.70 },
+          TC: { fx: 0.82, fy: 0.74 },
+          Mem:{ fx: 0.36, fy: 0.86 },
+        };
+        const n = (key) => ({ x: N[key].fx * W, y: N[key].fy * H });
+
+        function fitImm() {
+          DPR = Math.min(window.devicePixelRatio || 1, 2);
+          const r = cv.getBoundingClientRect();
+          W = Math.max(1, r.width);
+          H = Math.max(1, r.height);
+          cv.width = Math.round(W * DPR);
+          cv.height = Math.round(H * DPR);
+          g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        function drawPathogen(x, y, r, alpha) {
+          g.globalAlpha = alpha;
+          g.fillStyle = "#e05b4e";
+          g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0.5, 0, Math.PI * 2); g.fill();
+          g.fillStyle = "rgba(120,20,15,0.7)";
+          g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.1, r * 0.4, r * 0.25, 0.5, 0, Math.PI * 2); g.fill();
+          g.globalAlpha = 1;
+        }
+
+        function cell(x, y, r, fill, label, active, labelAbove) {
+          g.globalAlpha = active ? 1 : 0.55;
+          g.fillStyle = fill;
+          g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+          g.globalAlpha = active ? 0.9 : 0.35;
+          g.strokeStyle = "#fff"; g.lineWidth = 1.5;
+          g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+          if (active) {
+            g.globalAlpha = 0.9;
+            g.strokeStyle = "#ffb52b"; g.lineWidth = 2;
+            g.beginPath(); g.arc(x, y, r + 5, 0, Math.PI * 2); g.stroke();
+          }
+          g.globalAlpha = 0.9;
+          g.fillStyle = "rgba(255,255,255,0.88)";
+          g.font = `${Math.round(PF(W, 11))}px ${MONO}`;
+          g.textAlign = "center";
+          g.fillText(label, x, labelAbove ? y - r - 12 : y + r + 17);
+          g.globalAlpha = 1;
+        }
+
+        function hexagon(x, y, r, fill) {
+          g.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+            const px = x + r * Math.cos(a), py = y + r * Math.sin(a);
+            i === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+          }
+          g.closePath();
+          g.fillStyle = fill; g.fill();
+          g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 1.5; g.stroke();
+        }
+
+        function guide(a, b, active) {
+          g.setLineDash([4, 5]);
+          g.strokeStyle = active ? "rgba(255,181,43,0.75)" : "rgba(255,255,255,0.16)";
+          g.lineWidth = active ? 1.8 : 1;
+          g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+          g.setLineDash([]);
+        }
+
+        function antibody(x, y, s, alpha) {
+          g.globalAlpha = alpha;
+          g.strokeStyle = "#e5a526"; g.lineWidth = 1.6;
+          g.beginPath();
+          g.moveTo(x, y - s); g.lineTo(x, y + s * 0.6);
+          g.moveTo(x, y + s * 0.15); g.lineTo(x - s * 0.7, y + s);
+          g.moveTo(x, y + s * 0.15); g.lineTo(x + s * 0.7, y + s);
+          g.stroke();
+          g.globalAlpha = 1;
+        }
+
+        function drawImm() {
+          const p = clamp(imm.phaseT / PHASES[imm.idx].dur, 0, 1);
+          g.clearRect(0, 0, W, H);
+
+          const rB = clamp(W / 95, 15, 30);
+          const rP = clamp(W / 175, 8, 15);
+          const P0 = n("P"), M0 = n("M"), T0 = n("T"), B0 = n("B"), PC0 = n("PC");
+          const FA0 = n("FA"), CT0 = n("CT"), TC0 = n("TC"), Mem0 = n("Mem");
+          const cleared = imm.idx === 4;
+
+          // 细胞毒性T 在 cellular 阶段沿 CT→TC 移动
+          const ctMove = imm.idx === 3 ? clamp((p - 0.28) / 0.5, 0, 1) : 0;
+          const CTpos = imm.idx === 3 ? cp(CT0, TC0, ctMove) : CT0;
+
+          guide(P0, M0, imm.idx === 0);
+          guide(M0, T0, imm.idx === 1);
+          guide(T0, B0, imm.idx === 2);
+          guide(T0, CT0, imm.idx === 3);
+          guide(PC0, FA0, imm.idx === 2 && p > 0.5);
+          guide(CT0, TC0, imm.idx === 3 && p > 0.3);
+
+          // 病原体
+          const pAlpha = cleared ? clamp(1 - p * 2, 0, 1) : 1;
+          drawPathogen(P0.x, P0.y, rP, pAlpha);
+          const pastInnate = imm.idx > 0 || p > 0.7;
+          if (!pastInnate) drawPathogen(P0.x - rP * 2, P0.y + rP * 1.4, rP, pAlpha);
+          const boundAlpha = (imm.idx === 2 && p > 0.9) ? 0.3 : 1;
+          drawPathogen(FA0.x, FA0.y, rP, freeAntigenAlpha(p, cleared) * boundAlpha);
+
+          // 节点
+          cell(M0.x, M0.y, rB, "#3f8f8a", "吞噬细胞", imm.idx === 0 || imm.idx === 1);
+          cell(T0.x, T0.y, rB * 0.85, "#4a7fc4", "辅助性T细胞", imm.idx === 1 || imm.idx === 2 || imm.idx === 3);
+          cell(B0.x, B0.y, rB * 0.75, "#3f9b6d", "B细胞", imm.idx === 2);
+          cell(PC0.x, PC0.y, rB * 0.75, "#2f7d52", "浆细胞", imm.idx === 2 && p > 0.4);
+          const tcLysed = cleared;
+          hexagon(TC0.x, TC0.y, rB * 0.95, tcLysed ? "#9a8f96" : "#d974a0");
+          if (!tcLysed) drawPathogen(TC0.x - 2, TC0.y, rP * 0.45, 1);
+          g.fillStyle = "rgba(255,255,255,0.88)";
+          g.font = `${Math.round(PF(W, 11))}px ${MONO}`;
+          g.textAlign = "center";
+          g.fillText("被感染细胞", TC0.x, TC0.y + rB + 17);
+          // CT 细胞后画：抵达时可见地叠在靶细胞上；已对接时标签移到上方，避免与「被感染细胞」重叠
+          cell(CTpos.x, CTpos.y, rB * 0.8, "#8b5fc4", "细胞毒性T", imm.idx === 3, ctMove > 0.85);
+
+          // ---- 阶段效果 ----
+          if (imm.idx === 0) {
+            const t = Math.min(p * 1.35, 1);
+            const d = cp(P0, M0, t);
+            if (p < 0.72) drawPathogen(d.x, d.y, rP * 0.8, 1);
+            else {
+              const shrink = 1 - (p - 0.72) / 0.28;
+              drawPathogen(M0.x + (d.x - M0.x) * 0.3, M0.y + (d.y - M0.y) * 0.3, rP * 0.8 * shrink, 0.9);
+            }
+          }
+          if (imm.idx === 1) {
+            const t = Math.min(p * 1.25, 1);
+            const d = cp(M0, T0, t);
+            g.globalAlpha = 0.95;
+            g.fillStyle = "#e5a526";
+            g.beginPath(); g.arc(d.x, d.y, clamp(W / 400, 3, 6), 0, Math.PI * 2); g.fill();
+            g.globalAlpha = 1;
+          }
+          if (imm.idx === 2) {
+            if (p < 0.32) {
+              const t = p / 0.32;
+              const d = cp(T0, B0, t);
+              g.fillStyle = "#3f9b6d";
+              g.beginPath(); g.arc(d.x, d.y, clamp(W / 420, 3, 5), 0, Math.PI * 2); g.fill();
+            }
+            if (p > 0.3 && p < 0.55) {
+              const t = (p - 0.3) / 0.25;
+              const off = 14 * t;
+              g.fillStyle = "#3f9b6d";
+              g.beginPath(); g.arc(B0.x - off, B0.y, rB * 0.6, 0, Math.PI * 2); g.fill();
+              g.fillStyle = "#2f7d52";
+              g.beginPath(); g.arc(B0.x + off * 2.4, B0.y + off * 0.4, rB * 0.55, 0, Math.PI * 2); g.fill();
+            }
+            if (p > 0.5) {
+              const t0 = (p - 0.5) / 0.5;
+              const stagger = [0, 0.18, 0.36];
+              const s = clamp(W / 260, 5, 9);
+              for (let i = 0; i < 3; i++) {
+                const t = clamp((t0 - stagger[i]) / 0.8, 0, 1);
+                if (t >= 1) {
+                  // 已到达：围绕抗原扇形排布，示意抗体已结合
+                  const ang = -0.9 + i * 0.9;
+                  antibody(FA0.x + Math.cos(ang) * s * 0.7, FA0.y + Math.sin(ang) * s * 0.7, s, 1);
+                } else {
+                  const d = cp(PC0, FA0, t);
+                  antibody(d.x, d.y, s, 1);
+                }
+              }
+              if (p > 0.9) {
+                g.fillStyle = "rgba(220,220,225,0.85)";
+                g.beginPath(); g.arc(FA0.x, FA0.y, rP, 0, Math.PI * 2); g.fill();
+                g.strokeStyle = "#ffb52b"; g.lineWidth = 2;
+                g.beginPath(); g.arc(FA0.x, FA0.y, rP + 5 + 12 * ((p - 0.9) / 0.1), 0, Math.PI * 2); g.stroke();
+              }
+            }
+          }
+          if (imm.idx === 3) {
+            if (p < 0.28) {
+              const t = p / 0.28;
+              const d = cp(T0, CT0, t);
+              g.fillStyle = "#8b5fc4";
+              g.beginPath(); g.arc(d.x, d.y, clamp(W / 420, 3, 5), 0, Math.PI * 2); g.fill();
+            }
+            if (p > 0.78) {
+              for (let i = 0; i < 5; i++) {
+                const ang = (i / 5) * Math.PI * 2 + 0.4;
+                const rr = rB * 1.2 * ((p - 0.78) / 0.22);
+                g.fillStyle = "rgba(255,255,255,0.9)";
+                g.beginPath(); g.arc(TC0.x + Math.cos(ang) * rr, TC0.y + Math.sin(ang) * rr, 2.5, 0, Math.PI * 2); g.fill();
+              }
+              if (p > 0.88) {
+                for (let i = 0; i < 6; i++) {
+                  const ang = (i / 6) * Math.PI * 2 + 0.2;
+                  const rr = rB * 1.5 * ((p - 0.88) / 0.12);
+                  g.fillStyle = "#d974a0";
+                  g.beginPath(); g.arc(TC0.x + Math.cos(ang) * rr, TC0.y + Math.sin(ang) * rr, 3, 0, Math.PI * 2); g.fill();
+                }
+              }
+            }
+          }
+          if (imm.idx === 4) {
+            g.fillStyle = "#3f9b6d";
+            g.beginPath(); g.arc(Mem0.x, Mem0.y, rB * 0.5, 0, Math.PI * 2); g.fill();
+            g.fillStyle = "#8b5fc4";
+            g.beginPath(); g.arc(Mem0.x + rB * 0.8, Mem0.y + rB * 0.3, rB * 0.5, 0, Math.PI * 2); g.fill();
+            g.globalAlpha = 0.9;
+            g.fillStyle = "#fff";
+            g.font = `${Math.round(PF(W, 11))}px ${MONO}`;
+            g.textAlign = "center";
+            g.fillText("记忆B · 记忆T 待命", Mem0.x + rB * 0.4, Mem0.y + rB + 18);
+            g.globalAlpha = 1;
+            g.fillStyle = "rgba(120,230,160,0.95)";
+            g.font = `700 ${Math.round(PF(W, 20))}px ${MONO}`;
+            g.textAlign = "center";
+            g.fillText("病原体清除 ✓", W * 0.5, H * 0.1);
+          }
+        }
+
+        function freeAntigenAlpha(p, cleared) {
+          return cleared ? clamp(1 - p * 2, 0, 1) : 0.95;
+        }
+
+        function tickImm(dt) {
+          if (window.__sciPaused) { drawImm(); return; }
+          if (imm.playing) {
+            imm.phaseT += dt * imm.speed;
+            if (imm.phaseT >= PHASES[imm.idx].dur) {
+              imm.idx = (imm.idx + 1) % PHASES.length;
+              imm.phaseT = 0;
+            }
+          }
+          drawImm();
+        }
+
+        function syncImm() {
+          const ph = PHASES[imm.idx];
+          $("imm-status-output").textContent = ph.status;
+          $("imm-line-output").textContent = ph.line;
+          $("imm-force-output").textContent = ph.force;
+          $("imm-type-output").textContent = ph.type;
+          $("imm-memory-output").textContent = imm.idx === 4 ? "记忆B + 记忆T 待命 ✓" : "尚未生成";
+          $("imm-speed-output").textContent = `${imm.speed}×`;
+          $("imm-canvas-status").textContent = `阶段：${ph.line}`;
+          const paused = !imm.playing;
+          $("imm-play").textContent = paused ? "▶ 播放" : "⏸ 暂停";
+          $("imm-play").setAttribute("aria-pressed", String(!paused));
+        }
+
+        // ---------- 直觉区：二次免疫抗体曲线（浅色白卡画布） ----------
+        const cv2 = $("imm-curve");
+        const g2 = cv2.getContext("2d", { willReadFrequently: true });
+        let CW = 0, CH = 0, DPR2 = 1;
+        const cvState = { t: 0, playing: false, speed: 8 }; // 天/秒
+
+        function fitCurve() {
+          DPR2 = Math.min(window.devicePixelRatio || 1, 2);
+          const r = cv2.getBoundingClientRect();
+          CW = Math.max(1, r.width);
+          CH = Math.max(1, r.height);
+          cv2.width = Math.round(CW * DPR2);
+          cv2.height = Math.round(CH * DPR2);
+          g2.setTransform(DPR2, 0, 0, DPR2, 0, 0);
+        }
+
+        const y1Only = (d) => (d >= 0 ? 1.0 * Math.exp(-Math.pow((d - 14) / 7, 2)) : 0);
+        const y2Only = (d) => (d >= 28 ? 4.5 * Math.exp(-Math.pow((d - 36) / 3.2, 2)) : 0);
+
+        function drawCurve() {
+          g2.clearRect(0, 0, CW, CH);
+          const mT = 40, mB = 52, mL = 52, mR = 26;
+          const plotW = CW - mL - mR, plotH = CH - mT - mB;
+          const X = (d) => mL + (d / 60) * plotW;
+          const Yc = (c) => mT + plotH - (c / 5) * plotH;
+
+          g2.strokeStyle = "#c9c4b6"; g2.lineWidth = 1;
+          g2.beginPath(); g2.moveTo(mL, mT); g2.lineTo(mL, mT + plotH); g2.lineTo(CW - mR, mT + plotH); g2.stroke();
+          g2.fillStyle = "#6b6659";
+          g2.font = `${Math.round(PF(CW, 10))}px ${MONO}`;
+          g2.textAlign = "center";
+          for (let d = 0; d <= 60; d += 10) g2.fillText(d, X(d), mT + plotH + 16);
+          g2.textAlign = "right";
+          for (let c = 0; c <= 5; c++) g2.fillText(c, mL - 6, Yc(c) + 4);
+          g2.textAlign = "left";
+          g2.fillText("时间（天）", X(58), mT + plotH + 16);
+          g2.save(); g2.translate(16, mT + plotH / 2); g2.rotate(-Math.PI / 2);
+          g2.textAlign = "center"; g2.fillText("抗体浓度（相对）", 0, 0); g2.restore();
+
+          g2.strokeStyle = "rgba(229,165,38,0.7)"; g2.lineWidth = 1.5;
+          g2.setLineDash([3, 4]);
+          g2.beginPath(); g2.moveTo(X(0), mT); g2.lineTo(X(0), mT + plotH); g2.stroke();
+          g2.setLineDash([]);
+          g2.fillStyle = "#b8860b"; g2.font = `700 ${Math.round(PF(CW, 11))}px ${MONO}`;
+          g2.textAlign = "center"; g2.fillText("初次感染", X(0), mT - 6);
+          g2.strokeStyle = "rgba(180,31,36,0.55)";
+          g2.setLineDash([3, 4]);
+          g2.beginPath(); g2.moveTo(X(28), mT); g2.lineTo(X(28), mT + plotH); g2.stroke();
+          g2.setLineDash([]);
+          g2.fillStyle = "#b41f24"; g2.fillText("再次感染", X(28), mT - 6);
+
+          const step = 0.5;
+          function trace(fn, color) {
+            g2.strokeStyle = color; g2.lineWidth = 2.5; g2.beginPath();
+            let first = true;
+            for (let d = 0; d <= 60; d += step) {
+              const v = fn(d);
+              if (v <= 0.004 && d < 3) { first = true; continue; }
+              const x = X(d), y = Yc(v);
+              if (first) { g2.moveTo(x, y); first = false; } else g2.lineTo(x, y);
+            }
+            g2.stroke();
+          }
+          trace(y1Only, "rgba(7,24,45,0.14)");
+          trace(y2Only, "rgba(180,31,36,0.14)");
+          if (cvState.t > 0.2) trace((d) => (d <= cvState.t ? y1Only(d) : 0), "#07182d");
+          if (cvState.t > 28) trace((d) => (d <= cvState.t ? y2Only(d) : 0), "#b41f24");
+
+          g2.fillStyle = "#07182d";
+          g2.beginPath(); g2.arc(X(14), Yc(1), 3.5, 0, Math.PI * 2); g2.fill();
+          g2.fillStyle = "#07182d"; g2.font = `${Math.round(PF(CW, 11))}px ${MONO}`;
+          g2.textAlign = "left"; g2.fillText("峰值 1.0 · 第14天", X(15), Yc(1) - 6);
+          g2.fillStyle = "#b41f24";
+          g2.beginPath(); g2.arc(X(36), Yc(4.5), 3.5, 0, Math.PI * 2); g2.fill();
+          g2.fillStyle = "#b41f24"; g2.fillText("峰值 4.5 · 第36天", X(37), Yc(4.5) + 4);
+
+          const phx = X(cvState.t);
+          g2.strokeStyle = "#ffb52b"; g2.lineWidth = 2;
+          g2.beginPath(); g2.moveTo(phx, mT); g2.lineTo(phx, mT + plotH); g2.stroke();
+          g2.fillStyle = "#07182d"; g2.textAlign = "center";
+          g2.font = `700 ${Math.round(PF(CW, 11))}px ${MONO}`;
+          g2.fillText(`第 ${Math.round(cvState.t)} 天`, phx, mT + plotH + 34);
+        }
+
+        function tickCurve(dt) {
+          if (!window.__sciPaused && cvState.playing) {
+            cvState.t += dt * cvState.speed;
+            if (cvState.t >= 60) { cvState.t = 60; cvState.playing = false; }
+            $("imm-t").value = cvState.t;
+          }
+          drawCurve();
+          $("imm-day-output").textContent = `第 ${Math.round(cvState.t)} 天`;
+          $("imm-curve-play").textContent = cvState.playing ? "⏸ 暂停" : "播放 ▶";
+          $("imm-curve-play").setAttribute("aria-pressed", String(cvState.playing));
+        }
+
+        // ---------- 控件绑定 ----------
+        $("imm-play").addEventListener("click", () => {
+          imm.playing = !imm.playing; syncImm();
+        });
+        $("imm-step").addEventListener("click", () => {
+          imm.idx = (imm.idx + 1) % PHASES.length;
+          imm.phaseT = 0; imm.playing = false; syncImm();
+        });
+        $("imm-reset").addEventListener("click", () => {
+          imm.idx = 0; imm.phaseT = 0; imm.playing = true; syncImm();
+        });
+        $("imm-speed").addEventListener("input", () => {
+          imm.speed = clamp(+$("imm-speed").value, 0.5, 3); syncImm();
+        });
+        document.querySelectorAll("[data-imm-phase]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.dataset.immPhase;
+            const i = PHASES.findIndex((p) => p.id === id);
+            if (i >= 0) { imm.idx = i; imm.phaseT = 0; imm.playing = true; syncImm(); }
+          });
+        });
+        $("imm-t").addEventListener("input", () => {
+          cvState.t = clamp(+$("imm-t").value, 0, 60);
+          cvState.playing = false;
+        });
+        $("imm-curve-play").addEventListener("click", () => {
+          if (cvState.t >= 60) cvState.t = 0;
+          cvState.playing = !cvState.playing;
+        });
+        $("imm-curve-reset").addEventListener("click", () => {
+          cvState.t = 0; cvState.playing = false; $("imm-t").value = 0;
+        });
+
+        // ---------- 初始化 ----------
+        fitImm(); fitCurve();
+        window.addEventListener("resize", () => { fitImm(); fitCurve(); });
+        syncImm(); drawImm(); drawCurve();
+
+        window.SciScene = {
+          update(dt) {
+            tickImm(dt);
+            tickCurve(dt);
+            syncImm();
+          },
+        };
+      })();
+    </script>
+</body>
+</html>

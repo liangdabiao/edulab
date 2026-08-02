@@ -1,0 +1,1536 @@
+<!doctype html>
+<!--
+  edu-sci-viz · 单文件互动科普页模板
+  ============================================================
+  用法：把本文件复制到工作目录，然后按 SKILL.md 的 8 步流程替换四处内容：
+    1. <title> 与 hero 文案（大标题/lead/CTA/说明）
+    2. 分节叙事 HTML（直觉模型 → 正式定义 → 边界说明 → 来源）
+    3. hero 里的实验台 lab-shell（画布 + 控制区）
+    4. 底部「场景模块」<script>（用你的主题替换「光的折射」）
+  保留：<head> 设计系统 <style>、通用运行时 <script>、importmap。
+  本模板内置「光的折射」作为可运行示例（2D Canvas，零网络依赖）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="心脏双泵 + 双循环：右心把血泵进肺（肺循环）、左心泵进全身（体循环），血流把 O₂ 送到全身。拖心率滑杆看心输出量变化，再放大到肺泡看分压梯度如何驱动气体交换。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>循环与呼吸：心脏双泵 · 血流 · 气体交换 | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(450px, 0.84fr) minmax(700px, 1.55fr);
+        gap: clamp(36px, 4vw, 64px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        /* 陷阱：h1 是 nowrap，字号上限必须保证最长一行放得进左列（约 450px 文字列）。
+           68px 上限 ≈ 每行最多 6 个汉字；行更长的主题，在场景样式里覆盖
+           .scene .hero h1 { white-space: normal } 让标题折行，防止溢出压到右侧实验区。 */
+        font-size: clamp(48px, 3.8vw, 68px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+    <!-- ========== 场景专属样式：人体生理 · 循环与呼吸（新主题请整体替换本块） ========== -->
+    <style>
+      .cardio-scene .hero-lead { max-width: 460px; }
+      /* 单栏 hero：文案在上、实验台全宽 → 画布更大，画布内文字放大后更清晰 */
+      .cardio-scene .hero { grid-template-columns: 1fr; align-items: start; gap: clamp(28px, 3vw, 46px); }
+      .cardio-scene .hero-copy { max-width: 880px; }
+      .cardio-scene .hero-copy h1 { white-space: normal; }
+      .cardio-scene .lab-shell { width: 100%; }
+      .cardio-scene #cardio-canvas { width: 100%; height: 650px; }
+      .cardio-scene .cardio-preset-label { margin: 14px 0 0; color: rgba(255, 255, 255, 0.55); font-size: 11px; letter-spacing: 0.08em; }
+      .cardio-scene .cardio-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 2px; }
+      .cardio-scene .cardio-presets button {
+        padding: 8px 2px; color: rgba(255, 255, 255, 0.75); border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 4px; background: transparent; font-size: 11px;
+        transition: border 160ms ease, color 160ms ease;
+      }
+      .cardio-scene .cardio-presets button:hover,
+      .cardio-scene .cardio-presets button:focus-visible { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+      .cardio-scene .lab-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
+      .cardio-scene .lab-actions button {
+        display: inline-flex; gap: 7px; align-items: center; justify-content: center;
+        min-height: 38px; padding: 0 8px; color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34); border-radius: 3px;
+        background: transparent; font-size: 11px;
+      }
+      .cardio-scene .lab-actions button:hover,
+      .cardio-scene .lab-actions button:focus-visible { color: #fff; border-color: #fff; }
+      .cardio-scene .lab-actions .accent-button { border-color: var(--red-bright); background: var(--red-bright); }
+      .cardio-scene .lab-actions .full { grid-column: 1 / -1; }
+      .cardio-scene .lab-actions svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+      .cardio-scene .cardio-readout {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px;
+        margin: 18px 0 4px; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.18); font-size: 12px;
+      }
+      .cardio-scene .cardio-readout span { color: rgba(255, 255, 255, 0.62); }
+      .cardio-scene .cardio-readout output { display: block; margin-top: 2px; color: #fff; font-family: var(--mono); }
+      .cardio-scene .cardio-readout .cardio-wide { grid-column: 1 / -1; }
+      .cardio-scene .cardio-readout .cardio-wide output { color: #ffb52b; font-size: 13px; }
+      /* 直觉区 */
+      .cardio-scene .cardio-copy { max-width: 780px; }
+      .cardio-scene .cardio-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.8; }
+      .cardio-scene .cardio-gas-card { margin-top: 30px; padding: 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: #fff; box-shadow: 0 1px 3px rgba(23, 15, 5, 0.08); }
+      .cardio-scene .cardio-gas-card h3 { margin: 0 0 4px; font-family: var(--serif); font-size: 22px; }
+      .cardio-scene .cardio-gas-card .cardio-gas-sub { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+      .cardio-scene #cardio-gas { display: block; width: 100%; height: 440px; background: #fff; }
+      .cardio-scene .cardio-gas-ctrl { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-top: 14px; }
+      .cardio-scene .cardio-gas-ctrl .control-row { margin: 0; }
+      .cardio-scene .cardio-gas-ctrl output { color: var(--ink); }
+      .cardio-scene .cardio-gas-readout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+      .cardio-scene .cardio-gas-readout > div { padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); }
+      .cardio-scene .cardio-gas-readout span { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--red); }
+      .cardio-scene .cardio-gas-readout output { display: block; font-family: var(--mono); font-size: 15px; color: var(--ink); }
+      .cardio-scene .cardio-gas-note { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: rgba(7, 24, 45, 0.6); }
+      /* 定义区 */
+      .cardio-scene .def-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 34px 0 26px; }
+      .cardio-scene .def-stats > div { padding: 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); }
+      .cardio-scene .def-stats span { display: block; margin-bottom: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--red); }
+      .cardio-scene .def-stats strong { display: block; margin-bottom: 6px; font-family: var(--serif); font-size: 22px; }
+      .cardio-scene .def-stats em { display: block; font-style: normal; font-size: 12px; line-height: 1.55; color: var(--muted); }
+      .cardio-scene .eq-block { margin-top: 6px; padding: 18px 20px; border-left: 3px solid var(--red); background: var(--paper-2); font-family: var(--mono); font-size: 15px; line-height: 2.1; }
+      .cardio-scene .eq-block .eq { display: block; font-size: 15px; }
+      .cardio-scene .eq-block .eq b { font-family: var(--serif); font-weight: 700; }
+      .cardio-scene .eq-block .tag { color: var(--red); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; margin-right: 8px; }
+      .cardio-scene .cardio-transport { width: 100%; margin: 22px 0 6px; border-collapse: collapse; }
+      .cardio-scene .cardio-transport th, .cardio-scene .cardio-transport td { padding: 9px 12px; border: 1px solid var(--rule); text-align: center; font-size: 13px; }
+      .cardio-scene .cardio-transport thead th { background: var(--paper-2); font-family: var(--mono); font-weight: 700; }
+      .cardio-scene .cardio-transport td { font-family: var(--mono); }
+      .cardio-scene .cardio-tbl2 { width: 100%; margin: 22px 0 6px; border-collapse: collapse; }
+      .cardio-scene .cardio-tbl2 th, .cardio-scene .cardio-tbl2 td { padding: 9px 12px; border: 1px solid var(--rule); text-align: center; font-size: 13px; }
+      .cardio-scene .cardio-tbl2 thead th { background: var(--paper-2); font-family: var(--mono); font-weight: 700; }
+      .cardio-scene .cardio-tbl2 td { font-family: var(--mono); }
+      @media (max-width: 900px) { .cardio-scene .def-stats { grid-template-columns: repeat(2, 1fr); } .cardio-scene .cardio-gas-readout { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 1240px) { .cardio-scene #cardio-canvas { height: 650px; } }
+      @media (max-width: 620px) {
+        .cardio-scene #cardio-canvas { height: 460px; }
+        .cardio-scene .lab-canvas-wrap { height: 460px; }
+        .cardio-scene #cardio-gas { height: 380px; }
+        .cardio-scene .cardio-readout { grid-template-columns: 1fr; }
+        .cardio-scene .cardio-presets { grid-template-columns: repeat(2, 1fr); }
+        .cardio-scene .cardio-gas-ctrl { grid-template-columns: 1fr; }
+        .cardio-scene .cardio-transport { width: 100%; table-layout: fixed; }
+        .cardio-scene .cardio-transport th, .cardio-scene .cardio-transport td { padding: 6px 4px; font-size: 11px; }
+        .cardio-scene .cardio-tbl2 { width: 100%; table-layout: fixed; }
+        .cardio-scene .cardio-tbl2 th, .cardio-scene .cardio-tbl2 td { padding: 6px 4px; font-size: 11px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#cardio-intuition">直觉</a>
+        <a href="#cardio-definition">定义</a>
+        <a href="#cardio-limits">边界</a>
+        <a href="#cardio-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+    <main id="main" class="cardio-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 14 / HUMAN PHYSIOLOGY</p>
+          <h1>心脏双泵，肺换气，血流把 O₂ 送到全身</h1>
+          <p class="hero-lead">
+            心脏是一台双泵：右心把血泵进肺（肺循环），左心把血泵进全身（体循环）。
+            血在肺里卸掉 CO₂、装上 O₂，在组织里把 O₂ 交给细胞。把心率调快，看心输出量怎么变。
+          </p>
+          <a class="primary-action" href="#cardio-intuition">
+            开始观察
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            拖心率滑杆改心跳频率 · 血滴颜色 = 含氧量（红 = 携氧，蓝 = 去氧）<br />
+            右心 → 肺 → 左心 → 全身 → 右心，两条循环首尾相接，输出量必须相等。
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="双循环与心率交互实验">
+          <div class="lab-canvas-wrap">
+            <canvas id="cardio-canvas" aria-label="双循环示意图：心脏四腔连接肺循环与体循环，血滴沿两条环路流动"></canvas>
+            <div class="canvas-caption">
+              <span>双循环 · 血滴颜色 = 含氧量</span>
+              <span id="cardio-canvas-status">CO = 72 × 70 = 5.0 L/min</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="心率与心输出量">
+            <h2>心率与心输出量</h2>
+
+            <div class="cardio-presets" role="group" aria-label="心率预设">
+              <button data-cardio-hr="72" type="button">静息<br />72</button>
+              <button data-cardio-hr="120" type="button">慢跑<br />120</button>
+              <button data-cardio-hr="150" type="button">上坡<br />150</button>
+              <button data-cardio-hr="180" type="button">冲刺<br />180</button>
+            </div>
+
+            <label class="control-row" for="cardio-hr">
+              <span>心率 HR（次/分）</span>
+              <output id="cardio-hr-output">72</output>
+            </label>
+            <input id="cardio-hr" type="range" min="40" max="200" step="1" value="72" />
+
+            <div class="cardio-readout" aria-live="polite">
+              <div><span>每搏输出量 SV</span><output id="cardio-sv-output">70 mL</output></div>
+              <div><span>心输出量 CO</span><output id="cardio-co-output">5.0 L/min</output></div>
+              <div><span>全血(≈5L)循环一周</span><output id="cardio-cycle-output">60 s</output></div>
+              <div><span>血滴绕肺循环一周</span><output id="cardio-loop-output">≈ 24 s</output></div>
+              <div class="cardio-wide"><span>核验 CO = HR × SV</span><output id="cardio-check-output">72 × 70 = 5.0 L/min</output></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="cardio-intuition" aria-labelledby="cardio-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="cardio-intuition-title">直觉模型：分压差把 O₂ 拉进血里</h2>
+            <p>气体交换没有"泵"，全靠浓度（分压）差：气体从高分压流向低分压，直到两边平衡。</p>
+          </div>
+        </div>
+        <div class="cardio-copy">
+          <p>
+            在肺泡，空气里 O₂ 的分压高（104 mmHg），回到肺的静脉血里 O₂ 分压低（40 mmHg），
+            于是 O₂ 顺着梯度钻进血液；反过来，血里 CO₂ 分压（46 mmHg）比肺泡（40 mmHg）高，CO₂ 就逸出到肺泡呼出去。
+            一次呼吸的实质，就是让氧气跨过薄薄的呼吸膜，同时把二氧化碳请出去。
+          </p>
+          <p>
+            拖动"来血 PO₂"滑杆改变回到肺的静脉血氧分压——梯度越大，进血的 O₂ 就越多。
+            分压梯度是气体交换的发动机，这正是临床上吸氧、以及贫血/缺氧为何会触发代偿的原因。
+          </p>
+        </div>
+
+        <div class="cardio-gas-card">
+          <h3>肺泡气体交换：谁的分压高，就往低处扩散</h3>
+          <p class="cardio-gas-sub">红点 = O₂（肺泡 → 血）· 绿灰点 = CO₂（血 → 肺泡）。CO₂ 梯度小但溶解度高、扩散约快 20 倍。</p>
+          <canvas id="cardio-gas" aria-label="肺泡气体交换：O₂ 与 CO₂ 沿分压梯度跨过呼吸膜"></canvas>
+          <div class="cardio-gas-ctrl" aria-label="来血氧分压">
+            <label class="control-row" for="cardio-po2">
+              <span>来血 PO₂（回到肺的静脉血）</span>
+              <output id="cardio-po2-in-output">40 mmHg</output>
+            </label>
+            <span></span>
+          </div>
+          <input id="cardio-po2" type="range" min="30" max="60" step="1" value="40" />
+          <div class="cardio-gas-readout" aria-live="polite">
+            <div><span>肺泡 PO₂</span><output id="cardio-po2-a">104 mmHg</output></div>
+            <div><span>O₂ 梯度 ΔPO₂</span><output id="cardio-dpo2-output">64 mmHg</output></div>
+            <div><span>CO₂ 梯度 ΔPCO₂</span><output id="cardio-dpco2-output">6 mmHg</output></div>
+            <div><span>去血 PO₂（交换后）</span><output id="cardio-po2-out">≈ 100 mmHg</output></div>
+          </div>
+          <p class="cardio-gas-note">O₂ 梯度约 60 mmHg，是主力交换方向；CO₂ 梯度只有约 6 mmHg，但它在体液里溶解度高得多，扩散速率约为 O₂ 的 20 倍，所以照样高效呼出。</p>
+        </div>
+      </section>
+
+      <section class="section-pad" id="cardio-definition" aria-labelledby="cardio-definition-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="cardio-definition-title">正式定义：心脏、双循环、呼吸是一条流水线</h2>
+            <p>从泵到血管到气体，把"循环"和"呼吸"拆成能对上的环节。</p>
+          </div>
+        </div>
+        <div class="cardio-copy">
+          <p>
+            循环系统是闭合管道：右心把去氧血泵进肺（肺循环），左心把携氧血泵进全身（体循环）。
+            两个泵串在一条管路上，所以两边的心输出量必须相等——右边多泵一点，血液就在肺里淤积，左边跟不上，全身就缺氧。
+            呼吸系统的全部职责，就是在这条管路的"肺站"完成 O₂ / CO₂ 交换。
+          </p>
+        </div>
+        <div class="eq-block">
+          <span class="eq"><span class="tag">肺循环</span>右心室 → 肺动脉 → 肺（气体交换）→ 肺静脉 → 左心房　（去氧 → 携氧）</span>
+          <span class="eq"><span class="tag">体循环</span>左心室 → 主动脉 → 全身组织（O₂ 卸载）→ 上下腔静脉 → 右心房　（携氧 → 去氧）</span>
+          <span class="eq"><span class="tag">心输出量</span><b>CO = HR × SV</b>　≈ 72 次/分 × 70 mL = 5.0 L/min（静息）</span>
+          <span class="eq"><span class="tag">气体扩散</span>速率 ∝ 分压梯度 × 膜面积 ÷ 膜厚（Fick 定律）</span>
+        </div>
+        <div class="def-stats" role="list">
+          <div><span>双泵串联</span><strong>右心 + 左心</strong><em>肺循环与体循环输出量必须相等，靠 Frank–Starling 机制维持</em></div>
+          <div><span>心脏四腔</span><strong>两房两室</strong><em>房室瓣（三尖/二尖）+ 半月瓣（肺动脉/主动脉）防返流</em></div>
+          <div><span>气体运输</span><strong>O₂ 98.5% 靠血红蛋白</strong><em>CO₂ 70% 碳酸氢盐 + 20% 氨基甲酰 + 10% 溶解</em></div>
+          <div><span>分压驱动</span><strong>高分压 → 低分压</strong><em>肺泡 PO₂ 104 vs 血 PO₂ 40，方向即扩散方向</em></div>
+        </div>
+        <table class="cardio-transport" aria-label="气体运输方式占比表">
+          <caption>O₂ 与 CO₂ 在血液中的运输形式（静息、近似占比）</caption>
+          <thead><tr><th>气体</th><th>运输形式</th><th>占比</th></tr></thead>
+          <tbody>
+            <tr><td>O₂</td><td>与血红蛋白结合（HbO₂）</td><td>≈ 98.5%</td></tr>
+            <tr><td>O₂</td><td>溶解于血浆</td><td>≈ 1.5%</td></tr>
+            <tr><td>CO₂</td><td>碳酸氢盐（HCO₃⁻）</td><td>≈ 70%</td></tr>
+            <tr><td>CO₂</td><td>氨基甲酰血红蛋白</td><td>≈ 20%</td></tr>
+            <tr><td>CO₂</td><td>溶解于血浆</td><td>≈ 10%</td></tr>
+          </tbody>
+        </table>
+        <table class="cardio-tbl2" aria-label="气体分压表">
+          <caption>关键位置的气体分压（mmHg，海平面静息）</caption>
+          <thead><tr><th>位置</th><th>PO₂</th><th>PCO₂</th></tr></thead>
+          <tbody>
+            <tr><td>肺泡</td><td>104</td><td>40</td></tr>
+            <tr><td>动脉血（离开肺）</td><td>≈ 100</td><td>40</td></tr>
+            <tr><td>静脉血（回到肺）</td><td>40</td><td>46</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="limits section-pad" id="cardio-limits" aria-labelledby="cardio-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="cardio-limits-title">这个模型的边界</h2>
+            <p>示意图让你看到"该有什么"，但真实生理有它没画出来的复杂性。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>边界 1</span>
+            <h3>血流是搏动的，不是恒定</h3>
+            <p>示意图把血流画成均匀流动；实际上每搏一次，动脉里就是一波压力脉冲（这就是脉搏），静脉回流则相对连续。</p>
+          </article>
+          <article>
+            <span>边界 2</span>
+            <h3>左右心输出量相等是常态</h3>
+            <p>正常时两心室每搏输出量相等（Frank–Starling 机制自动校正）。但房间隔/室间隔缺损等先天分流会破坏这一平衡，需手术干预。</p>
+          </article>
+          <article>
+            <span>边界 3</span>
+            <h3>交换效率受"通气/灌注匹配"影响</h3>
+            <p>不是每个肺泡都刚好有血经过。肺栓塞（有通气无血流）、慢阻肺（面积缩小）、肺水肿/纤维化（膜增厚）都会让气体交换打折扣。</p>
+          </article>
+          <article>
+            <span>边界 4</span>
+            <h3>氧合不是线性的</h3>
+            <p>氧离曲线是 S 形：血红蛋白协同结合 O₂。组织侧 CO₂、H⁺、温度升高（Bohr 效应）让曲线右移、卸氧更容易——这个非线性被示意图省略了。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" id="cardio-sources" aria-labelledby="cardio-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="cardio-sources-title">来源与核验路径</h2>
+            <p>结构、数值与机制出处如下。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://openstax.org/books/anatomy-and-physiology-2e/pages/19-1-heart-anatomy" target="_blank" rel="noreferrer">
+            <span role="cell">教材</span>
+            <strong role="cell">OpenStax · Anatomy and Physiology 2e，Ch.19 心血管系统 / Ch.22 呼吸系统</strong>
+            <span role="cell">心腔与瓣膜结构、双循环路径、气体交换与运输</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Cardiac_output" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Cardiac output（CO = HR × SV，静息 ≈ 5 L/min）</strong>
+            <span role="cell">心输出量公式与静息/运动数值</span>
+          </a>
+          <a class="source-row" role="row" href="https://lmu.pressbooks.pub/humanphysiology/chapter/12-4-gas-exchange/" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">LMU Human Physiology · Gas Exchange（肺泡 PO₂ 104 / 静脉 40、CO₂ 扩散）</strong>
+            <span role="cell">肺泡-血液分压梯度与扩散方向</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Transport_of_gases_in_human_blood" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Transport of gases in human blood（O₂ 98.5% 血红蛋白、CO₂ 70% 碳酸氢盐）</strong>
+            <span role="cell">O₂ / CO₂ 运输方式占比</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.merckmanuals.com/home/lung-and-airway-disorders/biology-of-the-lungs-and-airways/gas-exchange" target="_blank" rel="noreferrer">
+            <span role="cell">临床</span>
+            <strong role="cell">Merck Manual · Gas Exchange（呼吸膜、扩散与氧合）</strong>
+            <span role="cell">气体交换生理与通气-灌注概念</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          数值口径：肺泡 PO₂ 104 / PCO₂ 40、静脉血 PO₂ 40 / PCO₂ 46（海平面静息，mmHg）；心输出量 CO = HR × SV，静息 ≈ 72 × 70 mL ≈ 5.0 L/min，
+          运动峰值可达 20–25 L/min；O₂ 运输 ≈ 98.5% 与血红蛋白结合、≈ 1.5% 溶解；CO₂ 运输 ≈ 70% 碳酸氢盐、≈ 20% 氨基甲酰血红蛋白、≈ 10% 溶解。
+          几何口径：双循环路径、心腔与瓣膜为教科书标准示意；血滴颜色（红 = 携氧 / 蓝 = 去氧）用于教学，并非血管真实外观。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+    <!--
+      Three.js 走 CDN importmap。纯 2D 场景（如本示例）无需引入；
+      3D 场景在「场景模块」里 `import * as THREE from "three"` 即可，浏览器会自动按需加载。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // 职责：阅读进度条、暂停/继续开关、统一 requestAnimationFrame 渲染循环。
+      // 场景模块只需在 window.SciScene 上暴露 update(dt)，本循环每帧调用。
+      // ============================================================
+      (function () {
+        // 阅读进度
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        // 暂停/继续：只停自动运动，不破坏滑杆与 3D 拖动
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        // 渲染循环：帧间隔封顶 50ms，避免切后台后跳变
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+    <script>
+      // ============================================================
+      // 场景模块：人体生理 · 循环与呼吸
+      // 约定：脚本顶层做初始化（找画布、绑滑杆）；window.SciScene.update(dt)
+      // 每帧被通用运行时调用。检查 window.__sciPaused 以停止自动运动。
+      // ============================================================
+      (function () {
+        "use strict";
+
+        const $ = (id) => document.getElementById(id);
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const MONO = "Consolas, 'SFMono-Regular', monospace";
+        // 画布字号随画布宽缩放（w/68 ≈ 基准 11px，clamp 到 12–26px），宽屏更大更清晰
+        const PF = (w, px) => (clamp(w / 68, 12, 26) * px) / 11;
+        const rgba = (c, a) => "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
+        const lerpRGB = (c1, c2, t) => ({
+          r: Math.round(lerp(c1.r, c2.r, t)),
+          g: Math.round(lerp(c1.g, c2.g, t)),
+          b: Math.round(lerp(c1.b, c2.b, t)),
+        });
+        const RED = { r: 227, g: 58, b: 50 }, BLUE = { r: 90, g: 167, b: 224 };
+
+        // ---------- hero：双循环（深海军蓝画布） ----------
+        const cv = $("cardio-canvas");
+        const g = cv.getContext("2d", { willReadFrequently: true });
+        let W = 0, H = 0, DPR = 1;
+
+        const circ = { hr: 72, sv: 70, phase: 0 };
+
+        function fitCardio() {
+          DPR = Math.min(window.devicePixelRatio || 1, 2);
+          const r = cv.getBoundingClientRect();
+          W = Math.max(1, r.width);
+          H = Math.max(1, r.height);
+          cv.width = Math.round(W * DPR);
+          cv.height = Math.round(H * DPR);
+          g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        // 循环路径（模型坐标，0..1 相对 W/H）。pulmonary：RV→肺→LA；systemic：LV→全身→RA
+        const PUL_F = [
+          { x: .605, y: .60 }, { x: .72, y: .56 }, { x: .68, y: .40 }, { x: .46, y: .30 },
+          { x: .24, y: .24 }, { x: .135, y: .30 }, { x: .18, y: .42 }, { x: .32, y: .46 }, { x: .435, y: .44 },
+        ];
+        const SYS_F = [
+          { x: .435, y: .60 }, { x: .36, y: .70 }, { x: .42, y: .80 }, { x: .68, y: .84 },
+          { x: .87, y: .72 }, { x: .90, y: .58 }, { x: .76, y: .44 }, { x: .605, y: .44 },
+        ];
+
+        function makePath(pts) {
+          const P = pts.map((p) => ({ x: p.x * W, y: p.y * H }));
+          const segs = [];
+          let total = 0;
+          for (let i = 1; i < P.length; i++) {
+            const dx = P[i].x - P[i - 1].x, dy = P[i].y - P[i - 1].y;
+            const L = Math.hypot(dx, dy);
+            segs.push({ x0: P[i - 1].x, y0: P[i - 1].y, dx, dy, L });
+            total += L;
+          }
+          const cum = [0];
+          let acc = 0;
+          for (const s of segs) { acc += s.L; cum.push(acc / (total || 1)); }
+          return { segs, cum };
+        }
+        let pulP = null, sysP = null;
+        function buildPaths() { pulP = makePath(PUL_F); sysP = makePath(SYS_F); }
+        function posOn(path, t) {
+          const { segs, cum } = path;
+          for (let i = 0; i < segs.length; i++) {
+            if (t < cum[i + 1]) {
+              const s = segs[i];
+              const f = (t - cum[i]) / Math.max(1e-6, cum[i + 1] - cum[i]);
+              return { x: s.x0 + s.dx * f, y: s.y0 + s.dy * f };
+            }
+          }
+          const s = segs[segs.length - 1];
+          return { x: s.x0 + s.dx, y: s.y0 + s.dy };
+        }
+
+        // 血滴颜色：去氧蓝 → 携氧红；肺循环在肺站换气、体循环在组织站卸氧
+        function dropColor(kind, t) {
+          if (kind === "pul")
+            return t < 0.42 ? BLUE : t > 0.55 ? RED : lerpRGB(BLUE, RED, (t - 0.42) / 0.13);
+          return t < 0.52 ? RED : t > 0.62 ? BLUE : lerpRGB(RED, BLUE, (t - 0.52) / 0.10);
+        }
+
+        const drops = { pul: [], sys: [] };
+        const LOOP_SEC = 24; // 心率 72 时血滴绕一圈的秒数
+        function initDrops() {
+          drops.pul = Array.from({ length: 12 }, (_, i) => ({ t: i / 12 }));
+          drops.sys = Array.from({ length: 12 }, (_, i) => ({ t: (i + 0.5) / 12 }));
+        }
+        function tickDrops(dt) {
+          const speed = dt / LOOP_SEC * (circ.hr / 72);
+          for (const arr of [drops.pul, drops.sys]) {
+            for (const d of arr) d.t = (d.t + speed) % 1;
+          }
+        }
+
+        function roundRectPath(x, y, w, h, r) {
+          g.beginPath();
+          g.moveTo(x + r, y);
+          g.arcTo(x + w, y, x + w, y + h, r);
+          g.arcTo(x + w, y + h, x, y + h, r);
+          g.arcTo(x, y + h, x, y, r);
+          g.arcTo(x, y, x + w, y, r);
+          g.closePath();
+        }
+
+        function drawTrack(path, kind) {
+          const { segs, cum } = path;
+          g.lineJoin = "round"; g.lineCap = "round";
+          g.lineWidth = clamp(W * 0.011, 4, 13);
+          for (let i = 0; i < segs.length; i++) {
+            const s = segs[i];
+            const tmid = (cum[i] + cum[i + 1]) / 2;
+            g.strokeStyle = rgba(dropColor(kind, tmid), 0.20);
+            g.beginPath(); g.moveTo(s.x0, s.y0); g.lineTo(s.x0 + s.dx, s.y0 + s.dy); g.stroke();
+          }
+          // 内侧更亮的细线，增强"血管"感
+          g.lineWidth = clamp(W * 0.005, 2, 6);
+          for (let i = 0; i < segs.length; i++) {
+            const s = segs[i];
+            const tmid = (cum[i] + cum[i + 1]) / 2;
+            g.strokeStyle = rgba(dropColor(kind, tmid), 0.55);
+            g.beginPath(); g.moveTo(s.x0, s.y0); g.lineTo(s.x0 + s.dx, s.y0 + s.dy); g.stroke();
+          }
+        }
+
+        function drawChevrons(path, kind) {
+          for (let t = 0.07; t < 1; t += 0.23) {
+            const a = posOn(path, t), b = posOn(path, (t + 0.03) % 1);
+            const ang = Math.atan2(b.y - a.y, b.x - a.x);
+            const sz = clamp(W * 0.008, 4, 9);
+            g.save(); g.translate(a.x, a.y); g.rotate(ang);
+            g.fillStyle = rgba(dropColor(kind, t), 0.9);
+            g.beginPath(); g.moveTo(sz, 0); g.lineTo(-sz * 0.7, -sz * 0.55); g.lineTo(-sz * 0.7, sz * 0.55); g.closePath(); g.fill();
+            g.restore();
+          }
+        }
+
+        function drawHeart() {
+          const pulse = Math.exp(-Math.pow(circ.phase, 2) * 45);
+          const pulse2 = Math.exp(-Math.pow((circ.phase + 0.5) % 1, 2) * 45);
+          const chW = W * 0.052, chH = H * 0.048;
+          const chs = [
+            { x: 0.435 * W, y: 0.44 * H, lab: "左房", fill: "#c2503e", s: 1 + 0.04 * pulse2 },
+            { x: 0.605 * W, y: 0.44 * H, lab: "右房", fill: "#3a6f9c", s: 1 + 0.04 * pulse2 },
+            { x: 0.435 * W, y: 0.60 * H, lab: "左室", fill: "#e33a32", s: 1 + 0.07 * pulse },
+            { x: 0.605 * W, y: 0.60 * H, lab: "右室", fill: "#2f5d85", s: 1 + 0.07 * pulse },
+          ];
+          g.textBaseline = "middle"; g.textAlign = "center";
+          for (const c of chs) {
+            const w = chW * c.s, h = chH * c.s;
+            roundRectPath(c.x - w / 2, c.y - h / 2, w, h, w * 0.25);
+            g.fillStyle = c.fill; g.fill();
+            g.strokeStyle = "rgba(255,255,255,0.5)"; g.lineWidth = 1; g.stroke();
+            g.fillStyle = "#fff"; g.font = PF(W, 8).toFixed(1) + "px " + MONO;
+            g.fillText(c.lab, c.x, c.y + 0.5);
+          }
+          // 房室交界（瓣膜示意短线）
+          g.strokeStyle = "rgba(255,255,255,0.4)"; g.lineWidth = 1.5;
+          g.beginPath(); g.moveTo(0.585 * W, 0.52 * H); g.lineTo(0.625 * W, 0.52 * H); g.stroke();
+          g.beginPath(); g.moveTo(0.415 * W, 0.52 * H); g.lineTo(0.455 * W, 0.52 * H); g.stroke();
+        }
+
+        function drawLung() {
+          const lx = 0.135 * W, ly = 0.30 * H;
+          g.fillStyle = "rgba(151,169,184,0.30)";
+          const lobes = [[0, 0, 0.05], [-0.045, 0.02, 0.040], [0.040, 0.025, 0.038], [-0.020, -0.03, 0.030], [0.025, -0.025, 0.032]];
+          for (const [dx, dy, r] of lobes) {
+            g.beginPath(); g.arc(lx + dx * W, ly + dy * H, r * W, 0, Math.PI * 2); g.fill();
+          }
+          g.textBaseline = "alphabetic";
+          g.fillStyle = "#fff"; g.textAlign = "center"; g.font = PF(W, 10).toFixed(1) + "px " + MONO;
+          g.fillText("肺", lx, ly - 0.06 * H);
+          g.fillStyle = "#ffb52b"; g.font = PF(W, 8).toFixed(1) + "px " + MONO;
+          g.fillText("O₂ ↓", lx - 0.055 * W, ly + 0.01 * H);
+          g.fillStyle = "rgba(180,200,215,0.95)";
+          g.fillText("CO₂ ↑", lx + 0.02 * W, ly + 0.03 * H);
+        }
+
+        function drawBody() {
+          const bx = 0.87 * W, by = 0.72 * H;
+          g.fillStyle = "rgba(180,140,110,0.32)";
+          g.beginPath(); g.ellipse(bx, by, 0.055 * W, 0.05 * H, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = "rgba(255,255,255,0.4)"; g.lineWidth = 1; g.stroke();
+          g.textBaseline = "alphabetic";
+          g.fillStyle = "#fff"; g.textAlign = "center"; g.font = PF(W, 9).toFixed(1) + "px " + MONO;
+          g.fillText("全身组织", bx, by - 0.06 * H);
+          g.fillStyle = "#ffb52b"; g.font = PF(W, 8).toFixed(1) + "px " + MONO;
+          g.fillText("O₂ → 细胞", bx + 0.03 * W, by + 0.015 * H);
+          g.fillStyle = "rgba(180,200,215,0.95)";
+          g.fillText("CO₂ ← 细胞", bx - 0.03 * W, by + 0.05 * H);
+        }
+
+        function drawDrops(path, kind) {
+          for (const d of drops[kind]) {
+            const p = posOn(path, d.t);
+            const col = dropColor(kind, d.t);
+            const r = clamp(W * 0.0045, 2, 4.5);
+            g.beginPath(); g.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
+            g.fillStyle = rgba(col, 0.22); g.fill();
+            g.beginPath(); g.arc(p.x, p.y, r, 0, Math.PI * 2);
+            g.fillStyle = rgba(col, 0.95); g.fill();
+          }
+        }
+
+        function drawCardio() {
+          g.clearRect(0, 0, W, H);
+          g.fillStyle = "#07182d"; g.fillRect(0, 0, W, H);
+          g.strokeStyle = "rgba(255,255,255,0.05)"; g.lineWidth = 1;
+          for (let x = 0; x <= W; x += 40) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+          for (let y = 0; y <= H; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+
+          g.textAlign = "left"; g.textBaseline = "alphabetic";
+          g.fillStyle = "rgba(255,255,255,0.6)"; g.font = PF(W, 11).toFixed(1) + "px " + MONO;
+          g.fillText("双循环：右心室→肺→左心房 ｜ 左心室→全身→右心房", W * 0.05, H * 0.055);
+
+          drawTrack(pulP, "pul");
+          drawTrack(sysP, "sys");
+          drawChevrons(pulP, "pul");
+          drawChevrons(sysP, "sys");
+          drawHeart();
+          drawLung();
+          drawBody();
+          drawDrops(pulP, "pul");
+          drawDrops(sysP, "sys");
+
+          g.fillStyle = "rgba(255,255,255,0.75)"; g.textAlign = "center"; g.font = PF(W, 10).toFixed(1) + "px " + MONO;
+          g.fillText("肺循环", 0.42 * W, 0.165 * H);
+          g.fillText("体循环", 0.62 * W, 0.80 * H);
+
+          g.textAlign = "right"; g.fillStyle = "rgba(255,255,255,0.5)"; g.font = PF(W, 9).toFixed(1) + "px " + MONO;
+          g.fillText("红 = 携氧血 · 蓝 = 去氧血 · 心跳把血同时泵进肺与全身", W - 14, H - 12);
+        }
+
+        function tickCardio(dt) {
+          if (!window.__sciPaused) {
+            circ.phase = (circ.phase + dt * circ.hr / 60) % 1;
+            tickDrops(dt);
+          }
+          drawCardio();
+        }
+
+        // ---------- 直觉区：肺泡气体交换（浅色画布） ----------
+        const bc = $("cardio-gas");
+        const tc = bc.getContext("2d", { willReadFrequently: true });
+        let EW = 0, EH = 0, EDPR = 1;
+        const gas = { inPO2: 40, o2dots: [], co2dots: [], o2t: 0, co2t: 0 };
+
+        function fitGas() {
+          EDPR = Math.min(window.devicePixelRatio || 1, 2);
+          const r = bc.getBoundingClientRect();
+          EW = Math.max(1, r.width);
+          EH = Math.max(1, r.height);
+          bc.width = Math.round(EW * EDPR);
+          bc.height = Math.round(EH * EDPR);
+          tc.setTransform(EDPR, 0, 0, EDPR, 0, 0);
+        }
+
+        function spawnGas(dt) {
+          const dPO2 = 104 - gas.inPO2;
+          gas.o2t -= dt;
+          if (gas.o2t <= 0) {
+            gas.o2t = 0.55 * (64 / dPO2);
+            gas.o2dots.push({ p: 0, y: 0.37 + Math.random() * 0.18, life: 1.9 });
+          }
+          gas.co2t -= dt;
+          if (gas.co2t <= 0) {
+            gas.co2t = 0.32;
+            gas.co2dots.push({ p: 0, y: 0.38 + Math.random() * 0.16, life: 0.28 });
+          }
+        }
+
+        function drawGas() {
+          tc.clearRect(0, 0, EW, EH);
+          tc.fillStyle = "#fff"; tc.fillRect(0, 0, EW, EH);
+          const dPO2 = 104 - gas.inPO2;
+          const hf = PF(EW, 13), mf = PF(EW, 10), sf = PF(EW, 11);
+          tc.textAlign = "center"; tc.textBaseline = "alphabetic"; tc.fillStyle = "#111315";
+          tc.font = hf.toFixed(1) + "px " + MONO;
+          tc.fillText("肺泡 ↔ 毛细血管：分压梯度驱动扩散", EW * 0.5, EH * 0.07);
+
+          // 肺泡（左）
+          const ax = EW * 0.19, ay = EH * 0.46, arx = EW * 0.13, ary = EH * 0.20;
+          tc.fillStyle = "#e9f0f8"; tc.strokeStyle = "#7ba7c4"; tc.lineWidth = 1.5;
+          tc.beginPath(); tc.ellipse(ax, ay, arx, ary, 0, 0, Math.PI * 2); tc.fill(); tc.stroke();
+          tc.fillStyle = "#2f5d85"; tc.font = mf.toFixed(1) + "px " + MONO;
+          tc.fillText("肺泡", ax, ay - 0.08 * EH);
+          tc.font = sf.toFixed(1) + "px " + MONO;
+          tc.fillText("PO₂ 104", ax, ay + 0.035 * EH);
+          tc.fillText("PCO₂ 40", ax, ay + 0.13 * EH);
+
+          // 呼吸膜（中）
+          const mx = EW * 0.465;
+          tc.strokeStyle = "#b8a98a"; tc.lineWidth = 3;
+          tc.beginPath(); tc.moveTo(mx, EH * 0.24); tc.lineTo(mx, EH * 0.70); tc.stroke();
+          tc.fillStyle = "#8a7a5f"; tc.font = mf.toFixed(1) + "px " + MONO;
+          tc.fillText("呼吸膜", mx, EH * 0.20);
+
+          // 毛细血管（右）
+          const cx0 = EW * 0.52, cx1 = EW * 0.93, cy = EH * 0.46, chalf = EH * 0.055;
+          tc.fillStyle = "#f7ead8"; tc.strokeStyle = "#c9a688"; tc.lineWidth = 1.5;
+          tc.fillRect(cx0, cy - chalf, cx1 - cx0, chalf * 2);
+          tc.strokeRect(cx0, cy - chalf, cx1 - cx0, chalf * 2);
+          for (let i = 0; i < 5; i++) {
+            const x = cx0 + (cx1 - cx0) * (0.10 + 0.19 * i);
+            const ox = clamp((x - cx0) / (cx1 - cx0), 0, 1);
+            const c = lerpRGB({ r: 176, g: 104, b: 92 }, { r: 209, g: 74, b: 64 }, ox);
+            tc.beginPath(); tc.ellipse(x, cy, EW * 0.012, chalf * 0.55, 0, 0, Math.PI * 2);
+            tc.fillStyle = rgba(c, 0.85); tc.fill();
+          }
+          tc.fillStyle = "#5f4a38"; tc.font = mf.toFixed(1) + "px " + MONO;
+          tc.fillText("毛细血管（血流 →）", (cx0 + cx1) / 2, cy - chalf - 8);
+          tc.font = sf.toFixed(1) + "px " + MONO;
+          tc.textAlign = "left"; tc.fillStyle = "#8a5a52";
+          tc.fillText("来血 PO₂ " + gas.inPO2, cx0, cy + chalf + 16);
+          tc.textAlign = "right"; tc.fillStyle = "#c22a20";
+          tc.fillText("去血 PO₂ ≈ 100", cx1, cy + chalf + 16);
+
+          // 扩散分子
+          const r = clamp(EW * 0.006, 3, 5);
+          for (const d of gas.o2dots) {
+            const x = lerp(EW * 0.40, EW * 0.57, d.p), y = d.y * EH;
+            tc.beginPath(); tc.arc(x, y, r, 0, Math.PI * 2);
+            tc.fillStyle = "rgba(226,58,50,0.9)"; tc.fill();
+          }
+          for (const d of gas.co2dots) {
+            const x = lerp(EW * 0.55, EW * 0.30, d.p), y = d.y * EH;
+            tc.beginPath(); tc.arc(x, y, r * 0.9, 0, Math.PI * 2);
+            tc.fillStyle = "rgba(120,126,84,0.9)"; tc.fill();
+          }
+
+          tc.textAlign = "center"; tc.fillStyle = "#625f59"; tc.font = mf.toFixed(1) + "px " + MONO;
+          tc.fillText("ΔPO₂ = " + dPO2 + " mmHg · ΔPCO₂ = 6 mmHg", EW * 0.5, EH * 0.90);
+        }
+
+        function tickGas(dt) {
+          if (!window.__sciPaused) {
+            spawnGas(dt);
+            for (const arr of [gas.o2dots, gas.co2dots]) {
+              for (const d of arr) d.p += dt / d.life;
+            }
+            gas.o2dots = gas.o2dots.filter((d) => d.p < 1);
+            gas.co2dots = gas.co2dots.filter((d) => d.p < 1);
+          }
+          drawGas();
+        }
+
+        // ---------- 数值同步与事件绑定 ----------
+        function syncCardio() {
+          const hr = circ.hr, sv = circ.sv, co = hr * sv / 1000;
+          $("cardio-hr-output").textContent = hr + " 次/分";
+          $("cardio-sv-output").textContent = sv + " mL";
+          $("cardio-co-output").textContent = co.toFixed(1) + " L/min";
+          const sec = 5 / co * 60;
+          $("cardio-cycle-output").textContent = sec >= 60 ? (sec / 60).toFixed(1) + " 分" : Math.round(sec) + " s";
+          $("cardio-loop-output").textContent = "≈ " + Math.round(LOOP_SEC * 72 / hr) + " s";
+          $("cardio-check-output").textContent = hr + " × " + sv + " = " + co.toFixed(1) + " L/min";
+          $("cardio-hr").value = hr;
+          $("cardio-canvas-status").textContent = "CO = " + hr + " × " + sv + " = " + co.toFixed(1) + " L/min";
+        }
+        function syncGas() {
+          const dPO2 = 104 - gas.inPO2;
+          $("cardio-po2-in-output").textContent = gas.inPO2 + " mmHg";
+          $("cardio-dpo2-output").textContent = dPO2 + " mmHg";
+          $("cardio-po2").value = gas.inPO2;
+        }
+
+        function setHR(hr) { circ.hr = clamp(hr, 40, 200); syncCardio(); }
+        function setPO2(v) { gas.inPO2 = clamp(v, 30, 60); syncGas(); }
+
+        fitCardio(); fitGas(); buildPaths(); initDrops();
+        window.addEventListener("resize", () => { fitCardio(); fitGas(); buildPaths(); });
+
+        $("cardio-hr").addEventListener("input", () => setHR(+$("cardio-hr").value));
+        document.querySelectorAll("[data-cardio-hr]").forEach((b) =>
+          b.addEventListener("click", () => setHR(+b.dataset.cardioHr)));
+        $("cardio-po2").addEventListener("input", () => setPO2(+$("cardio-po2").value));
+
+        setHR(72); setPO2(40);
+        drawCardio(); drawGas();
+
+        window.SciScene = {
+          update(dt) {
+            tickCardio(dt);
+            tickGas(dt);
+          },
+        };
+      })();
+    </script>
+</body>
+</html>

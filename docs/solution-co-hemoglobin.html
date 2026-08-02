@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="pageTitle">化学交互课程</title>
+<style>
+:root{--bg:#0a1628;--panel:#11203a;--card:#172a4a;--ink:#e8eef8;--muted:#9ab0d0;--accent:#a78bfa;--accent2:#06b6d4;--line:#243a5e;--good:#34d399;--warn:#fbbf24;--bad:#f87171;}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.back{color:var(--accent);text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;white-space:nowrap;background:rgba(167,139,250,.06)}
+.back:hover{background:rgba(167,139,250,.14)}
+.title{font-size:15px;font-weight:600}.subtitle{font-size:12px;color:var(--muted)}
+.cards{display:flex;gap:10px;padding:10px 16px;flex-wrap:wrap;background:linear-gradient(180deg,rgba(167,139,250,.06),transparent)}
+.card{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.card.s2::before{background:var(--accent2)}.card.s3::before{background:var(--good)}.card.s4::before{background:var(--bad)}
+.card h4{margin:0 0 4px;font-size:13px}.card .v{font-size:11px;color:var(--muted);line-height:1.5}
+.card .num{position:absolute;right:8px;top:6px;font-size:24px;font-weight:700;color:rgba(255,255,255,.07)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;min-width:0}
+canvas{background:#06101f;border:1px solid var(--line);border-radius:12px;max-width:100%;max-height:100%;display:block}
+.panel{width:340px;flex:none;padding:14px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);font-size:13px;line-height:1.7}
+.panel h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent);color:#1a1a1a;font-size:11px;font-weight:600}
+.body{color:var(--muted);margin:0 0 10px}.body strong{color:var(--ink)}
+.body code{background:rgba(167,139,250,.2);color:#ddd6fe;padding:1px 5px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:12px}
+.points{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-top:8px;border-left:3px solid var(--accent2)}
+.points h4{margin:0 0 6px;font-size:13px;color:var(--ink)}.points ul{margin:0;padding-left:18px;color:var(--muted)}
+.points li{margin-bottom:3px}.points li strong{color:var(--accent)}
+.stepbar{display:flex;gap:6px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto}
+.step{flex:1;min-width:80px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;text-align:center;transition:all .15s}
+.step:hover{background:#1e345a;border-color:var(--accent2)}
+.step.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-weight:600;border-color:transparent}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover{background:#1e345a}button.primary{background:var(--accent);border-color:var(--accent);color:#1a1a1a;font-weight:600}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:var(--accent)}
+.status{font-size:12px;color:var(--muted);margin-left:auto}
+@media(max-width:960px){main{flex-direction:column}.panel{width:auto;border-left:none;border-top:1px solid var(--line);max-height:200px}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<div class="cards" id="cards"></div>
+<main>
+  <div class="stage"><canvas id="cv"></canvas></div>
+  <aside class="panel"><h2 id="panelTitle"></h2><p class="body" id="panelBody"></p><div class="points" id="panelPoints"></div></aside>
+</main>
+<div class="stepbar" id="stepbar"></div>
+<div class="controls">
+  <button id="playBtn" class="primary">▶ 播放</button><button id="resetBtn">↺ 重置</button>
+  <button id="stepBackBtn">◀ 上一步</button><button id="stepFwdBtn">下一步 ▶</button>
+  <label>速度 <input id="speedInp" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+  <span id="paramArea" style="display:none;margin-left:4px"><label id="paramLabel" style="font-size:12px;color:var(--muted)"></label> <input id="paramSlider" type="range" min="0" max="1" step="0.01" value="0" style="width:120px;vertical-align:middle"> <span id="paramVal" style="font-size:12px;color:var(--ink);font-weight:600;min-width:30px;display:inline-block"></span></span>
+  <span id="status" class="status">点击播放或选择步骤</span>
+</div>
+
+<script>
+// ===================================================================
+// 0) Data (injected by Python generator)
+// ===================================================================
+const _DATA = {"meta": {"title": "一氧化碳毒性：与血红蛋白的竞争结合", "subtitle": "CO 如何竞争性结合 Hb → 组织缺氧 · 微观机制", "language": "zh-CN", "accent": "red"}, "cards": [{"num": 1, "title": "核心机制", "body": "CO 与 Hb 亲和力<br>是 O₂ 的 200-250 倍"}, {"num": 2, "title": "后果", "body": "Hb 携氧能力↓<br>组织缺氧"}, {"num": 3, "title": "特征", "body": "CO 结合不可逆<br>无痛悄无声息"}, {"num": 4, "title": "治疗", "body": "高压纯氧<br>加速 CO 解离"}], "steps": [{"tag": "基础", "name": "血红蛋白与氧", "body": "<p><strong>血红蛋白（Hemoglobin, Hb）</strong>是红细胞中的携氧蛋白，由4个亚基（2α+2β）组成，每个亚基含一个<strong>血红素辅基</strong>，可结合一个 O₂。正常成人每100mL血液含约15g Hb，可携带约20mL O₂。</p><p>Hb + O₂ ⇌ HbO₂（氧合血红蛋白）—— 这是生命活动的基础。</p>", "points": {"title": "血红蛋白要点", "items": ["4个亚基：α₁, α₂, β₁, β₂（四个结合位点）", "每个亚基含 Fe²⁺ 血红素", "每个 Fe²⁺ 可结合一个 O₂ 分子", "正常 Hb 氧饱和度 95-98%"]}, "scene": "concept", "sceneArgs": {"title": "血红蛋白结构", "items": [{"label": "4 亚基", "desc": "2α+2β\n四聚体结构", "color": "#dc2626"}, {"label": "Fe²⁺ 血红素", "desc": "每个亚基含一个\n结合位点", "color": "#3b82f6"}, {"label": "O₂ 运输", "desc": "肺部结合 O₂\n组织释放 O₂", "color": "#34d399"}, {"label": "氧饱和度", "desc": "正常 95-98%\n生命之源", "color": "#fbbf24"}]}}, {"tag": "动画", "name": "正常氧合过程", "body": "<p>正常生理条件下，O₂ 在肺部与 Hb 结合，随血液循环输送到组织，在组织释放 O₂。拖动滑块观察 O₂ 逐步结合 Hb 的四个位点。</p><p>结合具有<strong>协同效应</strong>：一个位点结合 O₂ 后，其他位点对 O₂ 亲和力升高。</p>", "points": {"title": "正常氧合要点", "items": ["肺部高 O₂ 浓度 → Hb 结合 O₂", "组织低 O₂ 浓度 → Hb 释放 O₂", "4个位点可结合最多 4 个 O₂", "协同效应使结合/释放高效"]}, "scene": "hemoglobin", "sceneArgs": {"mode": "normal", "title": "正常氧合 — O₂ 结合血红蛋白", "sites": 4, "param": {"name": "氧合进度", "min": 0, "max": 1, "step": 0.01, "value": 0}}}, {"tag": "概念", "name": "CO 的威胁", "body": "<p><strong>一氧化碳（CO）</strong>无色无味无刺激性，是含碳物质不完全燃烧的产物。常见来源：燃气热水器、汽车尾气、煤炉取暖。</p><p>CO 与 Hb 的亲和力是 O₂ 的 <strong>200-250 倍</strong>！这意味着即使空气中 CO 浓度很低，也能与 O₂ 竞争 Hb 的结合位点。</p><p>一旦 CO 结合 Hb，形成<strong>碳氧血红蛋白（HbCO）</strong>，极难解离。</p>", "points": {"title": "CO 特性", "items": ["无色无味无刺激性气体", "来源：不完全燃烧", "Hb 亲和力 = O₂ 的 200-250 倍", "结合后极难解离"]}, "scene": "concept", "sceneArgs": {"title": "CO vs O₂", "items": [{"label": "CO", "desc": "无色无味\n亲和力极高", "color": "#ef4444"}, {"label": "O₂", "desc": "生命必需\n正常结合 Hb", "color": "#3b82f6"}, {"label": "亲和力", "desc": "CO 亲和力\n是 O₂ 的 200×", "color": "#fbbf24"}, {"label": "后果", "desc": "CO 竞争占据\nO₂ 无法结合", "color": "#f87171"}]}}, {"tag": "动画", "name": "CO 竞争性结合", "body": "<p>拖动滑块观察 CO 如何一步步竞争性地占据 Hb 的四个结合位点。随着 CO 浓度升高：</p><p>① 少量 CO 占据部分位点 → ② 更多位点被占据 → ③ 全部位点被 CO 占据 → ④ O₂ 完全无法结合</p><p>注意：即使只有 50% 的位点被 CO 占据（两个位点），Hb 的携氧能力也下降一半以上！</p>", "points": {"title": "竞争机制", "items": ["CO 与 O₂ 竞争同一结合位点", "CO 亲和力远高于 O₂", "CO 占据越多，O₂ 结合越少", "半数位点被占 → 携氧严重不足"]}, "scene": "hemoglobin", "sceneArgs": {"mode": "competition", "title": "CO 竞争结合 — 逐步占据结合位点", "sites": 4, "param": {"name": "CO 占据进度", "min": 0, "max": 1, "step": 0.01, "value": 0}}}, {"tag": "概念", "name": "组织缺氧后果", "body": "<p>Hb 被 CO 占据后，无法运输足够的 O₂ 到组织，导致<strong>组织缺氧（Hypoxia）</strong>。耗氧量最大的器官最先受损：</p><p><strong>大脑</strong>：对缺氧最敏感，缺氧 4-6 分钟可造成不可逆损伤。</p><p><strong>心脏</strong>：心肌缺氧导致收缩力下降、心律失常。</p>", "points": {"title": "缺氧的影响", "items": ["大脑：头痛、意识模糊、昏迷", "心脏：胸痛、心律失常", "肌肉：乏力、运动失调", "皮肤：樱桃红色（HbCO 特征色）"]}, "scene": "concept", "sceneArgs": {"title": "组织缺氧", "items": [{"label": "大脑", "desc": "最敏感\n4-6 分钟不可逆", "color": "#f87171"}, {"label": "心脏", "desc": "心肌缺氧\n收缩力下降", "color": "#ef4444"}, {"label": "肌肉", "desc": "乏力\n运动失调", "color": "#fbbf24"}, {"label": "皮肤", "desc": "樱桃红色\nHbCO 特征", "color": "#dc2626"}]}}, {"tag": "动画", "name": "高压氧治疗", "body": "<p>CO 中毒的<strong>标准治疗</strong>是吸入高浓度纯氧（高压氧舱效果更佳）：</p><p>• 常压空气（21% O₂）：CO 半衰期约 4-5 小时</p><p>• 纯氧（100% O₂）：CO 半衰期缩短至 1-1.5 小时</p><p>• 高压氧（2-3 atm）：CO 半衰期仅 20-30 分钟！</p><p>拖动滑块观察 O₂ 如何逐步置换被 CO 占据的位点。</p>", "points": {"title": "治疗原理", "items": ["高浓度 O₂ 加速 CO 解离", "常压空气：半衰期 4-5 小时", "纯氧：半衰期 1-1.5 小时", "高压氧：半衰期仅 20-30 分钟"]}, "scene": "hemoglobin", "sceneArgs": {"mode": "treatment", "title": "高压氧治疗 — O₂ 置换 CO", "sites": 4, "param": {"name": "治疗进度", "min": 0, "max": 1, "step": 0.01, "value": 0}}}, {"tag": "总结", "name": "要点回顾", "body": "<p><strong>一氧化碳中毒</strong>的核心机制：</p><p>1. CO 与 Hb 亲和力是 O₂ 的 200-250 倍</p><p>2. CO 竞争性占据 Hb 的 O₂ 结合位点</p><p>3. 形成 HbCO → 有效携氧能力下降 → 组织缺氧</p><p>4. 治疗：高浓度 O₂/高压氧加速 CO 解离</p><p>5. 预防：保持通风、安装 CO 报警器</p>", "points": {"title": "预防措施", "items": ["燃气热水器安装在室外通风处", "不在密闭空间使用煤炉/炭火", "安装 CO 报警器", "定期检查排气管道"]}, "scene": "summary_grid", "sceneArgs": {"title": "CO 中毒 — 核心知识点", "items": [{"icon": "⚡", "title": "亲和力", "desc": "CO 是 O₂ 的\n200-250 倍", "color": "#ef4444"}, {"icon": "🔬", "title": "机制", "desc": "竞争性结合 Hb\n占据 4 个位点", "color": "#f87171"}, {"icon": "🧠", "title": "后果", "desc": "组织缺氧\n大脑心脏受损", "color": "#fbbf24"}, {"icon": "💊", "title": "治疗", "desc": "高压纯氧\n加速 CO 解离", "color": "#34d399"}, {"icon": "🛡️", "title": "预防", "desc": "通风 + 报警器\n定期检查", "color": "#06b6d4"}]}}]};
+const ACCENT = _DATA.meta?.accent || 'violet';
+const ACCENT_MAP = {
+  amber:'#f59e0b',violet:'#a78bfa',emerald:'#34d399',cyan:'#06b6d4',
+  indigo:'#6366f1',sky:'#0ea5e9',red:'#ef4444',green:'#22c55e',
+  orange:'#f97316',slate:'#64748b',pink:'#ec4899'
+};
+document.documentElement.style.setProperty('--accent', ACCENT_MAP[ACCENT] || '#a78bfa');
+document.documentElement.style.setProperty('--accent2', ACCENT_MAP[ACCENT]==='#06b6d4'?'#a78bfa':'#06b6d4');
+document.getElementById('pageTitle').textContent=_DATA.meta.title+' · 交互课程';
+document.getElementById('topbar').innerHTML='<span class="title">'+_DATA.meta.title+'</span><span class="subtitle">'+_DATA.meta.subtitle+'</span>';
+
+// Cards
+const cardsEl=document.getElementById('cards');
+if(_DATA.cards&&_DATA.cards.length){
+  _DATA.cards.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='card'+(i>0?' s'+(i+1):'');
+    d.innerHTML='<div class="num">'+c.num+'</div><h4>'+c.title+'</h4><div class="v">'+c.body+'</div>';
+    cardsEl.appendChild(d);
+  });
+}else cardsEl.style.display='none';
+
+// Canvas
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),statusEl=document.getElementById('status');
+const STEPS=_DATA.steps||[];
+const STEP_DURATION=3.5;
+let stepIdx=0,playing=false,lastT=0,speed=1,stepTime=0,t=0;
+
+function fit(){
+  const r=cv.parentElement.getBoundingClientRect();
+  cv.width=Math.max(460,Math.min(1000,r.width-12));
+  cv.height=Math.max(380,Math.min(600,r.height-12));
+}
+window.addEventListener('resize',()=>{fit();draw();});fit();
+
+// ===================================================================
+// 1) Drawing helpers
+// ===================================================================
+function drawText(t,x,y,c,fs,a,b){
+  ctx.fillStyle=c||'#9ab0d0';ctx.font=(fs||12)+'px sans-serif';
+  ctx.textAlign=a||'center';ctx.textBaseline=b||'middle';ctx.fillText(t,x,y);
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function glow(color,blur,fn){
+  ctx.save();ctx.shadowColor=color;ctx.shadowBlur=blur||10;fn();ctx.restore();
+}
+
+// ===================================================================
+// 2) Built-in scene draw functions
+// ===================================================================
+const SCENES = {
+  // --- Concept (4-panel card display) ---
+  concept(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    drawText(a.title||'核心概念',W/2,35,'#fff',16);
+    const items=a.items||[];const n=items.length;
+    const cw=Math.min(180,(W-80)/n-10);
+    items.forEach((m,i)=>{
+      const x=40+i*(cw+10);const y=75;
+      ctx.fillStyle=(m.color||'#a78bfa')+'22';ctx.strokeStyle=m.color||'#a78bfa';ctx.lineWidth=2;
+      roundRect(x,y,cw,Math.min(H-140,220),12);ctx.fill();ctx.stroke();
+      drawText(m.label,x+cw/2,y+40,m.color||'#fff',20);
+      const lines=(m.desc||'').split('\n');
+      lines.forEach((ln,j)=>drawText(ln,x+cw/2,y+80+j*20,'#e8eef8',13));
+    });
+  },
+
+  // --- Valences grid ---
+  valences(t,args){
+    const W=cv.width,H=cv.height;const els=(args&&args.elements)||[];
+    drawText('常见元素化合价',W/2,30,'#fff',16);
+    const cols=Math.min(4,Math.ceil(els.length/2));
+    const cw=Math.min(160,(W-60)/cols-6);const ch=Math.min(80,(H-140)/Math.ceil(els.length/cols)-4);
+    els.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=30+col*(cw+6),y=60+row*(ch+4);
+      ctx.fillStyle=m.color||'#a78bfa';ctx.beginPath();ctx.arc(x+30,y+ch/2,22,0,7);ctx.fill();
+      drawText(m.el,x+30,y+ch/2,'#fff',16);
+      drawText(m.v,x+60,y+ch/2-8,m.color||'#fbbf24',14,'left');
+      drawText(m.example||'',x+60,y+ch/2+12,'#9ab0d0',11,'left');
+      ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+      ctx.strokeRect(x,y,cw,ch);
+    });
+  },
+
+  // --- Steps diagram (flow chart) ---
+  steps_diagram(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    const steps=a.steps||[];const active=a.active;
+    drawText('配平五步法',W/2,30,'#fff',16);
+    const n=steps.length;const gap=Math.min(140,(W-40)/n-8);
+    const sx=(W-(n*gap+20))/2;
+    steps.forEach((s,i)=>{
+      const x=sx+i*(gap+20)+10,y=H/2-40;
+      const isActive=active<0||i===active;
+      ctx.fillStyle=isActive?'rgba(167,139,250,0.25)':'rgba(100,116,139,0.12)';
+      ctx.strokeStyle=isActive?'#a78bfa':'#475569';
+      ctx.lineWidth=isActive?2.5:1.5;
+      roundRect(x,y,gap-20,80,40);ctx.fill();ctx.stroke();
+      drawText((i+1)+'',x+(gap-20)/2,y+20,isActive?'#a78bfa':'#64748b',isActive?18:14);
+      drawText(s,x+(gap-20)/2,y+55,isActive?'#fff':'#9ab0d0',isActive?15:12);
+      // Arrow
+      if(i<n-1){
+        ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(x+gap-20,y+40);ctx.lineTo(x+gap+5,y+40);ctx.stroke();
+      }
+    });
+  },
+
+  // --- Redox bridge (双线桥) ---
+  redox_bridge(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    ctx.fillStyle='rgba(167,139,250,0.08)';ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;
+    roundRect(30,30,W-60,70,10);ctx.fill();ctx.stroke();
+    drawText(a.equation||'',W/2,65,'#fff',20);
+    const brs=a.bridges||[];
+    brs.forEach((b,i)=>{
+      const side=b.side||'top';
+      const yBase=side==='top'?110:H/2+60;
+      const color=b.color||(side==='top'?'#34d399':'#ef4444');
+      const lx=W*0.25, rx=W*0.75;
+      // Arrow arc
+      ctx.strokeStyle=color;ctx.lineWidth=2.5;
+      ctx.beginPath();
+      const midY=yBase+(side==='top'?30:-30);
+      ctx.moveTo(lx,yBase);ctx.quadraticCurveTo((lx+rx)/2,midY,rx,yBase);
+      ctx.stroke();
+      // Label
+      const labelX=(lx+rx)/2,labelY=(yBase+midY)/2;
+      ctx.fillStyle=color;ctx.font='bold 13px sans-serif';
+      ctx.textAlign='center';ctx.fillText(b.label||'',labelX,labelY-8);
+      ctx.fillStyle='#e8eef8';ctx.font='11px sans-serif';
+      ctx.fillText(b.desc||'',labelX,labelY+10);
+      // Start/end labels
+      drawText(b.from+(b.fromV?'('+b.fromV+')':''),lx-60,yBase,'#fff',12);
+      drawText(b.to+(b.toV?'('+b.toV+')':''),rx+60,yBase,'#fff',12);
+    });
+    drawText('双线桥：同元素间连线，标注电子转移',W/2,H-25,'#9ab0d0',12);
+  },
+
+  // --- Equation display ---
+  equation(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};const eqs=a.equations||[];
+    drawText('化学方程式',W/2,35,'#fff',16);
+    eqs.forEach((eq,i)=>{
+      const y=80+i*70;
+      ctx.fillStyle='rgba(255,255,255,0.04)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+      roundRect(60,y-20,W-120,50,8);ctx.fill();ctx.stroke();
+      drawText(eq,W/2,y+5,'#e8eef8',eq.startsWith('  ↳')?15:17);
+    });
+  },
+
+  // --- Summary grid ---
+  summary_grid(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    const items=a.items||[];const cols=Math.min(3,items.length);
+    const cw=Math.min(200,(W-60)/cols-8);
+    items.forEach((m,i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=30+col*(cw+8),y=45+row*Math.min(155,(H-80)/Math.ceil(items.length/cols)-4);
+      ctx.fillStyle=(m.color||'#a78bfa')+'22';ctx.strokeStyle=m.color||'#a78bfa';ctx.lineWidth=2;
+      roundRect(x,y,cw,Math.min(H-90,140),12);ctx.fill();ctx.stroke();
+      drawText(m.icon||'●',x+cw/2,y+35,m.color||'#fff',30);
+      drawText(m.title||'',x+cw/2,y+75,'#fff',16);
+      ctx.fillStyle='#9ab0d0';ctx.font='12px sans-serif';ctx.textAlign='center';
+      const desc=(m.desc||'').split('\n');
+      desc.forEach((ln,j)=>ctx.fillText(ln,x+cw/2,y+98+j*16));
+    });
+  },
+
+  // --- Activity series ---
+  activity_series(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};const series=a.series||[];
+    drawText('金属活动性顺序',W/2,35,'#fff',16);
+    const n=series.length;const gap=Math.min(70,(W-40)/n);
+    const sx=(W-(n*gap+20))/2;
+    series.forEach((m,i)=>{
+      const x=sx+i*gap+10,y=H/2-40;
+      const active=m.active!==false;
+      ctx.fillStyle=active?'rgba(52,211,153,0.2)':'rgba(100,116,139,0.12)';
+      ctx.strokeStyle=active?'#34d399':'#475569';ctx.lineWidth=active?2:1.5;
+      roundRect(x,y,gap-10,80,8);ctx.fill();ctx.stroke();
+      drawText(m.el,x+(gap-10)/2,y+35,active?'#34d399':'#64748b',active?15:12);
+      // Arrow
+      if(i<n-1){
+        ctx.fillStyle='#475569';
+        ctx.beginPath();ctx.moveTo(x+gap-10,y+40);ctx.lineTo(x+gap+3,y+36);
+        ctx.lineTo(x+gap+3,y+44);ctx.closePath();ctx.fill();
+      }
+    });
+    drawText('K Ca Na Mg Al Zn Fe Sn Pb (H) Cu Hg Ag Pt Au',W/2,H-60,'#9ab0d0',11);
+    drawText('← 活动性增强',10,H/2+5,'#34d399',11,'left');
+    drawText('活动性减弱 →',W-10,H/2+5,'#f87171',11,'right');
+  },
+
+  // --- Beaker reaction (animated) ---
+  beaker_reaction(t,args){
+    const W=cv.width,H=cv.height;const a=args||{};
+    drawText((a.metal||'')+'与'+(a.acid||a.solution||'')+'反应',W/2,30,'#fff',16);
+    const bx=W/2,by=H/2+40,bw=240,bh=180;
+    // Beaker
+    ctx.strokeStyle='rgba(205,215,234,0.4)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(bx-bw/2-8,by-bh);ctx.lineTo(bx-bw/2-8,by+8);
+    ctx.lineTo(bx+bw/2+8,by+8);ctx.lineTo(bx+bw/2+8,by-bh);ctx.stroke();
+    const waterY=by-bh+50;
+    const intensity=a.intensity||'medium';
+    // Liquid
+    ctx.fillStyle='rgba(6,182,212,0.15)';
+    ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    // Metal piece
+    const mX=bx-20+Math.sin(t*2)*30,mY=waterY+20+Math.sin(t*3)*3;
+    ctx.fillStyle='#94a3b8';ctx.shadowColor='#94a3b8';ctx.shadowBlur=6;
+    roundRect(mX-15,mY-6,30,12,4);ctx.fill();ctx.shadowBlur=0;
+    drawText(a.metal||'',mX,mY,'#fff',12);
+    // Bubbles (gas)
+    const bubCount=intensity==='violent'?12:intensity==='slow'?3:6;
+    for(let i=0;i<bubCount;i++){
+      const ph=(t*1.5+i*0.25)%2.5;
+      if(ph<2){
+        const bx2=mX+(i%5-2)*6+Math.sin(ph*6+i)*3;
+        const by2=mY-ph*50;
+        const r=1.5+ph*2;
+        ctx.fillStyle='rgba(125,211,252,'+Math.min(0.6,1-ph/2.5)+')';
+        ctx.beginPath();ctx.arc(bx2,by2,Math.min(r,8),0,7);ctx.fill();
+      }
+    }
+    // Gas label
+    if(a.gas)drawText(a.gas+'↑',mX+20,mY-10,'#34d399',11);
+    // Solution color change
+    if(a.product&&a.product.includes('Fe')){
+      ctx.fillStyle='rgba(52,211,153,0.08)';
+      ctx.fillRect(bx-bw/2-8,waterY,bw+16,by-waterY+8);
+    }
+    // Precipitate
+    if(a.precipitate){
+      ctx.fillStyle='#fb923c';ctx.shadowColor='#fb923c';ctx.shadowBlur=4;
+      ctx.beginPath();ctx.arc(bx+bw/4,by-10+Math.sin(t*2)*2,8,0,7);ctx.fill();
+      ctx.shadowBlur=0;
+      drawText(a.precipitate,bx+bw/4,by-20,'#fb923c',11);
+    }
+    drawText((a.acid||a.solution||'')+'溶液',bx,by+bh+10,'#9ab0d0',11);
+  },
+
+  // --- hemoglobin: CO-O2 competitive binding ---
+  hemoglobin(t,args){
+    const W=cv.width,H=cv.height;
+    const mode=args.mode||'normal';
+    const progress=args._paramVal!==undefined?args._paramVal:0;
+    const sites=args.sites||4;
+    drawText(args.title||'血红蛋白与气体结合',W/2,25,'#fff',15);
+
+    // Binding site positions (relative to center of canvas)
+    const cx=W/2,cy=H/2-10;
+    const sitePositions=[
+      {x:cx-50,y:cy-40,label:'α₁'},
+      {x:cx+50,y:cy-40,label:'α₂'},
+      {x:cx-50,y:cy+40,label:'β₁'},
+      {x:cx+50,y:cy+40,label:'β₂'},
+    ];
+
+    // Determine how many sites are bound by O2 and CO
+    let o2Bound=0,coBound=0;
+    if(mode==='normal'){
+      o2Bound=Math.round(progress*sites);
+    }else if(mode==='competition'){
+      const totalBound=Math.round(progress*sites);
+      o2Bound=Math.max(0,sites-totalBound);
+      coBound=totalBound;
+    }else if(mode==='blocked'){
+      coBound=Math.round(progress*sites);
+    }else if(mode==='treatment'){
+      const displaced=Math.round(progress*sites);
+      coBound=Math.max(0,sites-displaced);
+      o2Bound=displaced;
+    }
+
+    // Draw hemoglobin molecule (large oval)
+    ctx.save();
+    ctx.shadowColor='rgba(220,38,38,0.3)';ctx.shadowBlur=30;
+    ctx.fillStyle='rgba(185,28,28,0.35)';ctx.strokeStyle='rgba(220,38,38,0.5)';ctx.lineWidth=2.5;
+    roundRect(cx-90,cy-70,180,140,50);ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;
+    drawText('血红蛋白',cx,cy+75,'rgba(248,113,113,0.6)',12);
+
+    // Draw subunit labels
+    ctx.fillStyle='rgba(252,165,165,0.5)';ctx.font='11px sans-serif';ctx.textAlign='center';
+
+    // Draw binding sites and molecules
+    for(let i=0;i<sitePositions.length;i++){
+      const p=sitePositions[i];
+      const isO2=i<o2Bound;
+      const isCO=i>=sites-coBound&&i>=o2Bound;
+
+      // Binding pocket
+      ctx.fillStyle='rgba(0,0,0,0.25)';ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(p.x,p.y,18,0,7);ctx.fill();ctx.stroke();
+
+      // Molecule binding
+      if(isO2){
+        ctx.shadowColor='#3b82f6';ctx.shadowBlur=16;
+        ctx.fillStyle='#3b82f6';ctx.beginPath();ctx.arc(p.x,p.y,15,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('O₂',p.x,p.y+4);
+      }else if(isCO){
+        ctx.shadowColor='#ef4444';ctx.shadowBlur=16;
+        ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(p.x,p.y,15,0,7);ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText('CO',p.x,p.y+4);
+      }else{
+        // Empty pocket: show floating O2 nearby
+        const angle=t*0.8+i*1.57;
+        const dist=35+Math.sin(t*0.5+i)*8;
+        const fx=p.x+Math.cos(angle)*dist;
+        const fy=p.y+Math.sin(angle)*dist;
+        ctx.fillStyle='rgba(59,130,246,0.5)';ctx.shadowColor='#3b82f6';ctx.shadowBlur=8;
+        ctx.beginPath();ctx.arc(fx,fy,8,0,7);ctx.fill();ctx.shadowBlur=0;
+        ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='7px sans-serif';ctx.textAlign='center';
+        if(mode!=='blocked')ctx.fillText('O₂',fx,fy+3);
+        // Also show floating CO for competition/treatment
+        if(mode==='competition'||mode==='treatment'){
+          const a2=t*1.2+i*2.1;
+          const d2=40+Math.cos(t*0.7+i)*10;
+          const cx2=p.x+Math.cos(a2)*d2;
+          const cy2=p.y+Math.sin(a2)*d2;
+          ctx.fillStyle='rgba(239,68,68,0.5)';ctx.shadowColor='#ef4444';ctx.shadowBlur=8;
+          ctx.beginPath();ctx.arc(cx2,cy2,8,0,7);ctx.fill();ctx.shadowBlur=0;
+          ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='7px sans-serif';ctx.textAlign='center';
+          ctx.fillText('CO',cx2,cy2+3);
+        }
+      }
+      // Site label
+      ctx.fillStyle='rgba(252,165,165,0.5)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.label,p.x,p.y-26);
+    }
+    ctx.restore();
+
+    // Legend
+    const legY=H-55;
+    const legItems=[
+      {color:'#3b82f6',label:'O₂ 氧合'},
+      {color:'#ef4444',label:'CO 结合'},
+      {color:'rgba(59,130,246,0.5)',label:'游离 O₂'},
+    ];
+    let lx=60;
+    legItems.forEach(function(li){
+      ctx.fillStyle=li.color;ctx.beginPath();ctx.arc(lx,legY,7,0,7);ctx.fill();
+      ctx.fillStyle='#9ab0d0';ctx.font='11px sans-serif';ctx.textAlign='left';
+      ctx.fillText(li.label,lx+12,legY+4);
+      lx+=120;
+    });
+
+    // Readouts
+    const roY=H-25;
+    const ro=[
+      'O₂ 结合: '+o2Bound+'/'+sites,
+      'CO 结合: '+coBound+'/'+sites,
+      'Hb 氧饱和度: '+Math.round((o2Bound/sites)*100)+'%',
+    ];
+    ctx.fillStyle='#9ab0d0';ctx.font='11px sans-serif';
+    ro.forEach(function(r,i){ctx.fillText(r,60+i*200,roY);});
+
+    // Mode indicator
+    const modeLabels={normal:'正常氧合',competition:'CO 竞争结合',blocked:'CO 占据',treatment:'高压氧治疗'};
+    drawText('模式: '+ (modeLabels[mode]||mode),W/2,H-10,'#64748b',10);
+  },
+};
+
+// ===================================================================
+// 3) Sync & render
+// ===================================================================
+function syncStep(){
+  const s=STEPS[stepIdx];
+  if(!s){statusEl.textContent='完成';return;}
+  document.getElementById('panelTitle').innerHTML='<span class="badge">'+s.tag+'</span> '+s.name;
+  document.getElementById('panelBody').innerHTML=s.body||'';
+  const ptsEl=document.getElementById('panelPoints');
+  if(s.points){
+    ptsEl.innerHTML='<h4>'+(s.points.title||'')+'</h4><ul>'+((s.points.items||[]).map(function(x){return '<li>'+x+'</li>'}).join(''))+'</ul>';
+  }else ptsEl.innerHTML='';
+  document.querySelectorAll('.step').forEach(function(el,i){el.classList.toggle('active',i===stepIdx);});
+  statusEl.textContent='步骤 '+(stepIdx+1)+' / '+STEPS.length+(s.name?' · '+s.name:'');
+  stepTime=0;
+  // Param slider
+  const pa=document.getElementById('paramArea'),ps=document.getElementById('paramSlider'),
+        pl=document.getElementById('paramLabel'),pv=document.getElementById('paramVal');
+  const param=(s.sceneArgs&&s.sceneArgs.param);
+  if(param){
+    pa.style.display='inline';
+    pl.textContent=(param.label||param.name||'参数')+': ';
+    ps.min=param.min||0;ps.max=param.max||1;ps.step=param.step||0.01;ps.value=param.value||0;
+    pv.textContent=param.value||'0';
+  }else{pa.style.display='none';}
+  // Reset param value
+  if(!param&&pa.style.display!=='none')pa.style.display='none';
+}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const s=STEPS[stepIdx];
+  if(!s)return;
+  const sceneFn=SCENES[s.scene];
+  const args=s.sceneArgs||{};
+  const param=(args.param);
+  if(param){
+    const sv=document.getElementById('paramSlider').value;
+    args._paramVal=parseFloat(sv);
+    document.getElementById('paramVal').textContent=sv;
+  }
+  if(sceneFn)sceneFn(t,args);
+  else {
+    drawText('场景: '+s.scene,cv.width/2,cv.height/2-10,'#9ab0d0',16);
+    drawText(s.name||'',cv.width/2,cv.height/2+20,'#fff',14);
+  }
+}
+
+function update(dt){
+  t+=dt*speed;if(!playing)return;
+  stepTime+=dt*speed;
+  if(stepTime>=STEP_DURATION){
+    if(stepIdx<STEPS.length-1){stepIdx++;syncStep();}
+    else{playing=false;playBtn.textContent='▶ 播放';statusEl.textContent='课程完成！';}
+  }
+}
+
+function loop(ts){
+  if(!lastT)lastT=ts;const dt=(ts-lastT)/1000;lastT=ts;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+
+// ===================================================================
+// 4) Controls
+// ===================================================================
+const playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn');
+const stepBackBtn=document.getElementById('stepBackBtn'),stepFwdBtn=document.getElementById('stepFwdBtn');
+const speedInp=document.getElementById('speedInp');
+playBtn.onclick=function(){playing=!playing;playBtn.textContent=playing?'⏸ 暂停':'▶ 播放';};
+resetBtn.onclick=function(){stepIdx=0;playing=false;syncStep();draw();playBtn.textContent='▶ 播放';};
+stepFwdBtn.onclick=function(){if(stepIdx<STEPS.length-1){stepIdx++;syncStep();draw();}};
+stepBackBtn.onclick=function(){if(stepIdx>0){stepIdx--;syncStep();draw();}};
+speedInp.oninput=function(){speed=parseFloat(speedInp.value);};
+document.getElementById('paramSlider').oninput=function(){draw();};
+
+// Step bar
+function buildStepbar(){
+  const bar=document.getElementById('stepbar');bar.innerHTML='';
+  STEPS.forEach(function(s,i){
+    const el=document.createElement('div');
+    el.className='step'+(i===stepIdx?' active':'');
+    el.innerHTML='<div>'+s.tag+'</div><div>'+(s.name&&s.name.length>9?s.name.slice(0,8)+'…':s.name||'')+'</div>';
+    el.onclick=function(){stepIdx=i;syncStep();draw();};
+    bar.appendChild(el);
+  });
+}
+buildStepbar();syncStep();requestAnimationFrame(loop);
+</script>
+</body>
+</html>

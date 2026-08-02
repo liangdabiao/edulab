@@ -1,0 +1,1570 @@
+<!doctype html>
+<!--
+  edu-sci-viz · DNA 复制（半保留复制）互动科普页
+  ============================================================
+  基于 templates/board-sci.html 模板，保留设计系统 + 通用运行时 + importmap。
+  2D Canvas 场景，零网络依赖。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DNA 复制：看复制叉如何推进，前导链连续、后随链拆成冈崎片段；Meselson-Stahl 实验为何证明半保留复制。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>DNA 复制 | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(430px, 0.9fr) minmax(660px, 1.4fr);
+        gap: clamp(44px, 5vw, 88px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        font-size: clamp(58px, 4.8vw, 88px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+
+    <!-- ========== 场景专属样式：DNA 复制（新主题请整体替换本块） ========== -->
+    <style>
+      .dna-scene .hero-lead { max-width: 470px; }
+      .dna-scene .hero h1 { white-space: normal; }
+      .dna-scene .lab-canvas-wrap { height: 650px; }
+      .dna-scene #dna-canvas { width: 100%; height: 650px; }
+      .dna-scene .dna-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.8; }
+      .dna-scene .dna-key {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        display: flex;
+        gap: 14px;
+        padding: 6px 10px;
+        color: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(7, 24, 45, 0.72);
+        font-size: 10px;
+      }
+      .dna-scene .dna-key i {
+        display: inline-block;
+        width: 16px;
+        height: 2px;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+      .dna-scene .dna-hint { margin: 6px 0 0; color: rgba(255, 255, 255, 0.45); font-size: 10px; }
+      .dna-scene .lab-actions button { grid-column: 1 / -1; }
+      .dna-scene .dna-readout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 18px;
+        margin: 18px 0 4px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+      }
+      .dna-scene .dna-readout span { color: rgba(255, 255, 255, 0.62); }
+      .dna-scene .dna-readout output { display: block; margin-top: 2px; color: #fff; font-family: var(--mono); }
+      .dna-scene .dna-wide { grid-column: 1 / -1; }
+      .dna-scene .dna-red output { color: #ff9d9d; }
+      .dna-scene .dna-blue output { color: #8fc3ff; }
+      .dna-scene .intuition-side { display: flex; flex-direction: column; gap: 14px; }
+      .dna-scene .canvas-panel { height: 500px; min-height: 0; }
+      .dna-scene #ms-canvas { width: 100%; height: 100%; }
+      .dna-scene .ms-controls { padding: 14px 16px 12px; border: 1px solid var(--rule); background: var(--paper-2); }
+      .dna-scene .ms-controls .control-row { margin: 0 0 6px; }
+      .dna-scene .ms-controls .control-row span { color: var(--muted); }
+      .dna-scene .ms-controls .control-row output { color: var(--ink); }
+      .dna-scene .ms-controls input[type="range"] { accent-color: var(--red-bright); }
+      .dna-scene .ms-readout {
+        margin: 8px 0 0;
+        padding: 12px 14px;
+        color: #363431;
+        border-left: 3px solid var(--red);
+        background: var(--paper);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      @media (max-width: 1240px) {
+        .dna-scene .lab-canvas-wrap,
+        .dna-scene #dna-canvas { height: 620px; }
+      }
+      @media (max-width: 900px) {
+        .dna-scene .canvas-panel { height: 430px; }
+      }
+      @media (max-width: 620px) {
+        .dna-scene .lab-canvas-wrap,
+        .dna-scene #dna-canvas { height: 460px; }
+        .dna-scene .canvas-panel { height: 380px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#dna-intuition">直觉</a>
+        <a href="#dna-limits">边界</a>
+        <a href="#dna-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+    <main id="main" class="dna-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 08 / MOLECULAR BIOLOGY LAB</p>
+          <h1>双链一拉，<br />变出两份 DNA</h1>
+          <p class="hero-lead">
+            复制时两条母链被解开，各自当模板，按碱基配对补一条新链。
+            结果每个子代分子都「半旧半新」——这就是半保留复制。
+          </p>
+          <a class="primary-action" href="#dna-intuition">
+            开始实验
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            看复制叉怎么推进 · 调速度观察前导链与冈崎片段<br />
+            往下看 Meselson–Stahl 实验，为什么只能是「半保留」
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="DNA 复制叉交互实验">
+          <div class="lab-canvas-wrap">
+            <div class="dna-key" aria-hidden="true">
+              <span><i style="background:#4a86c8"></i>母链</span>
+              <span><i style="background:#e8545a"></i>新链</span>
+              <span><i style="background:#ff9f43"></i>RNA 引物</span>
+              <span><i style="background:#4fd186"></i>酶</span>
+            </div>
+            <canvas id="dna-canvas" aria-label="DNA 复制叉演示：母链解开，前导链连续、后随链冈崎片段合成"></canvas>
+            <div class="canvas-caption">
+              <span>半保留复制 · 一个复制叉（向右推进）</span>
+              <span id="dna-canvas-status">复制叉推进中 0%</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="复制叉参数">
+            <h2>复制叉实验</h2>
+
+            <label class="control-row" for="dna-speed">
+              <span>复制速度 <i>×</i></span>
+              <output id="dna-speed-output">1.0×</output>
+            </label>
+            <input id="dna-speed" type="range" min="0.25" max="3" step="0.05" value="1" />
+            <p class="dna-hint">基准约 30 bp/s · 人源约 50 bp/s，大肠杆菌约 1000 bp/s</p>
+
+            <div class="lab-actions">
+              <button id="dna-restart" type="button">重放</button>
+            </div>
+
+            <div class="dna-readout" aria-live="polite">
+              <div class="dna-wide"><span>复制进度</span><output id="dna-progress">0%</output></div>
+              <div class="dna-blue"><span>已复制碱基对</span><output id="dna-bp">0 bp</output></div>
+              <div class="dna-red"><span>前导链</span><output id="dna-leading">连续合成</output></div>
+              <div class="dna-red"><span>后随链</span><output id="dna-lagging">冈崎片段 ×0</output></div>
+              <div class="dna-wide"><span>合成方向</span><output id="dna-direction">新链一律 5′→3′ · 后随链分段</output></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="dna-intuition" aria-labelledby="dna-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="dna-intuition-title">直觉模型：旧链就是模板</h2>
+            <p>A 配 T、C 配 G，把双链解开，每条旧链都能自己当模子，补出一份一模一样的新链。</p>
+          </div>
+        </div>
+        <div class="intuition-layout">
+          <div class="intuition-copy">
+            <p>
+              DNA 由两条方向相反（反向平行）的链靠碱基互补配对拧成双螺旋：A 对 T、C 对 G。
+              要得到两份一模一样的遗传信息，最经济的办法是「解开 → 各当模板 → 各补一条」——
+              两条旧链各自长出互补的新链，一个双链就变成了两个双链。
+            </p>
+            <p>
+              关键在「每条旧链都原封不动保留在子代分子里」，所以每个子代 DNA 都半旧半新。这正是 1958 年
+              Meselson–Stahl 实验证明的结论：用重同位素 ¹⁵N 养细菌、再换到轻同位素 ¹⁴N，用密度梯度离心观察——
+              第一代 DNA 全部落在中间「杂交」位置，第二代才出现一半「轻」带。这精确排除了「全保留」
+              （第一代就该有重带 + 轻带）与「分散」（各代都是单一中间带）两种假说。右侧小实验可以拖动「世代」亲眼看带型变化。
+            </p>
+            <p>
+              真正的复制比「解开补新」多一层波折：两条母链方向相反，而 DNA 聚合酶只能沿 5′→3′ 合成。
+              于是前导链顺风顺水一路到底，后随链则被拆成一段段冈崎片段，由连接酶接成完整长链。页面上方的复制叉演示可以看这个过程。
+            </p>
+          </div>
+          <div class="intuition-side">
+            <div class="canvas-panel">
+              <canvas id="ms-canvas" aria-label="Meselson-Stahl 实验：密度梯度离心管带型随世代变化"></canvas>
+              <div class="canvas-key">
+                <span><i class="key-line" style="background:#7fd0ff;height:6px"></i>重 ¹⁵N/¹⁵N</span>
+                <span><i class="key-line" style="background:#3f9fe0;height:6px"></i>杂交 ¹⁵N/¹⁴N</span>
+                <span><i class="key-line" style="background:#1d4f7d;height:6px"></i>轻 ¹⁴N/¹⁴N</span>
+              </div>
+            </div>
+            <div class="ms-controls">
+              <label class="control-row" for="ms-gen">
+                <span>世代</span>
+                <output id="ms-gen-output">第 1 代</output>
+              </label>
+              <input id="ms-gen" type="range" min="0" max="3" step="1" value="1" />
+              <p class="ms-readout" id="ms-readout" aria-live="polite">全部 ¹⁵N/¹⁴N 杂交带 → 排除「全保留」</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-pad" aria-labelledby="dna-def-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="dna-def-title">正式定义：半保留、半不连续复制</h2>
+            <p>一个复制叉里，两条新链的遭遇完全不同：一条顺风，一条逆风。</p>
+          </div>
+        </div>
+        <div class="dna-copy">
+          <p>
+            DNA 复制在「复制起点」启动，向两边各形成一个「复制叉」。在每个复制叉处：解旋酶（helicase）解开双链，
+            单链结合蛋白稳住模板；引物酶（primase）先放一小段 RNA 引物，DNA 聚合酶（DNA polymerase）才能从引物的
+            3′ 端开始、沿 5′→3′ 方向合成新链。因为两条母链反向平行而聚合酶只认 5′→3′，两条新链的命运就此分岔：
+            前导链顺着复制叉方向连续合成；后随链逆着方向、拆成一段段冈崎片段，每段都要新引物，最后由连接酶（ligase）接成完整长链。
+          </p>
+        </div>
+        <p class="fact-line">
+          碱基互补配对：A－T（2 个氢键）· C≡G（3 个氢键）。新链序列完全由旧链模板决定，这是「半保留」能忠实复制的根本。
+        </p>
+        <div class="distinction-rail">
+          <article>
+            <span>两个词</span>
+            <h3>前导链 vs 后随链</h3>
+            <p>前导链顺着复制叉方向连续合成；后随链逆着方向，拆成冈崎片段，由连接酶再接起来。</p>
+          </article>
+          <article>
+            <span>根本原因</span>
+            <h3>聚合酶只能 5′→3′</h3>
+            <p>新链只能从 5′ 端往 3′ 端生长。因为模板反向平行，后随链那一侧只能分段「倒着」合成。</p>
+          </article>
+          <article>
+            <span>保真</span>
+            <h3>旧链定新链</h3>
+            <p>碱基互补配对让每条新链严格照旧链的序列来，所以复制出的两份 DNA 与原来完全一致。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="limits section-pad" aria-labelledby="dna-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="dna-limits-title">这个模型简化了什么</h2>
+            <p>一个复制叉、几种酶——真实基因组要复杂得多。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>简化 1</span>
+            <h3>只画了一个复制叉</h3>
+            <p>
+              真核生物每条染色体有多个复制起点、双向复制。人类基因组约 3.4×10⁹ bp，若只有单个起点要复制约 40 天，
+              实际靠成千上万个起点并行分段完成。
+            </p>
+          </article>
+          <article>
+            <span>简化 2</span>
+            <h3>酶被合并与省略</h3>
+            <p>
+              未画拓扑异构酶（释放超螺旋）与单链结合蛋白（稳住单链）；真核的多种 DNA 聚合酶（α、δ、ε 等）
+              也合并为一类来表现。
+            </p>
+          </article>
+          <article>
+            <span>简化 3</span>
+            <h3>速率与片段是示意</h3>
+            <p>
+              复制速度因物种而异：大肠杆菌约 1000 bp/s，人约 50 bp/s；冈崎片段长度也不同
+              （原核约 1000–2000 nt，真核约 100–200 nt）。画面里的速度与片段只为示意。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" aria-labelledby="dna-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="dna-sources-title">来源与核验路径</h2>
+            <p>复制机制、实验带型与速率以下列资料为准。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/DNA_replication" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · DNA replication</strong>
+            <span role="cell">复制叉、前导/后随链、各酶分工</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Meselson%E2%80%93Stahl_experiment" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Meselson–Stahl experiment</strong>
+            <span role="cell">1958 半保留实验与各代带型</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Okazaki_fragments" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Okazaki fragments</strong>
+            <span role="cell">冈崎片段成因与长度范围</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.ncbi.nlm.nih.gov/books/NBK26850/" target="_blank" rel="noreferrer">
+            <span role="cell">教材</span>
+            <strong role="cell">Alberts 等 · Molecular Biology of the Cell</strong>
+            <span role="cell">5′→3′ 合成、引物与复制机制</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.mun.ca/biology/scarr/Meselson_StahL_experiment.html" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">Memorial University · Meselson &amp; Stahl 图解</strong>
+            <span role="cell">实验原理与半保留结论</span>
+          </a>
+          <a class="source-row" role="row" href="https://courses.lumenlearning.com/suny-mcc-microbiology/chapter/dna-replication/" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">Lumen Learning · DNA Replication</strong>
+            <span role="cell">复制速率与真核/原核差异</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          复制速度（大肠杆菌约 1000 bp/s、人约 50 bp/s）与冈崎片段长度（原核 1000–2000 nt、真核 100–200 nt）
+          来自上述教学来源；Meselson–Stahl 带型（G1 全杂交、G2 ½杂交 + ½轻、G3 ¼杂交 + ¾轻）以经典实验原图与
+          Wikipedia 为准。页面复制叉只展示一个方向，速率为示意。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+
+    <!-- Three.js 走 CDN importmap。本页为纯 2D Canvas 场景，无需引入。 -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // ============================================================
+      (function () {
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+
+    <script>
+      // ============================================================
+      // 场景模块 1：复制叉动画（2D Canvas）
+      // 母链被解开，前导链连续合成、后随链分段（冈崎片段）+ 连接酶。
+      // 窗口接口：window.SciScene.update(dt)
+      // ============================================================
+      (function () {
+        const canvas = document.getElementById("dna-canvas");
+        const ctx = canvas.getContext("2d");
+        const $ = (sel) => document.querySelector(sel);
+
+        function setCanvasSize(canvas, width, height) {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const w = Math.max(1, Math.floor(width * dpr));
+          const h = Math.max(1, Math.floor(height * dpr));
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+          }
+          return dpr;
+        }
+
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+
+        const SEG_BP = 150;
+        const FRAG_BP = 18;
+        const BASE_RATE = 30;
+
+        const state = {
+          rel: 1.0,
+          progress: 0,
+          done: false,
+          fragments: [],
+        };
+
+        function resetRun() {
+          state.progress = 0;
+          state.done = false;
+          state.fragments = [];
+        }
+
+        function advance(dt) {
+          if (state.done || window.__sciPaused) return;
+          const dP = (BASE_RATE * state.rel * dt) / SEG_BP;
+          state.progress = Math.min(1, state.progress + dP);
+
+          const frags = state.fragments;
+          const lastX = frags.length ? frags[frags.length - 1].x5 : 0;
+          if (state.progress - lastX >= FRAG_BP / SEG_BP) {
+            frags.push({ x5: state.progress, len: 0, done: false });
+          }
+          const newest = frags[frags.length - 1];
+          if (newest && !newest.done) {
+            newest.len += dP;
+            const prevX5 = frags.length >= 2 ? frags[frags.length - 2].x5 : 0;
+            if (newest.x5 - newest.len <= prevX5) {
+              newest.len = newest.x5 - prevX5;
+              newest.done = true;
+            }
+          }
+
+          if (state.progress >= 1) {
+            if (newest) {
+              newest.len = newest.x5 - (frags.length >= 2 ? frags[frags.length - 2].x5 : 0);
+              newest.done = true;
+            }
+            state.done = true;
+          }
+        }
+
+        function circle(x, y, r, color) {
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        function arrow(x, y, dir, color) {
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          if (dir === "right") {
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 7, y - 3.5);
+            ctx.lineTo(x - 7, y + 3.5);
+          } else {
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + 7, y - 3.5);
+            ctx.lineTo(x + 7, y + 3.5);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        function label(text, x, y) {
+          ctx.save();
+          ctx.font = "10px sans-serif";
+          const w = ctx.measureText(text).width;
+          ctx.fillStyle = "rgba(7,24,45,0.72)";
+          ctx.fillRect(x - 3, y - 9, w + 6, 13);
+          ctx.fillStyle = "#dbe7f3";
+          ctx.fillText(text, x, y + 1);
+          ctx.restore();
+        }
+
+        function drawStrand(fn, W, color) {
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let x = 0; x <= W; x += 3) {
+            const y = fn(x);
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        function draw() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = setCanvasSize(canvas, rect.width, rect.height);
+          const W = rect.width;
+          const H = rect.height;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, W, H);
+
+          const midY = H * 0.5;
+          const topY = H * 0.34;
+          const botY = H * 0.66;
+          const amp = Math.min(26, H * 0.05);
+          const originX = W * 0.06;
+          const endX = W * 0.9;
+          const span = endX - originX;
+          const forkX = originX + state.progress * span;
+          const xOf = (n) => originX + n * span;
+          const trans = 20;
+          const wl = 76;
+
+          const phase = (x) => (x - originX) * ((2 * Math.PI) / wl);
+          const helixTop = (x) => midY + amp * Math.sin(phase(x));
+          const helixBot = (x) => midY - amp * Math.sin(phase(x));
+          const tTop = (x) => (x <= forkX ? topY : lerp(topY, helixTop(x), smooth((x - forkX) / trans)));
+          const tBot = (x) => (x <= forkX ? botY : lerp(botY, helixBot(x), smooth((x - forkX) / trans)));
+
+          // 未复制的双螺旋区域（右端）：rungs
+          ctx.save();
+          ctx.strokeStyle = "rgba(122,170,214,0.18)";
+          ctx.lineWidth = 1;
+          for (let x = forkX + trans; x < W; x += 12) {
+            ctx.beginPath();
+            ctx.moveTo(x, helixTop(x));
+            ctx.lineTo(x, helixBot(x));
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // 母链
+          drawStrand(tTop, W, "#4a86c8");
+          drawStrand(tBot, W, "#4a86c8");
+
+          // ---- 前导链（红色，topY+16，origin→fork）----
+          const ly = topY + 16;
+          ctx.strokeStyle = "#e8545a";
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(originX, ly);
+          ctx.lineTo(forkX, ly);
+          ctx.stroke();
+          ctx.fillStyle = "#ff9f43";
+          ctx.fillRect(originX, ly - 3, 7, 6);
+          arrow(forkX, ly, "right", "#e8545a");
+          circle(forkX, ly, 5.5, "#4fd186");
+
+          // ---- 后随链冈崎片段（红色，botY-16）----
+          const by = botY - 16;
+          const frags = state.fragments;
+          for (let i = 0; i < frags.length; i++) {
+            const f = frags[i];
+            const x5 = xOf(f.x5);
+            const x3 = xOf(f.x5 - f.len);
+            ctx.strokeStyle = "#e8545a";
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(x3, by);
+            ctx.lineTo(x5, by);
+            ctx.stroke();
+            ctx.fillStyle = "#ff9f43";
+            ctx.fillRect(x5 - 2, by - 3, 7, 6);
+            arrow(x3, by, "left", "#e8545a");
+            if (f.done && i >= 1) circle(x3, by, 2.6, "#4fd186");
+          }
+          // 后随链聚合酶（最新片段 3′ 端）
+          if (frags.length) {
+            const nw = frags[frags.length - 1];
+            circle(xOf(nw.x5 - nw.len), by, 5, "#4fd186");
+          }
+
+          // ---- 母链极性箭头与 5′/3′ 标记 ----
+          const rw = forkX - originX;
+          if (rw > 90) {
+            const ax = originX + rw * 0.38;
+            arrow(ax, topY, "left", "#7fb4e8");
+            arrow(ax, botY, "right", "#7fb4e8");
+            ctx.save();
+            ctx.fillStyle = "rgba(190,215,238,0.85)";
+            ctx.font = "9px sans-serif";
+            ctx.fillText("3′", originX - 6, topY - 6);
+            ctx.fillText("5′", forkX + 4, topY - 6);
+            ctx.fillText("5′", originX - 6, botY + 12);
+            ctx.fillText("3′", forkX + 4, botY + 12);
+            ctx.fillText("5′", originX - 6, ly - 6);
+            ctx.fillText("3′", forkX + 4, ly - 6);
+            ctx.restore();
+          }
+
+          // ---- 酶与结构标签（在空间足够时显示）----
+          if (rw > 40) {
+            circle(forkX, midY, 7, "#4fd186");
+            ctx.save();
+            ctx.strokeStyle = "rgba(255,255,255,0.75)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(forkX, midY, 7, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+            label("解旋酶", forkX, midY - 16);
+            label("DNA 聚合酶", forkX - 4, ly + 14);
+          }
+          if (rw > 160) {
+            label("RNA 引物", originX, ly - 14);
+            label("冈崎片段", xOf(0.5 * state.progress), by + 14);
+            if (frags.length >= 2) {
+              const join = xOf(frags[0].x5 - frags[0].len);
+              label("连接酶", join, by - 14);
+            }
+          }
+
+          // 完成提示
+          if (state.done) {
+            ctx.save();
+            ctx.fillStyle = "#ffd166";
+            ctx.font = "600 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("复制完成：每个子代分子 = 一条旧链 + 一条新链", W * 0.5, H * 0.12);
+            ctx.restore();
+          }
+        }
+
+        function setText(el, val) {
+          if (el && el.textContent !== val) el.textContent = val;
+        }
+
+        function refreshReadout() {
+          const bp = Math.round(state.progress * SEG_BP);
+          const frags = state.fragments;
+          setText($("#dna-progress"), state.done ? "100% · 完成" : Math.round(state.progress * 100) + "%");
+          setText($("#dna-bp"), bp + " bp");
+          setText($("#dna-leading"), "连续合成 · 5′→3′ 随复制叉");
+          setText($("#dna-lagging"), "冈崎片段 ×" + frags.length + " · 已连接 " + frags.filter((f) => f.done).length);
+          setText(
+            $("#dna-canvas-status"),
+            state.done
+              ? "复制完成：两条子代 DNA 各含一条旧链"
+              : "复制叉推进中 " + Math.round(state.progress * 100) + "%"
+          );
+        }
+
+        function wire() {
+          $("#dna-restart").addEventListener("click", () => {
+            resetRun();
+          });
+          $("#dna-speed").addEventListener("input", (event) => {
+            state.rel = Number(event.target.value);
+            setText($("#dna-speed-output"), state.rel.toFixed(1) + "×");
+          });
+        }
+
+        const ro = new ResizeObserver(() => draw());
+        ro.observe(canvas.parentElement);
+
+        wire();
+        refreshReadout();
+        draw();
+
+        window.SciScene = {
+          update(dt) {
+            advance(dt);
+            draw();
+            refreshReadout();
+          },
+        };
+      })();
+    </script>
+
+    <script>
+      // ============================================================
+      // 场景模块 2：Meselson–Stahl 密度梯度带型（2D Canvas，滑块驱动）
+      // 拖动「世代」看 G0–G3 的带型，验证半保留复制。
+      // ============================================================
+      (function () {
+        const canvas = document.getElementById("ms-canvas");
+        const ctx = canvas.getContext("2d");
+
+        function setCanvasSize(canvas, width, height) {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const w = Math.max(1, Math.floor(width * dpr));
+          const h = Math.max(1, Math.floor(height * dpr));
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+          }
+          return dpr;
+        }
+
+        const BAND_COLORS = { heavy: "#7fd0ff", hybrid: "#3f9fe0", light: "#1d4f7d" };
+        const BAND_Y = { heavy: 0.68, hybrid: 0.48, light: 0.28 };
+
+        const GEN = [
+          { label: "G0", name: "亲代", comp: { heavy: 1, hybrid: 0, light: 0 },
+            desc: "全部 ¹⁵N/¹⁵N：单一重带（试管底部）" },
+          { label: "G1", name: "第 1 代", comp: { heavy: 0, hybrid: 1, light: 0 },
+            desc: "全部 ¹⁵N/¹⁴N：单一杂交带 → 排除「全保留」" },
+          { label: "G2", name: "第 2 代", comp: { heavy: 0, hybrid: 0.5, light: 0.5 },
+            desc: "½ 杂交 + ½ 轻带 → 排除「分散」" },
+          { label: "G3", name: "第 3 代", comp: { heavy: 0, hybrid: 0.25, light: 0.75 },
+            desc: "¼ 杂交 + ¾ 轻带：旧链稀释，轻带渐占主导" },
+        ];
+
+        let sel = 1;
+
+        function draw() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = setCanvasSize(canvas, rect.width, rect.height);
+          const W = rect.width;
+          const H = rect.height;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, W, H);
+
+          const tubeTop = H * 0.16;
+          const tubeH = H * 0.55;
+          const tubeW = Math.min(W * 0.13, 76);
+          const left = W * 0.09;
+          const gap = Math.max(8, (W - left * 2 - 4 * tubeW) / 3);
+
+          // 密度方向（左缘）
+          ctx.save();
+          ctx.strokeStyle = "rgba(243,239,229,0.4)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(W * 0.045, tubeTop);
+          ctx.lineTo(W * 0.045, tubeTop + tubeH);
+          ctx.stroke();
+          ctx.fillStyle = "#4fd186";
+          ctx.beginPath();
+          ctx.moveTo(W * 0.045, tubeTop + tubeH + 4);
+          ctx.lineTo(W * 0.045 - 4, tubeTop + tubeH - 3);
+          ctx.lineTo(W * 0.045 + 4, tubeTop + tubeH - 3);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "rgba(243,239,229,0.55)";
+          ctx.font = "10px sans-serif";
+          ctx.fillText("轻", W * 0.045 + 8, tubeTop + 12);
+          ctx.fillText("重", W * 0.045 + 8, tubeTop + tubeH);
+          ctx.restore();
+
+          for (let g = 0; g < 4; g++) {
+            const x = left + g * (tubeW + gap);
+            drawTube(x, tubeTop, tubeW, tubeH, GEN[g], g === sel);
+          }
+        }
+
+        function drawTube(x, y, w, h, gen, selected) {
+          ctx.save();
+          // 管身：密度梯度
+          const grd = ctx.createLinearGradient(0, y, 0, y + h);
+          grd.addColorStop(0, "rgba(16,40,66,0.7)");
+          grd.addColorStop(1, "rgba(8,22,40,0.95)");
+          ctx.fillStyle = grd;
+          ctx.strokeStyle = selected ? "rgba(255,181,43,0.9)" : "rgba(243,239,229,0.25)";
+          ctx.lineWidth = selected ? 2 : 1;
+          roundRect(x, y, w, h, 8);
+          ctx.fill();
+          ctx.stroke();
+
+          // 带
+          for (const key of ["heavy", "hybrid", "light"]) {
+            const frac = gen.comp[key];
+            if (!frac) continue;
+            const by = y + h * BAND_Y[key];
+            const bw = w * 0.72;
+            const bh = Math.max(6, h * 0.09 * (0.5 + frac));
+            ctx.fillStyle = BAND_COLORS[key];
+            ctx.globalAlpha = 0.35 + 0.6 * frac;
+            ctx.beginPath();
+            ctx.ellipse(x + w / 2, by, bw / 2, bh / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+
+          // 标签
+          ctx.fillStyle = "rgba(243,239,229,0.75)";
+          ctx.font = "11px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(gen.name, x + w / 2, y - 10);
+          ctx.fillStyle = "rgba(243,239,229,0.45)";
+          ctx.font = "10px Consolas, monospace";
+          ctx.fillText(gen.label, x + w / 2, y + h + 16);
+          ctx.textAlign = "left";
+          ctx.restore();
+        }
+
+        function roundRect(x, y, w, h, r) {
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+        }
+
+        function setText(el, val) {
+          if (el && el.textContent !== val) el.textContent = val;
+        }
+
+        function refresh() {
+          setText(document.getElementById("ms-gen-output"), GEN[sel].name);
+          setText(document.getElementById("ms-readout"), GEN[sel].desc);
+          draw();
+        }
+
+        document.getElementById("ms-gen").addEventListener("input", (event) => {
+          sel = Number(event.target.value);
+          refresh();
+        });
+
+        const ro = new ResizeObserver(() => draw());
+        ro.observe(canvas.parentElement);
+
+        refresh();
+      })();
+    </script>
+  </body>
+</html>

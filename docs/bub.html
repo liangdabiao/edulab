@@ -1,0 +1,1499 @@
+<!doctype html>
+<!--
+  edu-sci-viz · 单文件互动科普页模板
+  ============================================================
+  用法：把本文件复制到工作目录，然后按 SKILL.md 的 8 步流程替换四处内容：
+    1. <title> 与 hero 文案（大标题/lead/CTA/说明）
+    2. 分节叙事 HTML（直觉模型 → 正式定义 → 边界说明 → 来源）
+    3. hero 里的实验台 lab-shell（画布 + 控制区）
+    4. 底部「场景模块」<script>（用你的主题替换「光的折射」）
+  保留：<head> 设计系统 <style>、通用运行时 <script>、importmap。
+  本模板内置「光的折射」作为可运行示例（2D Canvas，零网络依赖）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="冒泡排序：相邻两两比较、逆序就交换，每一趟让当前最大值冒到末尾。拖动条数/速度看动画，用 O(n²) 曲线直观感受数据翻倍、工作量翻四倍。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>冒泡排序：相邻比较 · 依次冒泡 · O(n²) | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(450px, 0.84fr) minmax(700px, 1.55fr);
+        gap: clamp(36px, 4vw, 64px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        /* 陷阱：h1 是 nowrap，字号上限必须保证最长一行放得进左列（约 450px 文字列）。
+           68px 上限 ≈ 每行最多 6 个汉字；行更长的主题，在场景样式里覆盖
+           .scene .hero h1 { white-space: normal } 让标题折行，防止溢出压到右侧实验区。 */
+        font-size: clamp(48px, 3.8vw, 68px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+    <!-- ========== 场景专属样式：冒泡排序（新主题请整体替换本块） ========== -->
+    <style>
+      .bub-scene .hero-lead { max-width: 460px; }
+      /* 单栏 hero：文案在上、实验台全宽 → 画布更大，画布内文字放大后更清晰 */
+      .bub-scene .hero { grid-template-columns: 1fr; align-items: start; gap: clamp(28px, 3vw, 46px); }
+      .bub-scene .hero-copy { max-width: 880px; }
+      .bub-scene .hero-copy h1 { white-space: normal; }
+      .bub-scene .lab-shell { width: 100%; }
+      .bub-scene #bub-canvas { width: 100%; height: 650px; }
+      .bub-scene .bub-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 2px; }
+      .bub-scene .bub-presets button {
+        padding: 8px 2px; color: rgba(255, 255, 255, 0.75); border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 4px; background: transparent; font-size: 11px;
+        transition: border 160ms ease, color 160ms ease;
+      }
+      .bub-scene .bub-presets button:hover,
+      .bub-scene .bub-presets button:focus-visible { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+      .bub-scene .lab-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
+      .bub-scene .lab-actions button {
+        display: inline-flex; gap: 7px; align-items: center; justify-content: center;
+        min-height: 38px; padding: 0 8px; color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34); border-radius: 3px;
+        background: transparent; font-size: 11px;
+      }
+      .bub-scene .lab-actions button:hover,
+      .bub-scene .lab-actions button:focus-visible { color: #fff; border-color: #fff; }
+      .bub-scene .lab-actions .accent-button { border-color: var(--red-bright); background: var(--red-bright); }
+      .bub-scene .lab-actions .full { grid-column: 1 / -1; }
+      .bub-scene .lab-actions svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+      .bub-scene .bub-check {
+        display: flex; gap: 9px; align-items: center; margin-top: 18px; padding: 11px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 3px;
+        color: rgba(255, 255, 255, 0.82); font-size: 12px; line-height: 1.45;
+      }
+      .bub-scene .bub-check input { accent-color: var(--red-bright); flex: none; }
+      .bub-scene .bub-readout {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px;
+        margin: 18px 0 4px; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.18); font-size: 12px;
+      }
+      .bub-scene .bub-readout span { color: rgba(255, 255, 255, 0.62); }
+      .bub-scene .bub-readout output { display: block; margin-top: 2px; color: #fff; font-family: var(--mono); }
+      .bub-scene .bub-readout .bub-wide { grid-column: 1 / -1; }
+      .bub-scene .bub-readout .bub-wide output { color: #ffb52b; font-size: 13px; }
+      /* 直觉区 */
+      .bub-scene .bub-copy { max-width: 780px; }
+      .bub-scene .bub-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.8; }
+      .bub-scene .bub-complex-card { margin-top: 30px; padding: 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: #fff; box-shadow: 0 1px 3px rgba(23, 15, 5, 0.08); }
+      .bub-scene .bub-complex-card h3 { margin: 0 0 4px; font-family: var(--serif); font-size: 22px; }
+      .bub-scene .bub-complex-card .bub-complex-sub { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+      .bub-scene #bub-complex { display: block; width: 100%; height: 440px; background: #fff; }
+      .bub-scene .bub-complex-ctrl { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-top: 14px; }
+      .bub-scene .bub-complex-ctrl .control-row { margin: 0; }
+      .bub-scene .bub-complex-ctrl output { color: var(--ink); }
+      .bub-scene .bub-complex-readout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+      .bub-scene .bub-complex-readout > div { padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); }
+      .bub-scene .bub-complex-readout span { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--red); }
+      .bub-scene .bub-complex-readout output { display: block; font-family: var(--mono); font-size: 15px; color: var(--ink); }
+      .bub-scene .bub-complex-note { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: rgba(7, 24, 45, 0.6); }
+      /* 定义区 */
+      .bub-scene .def-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 34px 0 26px; }
+      .bub-scene .def-stats > div { padding: 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); }
+      .bub-scene .def-stats span { display: block; margin-bottom: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--red); }
+      .bub-scene .def-stats strong { display: block; margin-bottom: 6px; font-family: var(--serif); font-size: 22px; }
+      .bub-scene .def-stats em { display: block; font-style: normal; font-size: 12px; line-height: 1.55; color: var(--muted); }
+      .bub-scene .eq-block { margin-top: 6px; padding: 18px 20px; border-left: 3px solid var(--red); background: var(--paper-2); font-family: var(--mono); font-size: 15px; line-height: 2.1; }
+      .bub-scene .eq-block .eq { display: block; font-size: 15px; }
+      .bub-scene .eq-block .eq b { font-family: var(--serif); font-weight: 700; }
+      .bub-scene .eq-block .dim { color: rgba(7, 24, 45, 0.5); font-size: 12px; margin-left: 8px; }
+      .bub-scene .eq-block .tag { color: var(--red); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; margin-right: 8px; }
+      .bub-scene .gamma-table { width: 100%; margin: 22px 0 6px; border-collapse: collapse; }
+      .bub-scene .gamma-table th, .bub-scene .gamma-table td { padding: 9px 12px; border: 1px solid var(--rule); text-align: center; font-size: 13px; }
+      .bub-scene .gamma-table th { background: var(--paper-2); font-family: var(--mono); font-weight: 700; }
+      .bub-scene .gamma-table td { font-family: var(--mono); }
+      .bub-scene .gamma-table tbody tr:first-child th { color: var(--red); }
+      @media (max-width: 900px) { .bub-scene .def-stats { grid-template-columns: repeat(2, 1fr); } .bub-scene .bub-complex-readout { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 620px) {
+        .bub-scene #bub-canvas { height: 460px; }
+        .bub-scene .lab-canvas-wrap { height: 460px; }
+        .bub-scene #bub-complex { height: 360px; }
+        .bub-scene .bub-readout { grid-template-columns: 1fr; }
+        .bub-scene .bub-presets { grid-template-columns: repeat(2, 1fr); }
+        .bub-scene .bub-complex-ctrl { grid-template-columns: 1fr; }
+        .bub-scene .gamma-table { width: 100%; table-layout: fixed; }
+        .bub-scene .gamma-table th, .bub-scene .gamma-table td { padding: 6px 4px; font-size: 11px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#bub-intuition">直觉</a>
+        <a href="#bub-definition">定义</a>
+        <a href="#bub-limits">边界</a>
+        <a href="#bub-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+    <main id="main" class="bub-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 14 / COMPUTER SCIENCE</p>
+          <h1>冒泡排序：相邻比较 · 依次冒泡 · O(n²)</h1>
+          <p class="hero-lead">
+            每一趟，当前最大的数就像气泡一样冒到末尾——相邻两两比较、逆序就交换，简单到一眼看懂。
+            但代价也写在名字里：数据翻一倍，工作量翻四倍。拖动速度，看 12 条数据怎么一趟趟归位。
+          </p>
+          <a class="primary-action" href="#bub-intuition">
+            开始实验
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            拖动「数据条数」与「播放速度」· 每趟把未排序区的最大值送到尾部<br />
+            绿色 = 已就位尾部 · 黄色 = 当前比较对 · 红色 = 发生交换 · 琥珀环 = 本趟最大值。试试「优化」开关。
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="冒泡排序交互实验">
+          <div class="lab-canvas-wrap">
+            <canvas id="bub-canvas" aria-label="冒泡排序：相邻比较与逐趟冒泡动画"></canvas>
+            <div class="canvas-caption">
+              <span>颜色：青灰 未比较 · 黄 当前比较对 · 红 发生交换 · 绿 已就位尾部 · 琥珀环 本趟最大值</span>
+              <span id="bub-canvas-status">n = 12 · 比较 0 · 交换 0</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="冒泡排序参数">
+            <h2>冒泡排序参数</h2>
+
+            <div class="bub-presets" role="group" aria-label="数据规模预设">
+              <button data-bub-n="6" type="button">6 条</button>
+              <button data-bub-n="12" type="button">12 条</button>
+              <button data-bub-n="20" type="button">20 条</button>
+              <button data-bub-n="30" type="button">30 条</button>
+            </div>
+
+            <label class="control-row" for="bub-n">
+              <span>数据条数 n</span>
+              <output id="bub-n-output">12</output>
+            </label>
+            <input id="bub-n" type="range" min="5" max="40" step="1" value="12" />
+
+            <label class="control-row" for="bub-speed">
+              <span>播放速度</span>
+              <output id="bub-speed-output">2×</output>
+            </label>
+            <input id="bub-speed" type="range" min="0.5" max="8" step="0.5" value="2" />
+
+            <div class="lab-actions" role="group" aria-label="冒泡排序控制">
+              <button class="accent-button" id="bub-play" type="button" aria-pressed="true">⏸ 暂停</button>
+              <button id="bub-step" type="button">
+                单步
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l10 8-10 8V4zM19 5v14" /></svg>
+              </button>
+              <button id="bub-shuffle" type="button">
+                重排
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+              </button>
+              <button class="full" id="bub-reset" type="button">
+                从头再来
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4" /></svg>
+              </button>
+            </div>
+
+            <label class="bub-check" for="bub-optimize">
+              <input id="bub-optimize" type="checkbox" checked />
+              <span>优化：本趟无交换即提前结束（随机数据下能省不少；最好情况 O(n)）</span>
+            </label>
+
+            <div class="bub-readout" aria-live="polite">
+              <div class="bub-wide"><span>状态</span><output id="bub-status-output">就绪 · 点播放或单步开始</output></div>
+              <div><span>比较次数</span><output id="bub-cmp-output">0</output></div>
+              <div><span>交换次数</span><output id="bub-swap-output">0</output></div>
+              <div><span>已就位（尾部）</span><output id="bub-sorted-output">0 / 12</output></div>
+              <div><span>当前比较对</span><output id="bub-pair-output">—</output></div>
+              <div class="bub-wide"><span>预检查：最坏比较上限 n(n−1)/2</span><output id="bub-check-output">= 66 次</output></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="bub-intuition" aria-labelledby="bub-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="bub-intuition-title">直觉模型：工作量翻一倍，代价翻四倍</h2>
+            <p>冒泡排序一趟只让「当前最大值」冒到尾，要归位 n 个数就要扫约 n 遍——总比较数约 n²/2。</p>
+          </div>
+        </div>
+        <div class="bub-copy">
+          <p>
+            想象一列站得不整齐的学生，你只和左右相邻的人两两比较、谁个子高谁往右挪一步。
+            第一趟下来，最高的那位一定会被「挤」到最右边——他每比较一次就往右挪一格，一路冒到底。
+            之后把他冻结在右边，对剩下的 n−1 个人再来一趟，第二高的又冒到右边第二位。
+            如此反复，每一趟的终点位置左移一格：这就是「每趟定一位」。
+          </p>
+          <p>
+            麻烦在于：每一趟都要把未排序区从头扫到尾。n 条数据要扫约 n 趟、每趟约 n 次比较，
+            总数约 n(n−1)/2 次。这意味着 n 翻一倍，比较次数不是翻一倍，而是翻四倍——
+            这就是下面这张图想让你记住的 O(n²) 陡峭曲线。
+          </p>
+        </div>
+
+        <div class="bub-complex-card">
+          <h3>O(n²) 增长：数据翻一倍，工作量翻四倍</h3>
+          <p class="bub-complex-sub">拖动 n，看 n/2、n、2n 三档规模的比较量对比——中间那根就是「现在」。</p>
+          <canvas id="bub-complex" aria-label="冒泡排序比较次数随输入规模的增长曲线"></canvas>
+          <div class="bub-complex-ctrl">
+            <label class="control-row" for="bub-cn">
+              <span>输入规模 n</span>
+              <output id="bub-cn-output">20</output>
+            </label>
+            <input id="bub-cn" type="range" min="10" max="60" step="1" value="20" />
+          </div>
+          <div class="bub-complex-readout" aria-live="polite">
+            <div><span>n = 20 时</span><output id="bub-cn-compare">190 次</output></div>
+            <div><span>2n = 40 时</span><output id="bub-2n-compare">780 次</output></div>
+            <div><span>比值</span><output id="bub-ratio">≈ 4.1×</output></div>
+          </div>
+          <p class="bub-complex-note">最坏情况比较次数 = n(n−1)/2。n 从 20 涨到 40，输入只翻一倍，比较量却从 190 涨到 780——约四倍。这就是 O(n²)：百万条数据要几千亿次比较，所以现实里几乎没人用它排大数据。</p>
+        </div>
+      </section>
+
+      <section class="section-pad" id="bub-definition" aria-labelledby="bub-definition-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="bub-definition-title">正式定义：相邻比较，逐趟冒泡</h2>
+            <p>一趟确定一个最大值的最终位置，n−1 趟全部归位。核心是相邻两两比较与就地交换。</p>
+          </div>
+        </div>
+        <div class="bub-copy">
+          <p>
+            伪代码只有两重循环：外层 i 记「已归位的尾部长度」，内层 j 扫未排序区做相邻比较。
+            每趟结束，未排序区最大值已经冒到 a[n−1−i]，可以冻结；内层右端点随之左移一格。
+            加上「本趟无交换即已有序」的提前退出，就是教科书的冒泡排序。
+          </p>
+        </div>
+        <div class="eq-block">
+          <span class="eq"><span class="tag">外层</span>for i ← 0 … n−2<b>　每趟把未排序区最大值送到尾部</b></span>
+          <span class="eq"><span class="tag">内层</span>for j ← 0 … n−2−i<b>　相邻两两比较，右端随已归位尾部左移</b></span>
+          <span class="eq"><span class="tag">比较</span>if a[j] &gt; a[j+1]<b>　逆序 → 交换相邻两数</b></span>
+          <span class="eq"><span class="tag">优化</span>if 本趟无交换 → break<b>　已有序，提前结束</b></span>
+          <span class="eq"><span class="tag">核验</span>最坏比较 n(n−1)/2 = O(n²) · 交换 ≤ 比较 · 一趟定一位 · 原地稳定</span>
+        </div>
+        <div class="def-stats" role="list">
+          <div><span>最坏情况</span><strong>O(n²)</strong><em>逆序输入：约 n(n−1)/2 次比较、同样多的交换</em></div>
+          <div><span>平均情况</span><strong>O(n²)</strong><em>任意排列都约 n²/2 次比较，交换约一半</em></div>
+          <div><span>最好情况</span><strong>O(n)</strong><em>已有序 + 优化开关：第一趟扫完无交换即停</em></div>
+          <div><span>空间复杂度</span><strong>O(1) 原地</strong><em>只交换相邻元素，不需要额外数组</em></div>
+          <div><span>稳定性</span><strong>稳定</strong><em>相等的数不会互相越过，保持原相对顺序</em></div>
+          <div><span>一趟定一位</span><strong>n−1 趟</strong><em>每趟冻结一个最大值，最后一趟顺带完成</em></div>
+        </div>
+        <table class="gamma-table" aria-label="O(n²) 排序同场对比">
+          <caption>同是简单排序，和插入、归并、快排比一比（n 条数据）</caption>
+          <thead><tr><th>算法</th><th>最坏</th><th>平均</th><th>最好</th><th>空间</th><th>稳定</th></tr></thead>
+          <tbody>
+            <tr><th>冒泡排序</th><td>O(n²)</td><td>O(n²)</td><td>O(n)</td><td>O(1)</td><td>是</td></tr>
+            <tr><th>插入排序</th><td>O(n²)</td><td>O(n²)</td><td>O(n)</td><td>O(1)</td><td>是</td></tr>
+            <tr><th>归并排序</th><td>O(n log n)</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td><td>是</td></tr>
+            <tr><th>快速排序</th><td>O(n²)</td><td>O(n log n)</td><td>O(n log n)</td><td>O(log n)</td><td>否</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="limits section-pad" id="bub-limits" aria-labelledby="bub-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="bub-limits-title">这个模型简化了什么</h2>
+            <p>冒泡排序最适合「看懂」，最不适合「用」。它丢掉的效率藏在四个地方。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>简化 1</span>
+            <h3>大数据不可用</h3>
+            <p>O(n²) 在 n=10⁶ 时约 5×10¹¹ 次比较，一台普通电脑要跑几十分钟；归并/快排只消零点几秒。</p>
+          </article>
+          <article>
+            <span>简化 2</span>
+            <h3>相邻交换低效</h3>
+            <p>每个元素一步只能挪一格。一个该从右端到左端的元素，要穿越整列——交换次数是跨距离的 O(n²)，比插入排序的移动更费。</p>
+          </article>
+          <article>
+            <span>简化 3</span>
+            <h3>优化只救近有序</h3>
+            <p>「本趟无交换」的提前退出只对几乎有序的输入有效。对随机排列，几乎每趟都有交换，优化几乎不省事。</p>
+          </article>
+          <article>
+            <span>简化 4</span>
+            <h3>唯一的优点：稳定</h3>
+            <p>它只在逆序时交换，相等元素从不互越——稳定性是它在「对已按关键字排序的数据再次排序」这类场景下被保留的理由。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" id="bub-sources" aria-labelledby="bub-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="bub-sources-title">来源与核验路径</h2>
+            <p>伪代码、复杂度与稳定性以以下资料为准。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Bubble_sort" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Bubble sort</strong>
+            <span role="cell">算法流程、n(n−1)/2 比较上限、稳定性的标准表述</span>
+          </a>
+          <a class="source-row" role="row" href="https://clrs.skanev.com/02/02.html" target="_blank" rel="noreferrer">
+            <span role="cell">教材</span>
+            <strong role="cell">CLRS 2-2 · Bubble Sort Correctness</strong>
+            <span role="cell">正确性证明：循环不变量「第 i 趟后最大 i+1 个元素就位」</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.sorting-algorithms.com/bubble-sort" target="_blank" rel="noreferrer">
+            <span role="cell">可视化</span>
+            <strong role="cell">sorting-algorithms.com · Bubble Sort</strong>
+            <span role="cell">各种输入下的比较/交换计数、与插入排序的可视化对比</span>
+          </a>
+          <a class="source-row" role="row" href="https://visualgo.net/en/sorting" target="_blank" rel="noreferrer">
+            <span role="cell">可视化</span>
+            <strong role="cell">VisuAlgo · Sorting</strong>
+            <span role="cell">逐帧步进交互，核对「一趟定一位」与优化提前退出的行为</span>
+          </a>
+          <a class="source-row" role="row" href="https://www.geeksforgeeks.org/bubble-sort-algorithm/" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">GeeksforGeeks · Bubble Sort</strong>
+            <span role="cell">复杂度表、稳定性、与选择排序的差异说明</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          数值口径：最坏比较次数 = n(n−1)/2（n=20 → 190，n=40 → 780）；平均约 n²/2 次比较、n²/4 次交换；
+          最好 O(n) 指开启提前退出且输入已有序；稳定性指相等元素保持原相对顺序。动画以「每帧至多一步」推进，
+          速度 ×8 时每秒最多 64 次比较，便于肉眼跟随。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+    <!--
+      Three.js 走 CDN importmap。纯 2D 场景（如本示例）无需引入；
+      3D 场景在「场景模块」里 `import * as THREE from "three"` 即可，浏览器会自动按需加载。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // 职责：阅读进度条、暂停/继续开关、统一 requestAnimationFrame 渲染循环。
+      // 场景模块只需在 window.SciScene 上暴露 update(dt)，本循环每帧调用。
+      // ============================================================
+      (function () {
+        // 阅读进度
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        // 暂停/继续：只停自动运动，不破坏滑杆与 3D 拖动
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        // 渲染循环：帧间隔封顶 50ms，避免切后台后跳变
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+    <script>
+      // ============================================================
+      // 场景模块：冒泡排序
+      // 约定：脚本顶层做初始化（找画布、绑滑杆）；window.SciScene.update(dt)
+      // 每帧被通用运行时调用。检查 window.__sciPaused 以停止自动运动。
+      // 状态机：doStep() 每步至多做一次「比较 + 可能交换」；
+      // 趟末分支推进 i 或提前结束。速度 ×8 时每秒最多 64 步。
+      // ============================================================
+      (function () {
+        "use strict";
+
+        const $ = (id) => document.getElementById(id);
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const MONO = "Consolas, 'SFMono-Regular', monospace";
+        // 画布字号随画布宽缩放（w/68 ≈ 基准 11px，clamp 到 12–26px），宽屏更大更清晰
+        const PF = (w, px) => (clamp(w / 68, 12, 26) * px) / 11;
+
+        // ---------- hero：冒泡排序柱状动画（深海军蓝画布） ----------
+        const cv = $("bub-canvas");
+        const g = cv.getContext("2d", { willReadFrequently: true });
+        let W = 0, H = 0, DPR = 1;
+
+        const bub = {
+          n: 12, speed: 2, a: [],
+          i: 0, j: 0, cmp: 0, swp: 0,
+          done: false, optimize: true, passSwapped: false,
+          sortedCount: 0, maxIdx: -1,
+          phase: "running", acc: 0,
+          hl: { type: "compare", j: -1 },
+          status: "就绪 · 点播放或单步开始",
+        };
+
+        function fitBub() {
+          DPR = Math.min(window.devicePixelRatio || 1, 2);
+          const r = cv.getBoundingClientRect();
+          W = Math.max(1, r.width);
+          H = Math.max(1, r.height);
+          cv.width = Math.round(W * DPR);
+          cv.height = Math.round(H * DPR);
+          g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+
+        function resetBub() {
+          const { n } = bub;
+          bub.a = [];
+          for (let i = 0; i < n; i++) bub.a.push(i + 1);
+          for (let i = n - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [bub.a[i], bub.a[j]] = [bub.a[j], bub.a[i]];
+          }
+          bub.i = 0; bub.j = 0; bub.cmp = 0; bub.swp = 0;
+          bub.done = false; bub.passSwapped = false; bub.sortedCount = 0;
+          bub.maxIdx = -1; bub.hl = { type: "compare", j: -1 }; bub.acc = 0;
+          bub.status = "就绪 · 点播放或单步开始";
+          syncBub();
+        }
+
+        function doStep() {
+          if (bub.done) return;
+          const { a, n } = bub;
+          const limit = n - 1 - bub.i;
+          if (bub.i >= n - 1 || bub.j >= limit) {
+            // 趟末：本趟结束
+            if (bub.i >= n - 1) {
+              bub.done = true; bub.sortedCount = n;
+              bub.status = "全部排序完成 ✓";
+            } else if (bub.optimize && !bub.passSwapped) {
+              bub.done = true; bub.sortedCount = n;
+              bub.status = `第 ${bub.i + 1} 趟无交换 → 提前结束 ✓`;
+            } else {
+              bub.i += 1; bub.j = 0; bub.passSwapped = false; bub.sortedCount = bub.i;
+              bub.status = `第 ${bub.i} 趟完成：最大值已冒到尾`;
+            }
+            bub.maxIdx = -1; bub.hl = { type: "pass", j: -1 };
+            return;
+          }
+          bub.cmp += 1;
+          if (a[bub.j] > a[bub.j + 1]) {
+            [a[bub.j], a[bub.j + 1]] = [a[bub.j + 1], a[bub.j]];
+            bub.swp += 1; bub.passSwapped = true; bub.maxIdx = bub.j + 1;
+            bub.hl = { type: "swap", j: bub.j };
+            bub.status = `a[${bub.j}] > a[${bub.j + 1}] → 交换`;
+          } else {
+            if (bub.maxIdx === -1 || a[bub.j + 1] > a[bub.maxIdx]) bub.maxIdx = bub.j + 1;
+            bub.hl = { type: "compare", j: bub.j };
+            bub.status = `a[${bub.j}] ≤ a[${bub.j + 1}] → 不动`;
+          }
+          bub.j += 1;
+        }
+
+        function tickBub(dt) {
+          if (!window.__sciPaused && bub.phase === "running" && !bub.done) {
+            bub.acc += dt;
+            const stepT = 1 / (bub.speed * 8);
+            while (bub.acc >= stepT && !bub.done) {
+              bub.acc -= stepT;
+              doStep();
+            }
+          }
+          drawBub();
+        }
+
+        function drawBub() {
+          const { a, n } = bub;
+          const mT = 48, mB = 54, mL = 30, mR = 18;
+          const plotW = W - mL - mR;
+          const plotH = H - mT - mB;
+          const bw = plotW / n;
+          const gap = Math.max(2, bw * 0.2);
+          const colW = bw - gap;
+          g.clearRect(0, 0, W, H);
+
+          g.fillStyle = "rgba(255,255,255,0.6)";
+          g.font = `${Math.round(PF(W, 11))}px ${MONO}`;
+          g.textAlign = "left";
+          g.fillText(`趟 i = ${bub.i} · 未排序区 j ∈ [0, ${Math.max(0, n - 2 - bub.i)}] · 已就位尾部 ${bub.sortedCount}/${n}`, mL, 26);
+
+          for (let k = 0; k < n; k++) {
+            const x = mL + k * bw + gap / 2;
+            const h = Math.max(2, plotH * (a[k] / n));
+            const y = mT + plotH - h;
+            let fill = "#dfe5ec";
+            if (k >= n - bub.sortedCount) fill = "#3f9b6d";
+            if (bub.hl.type !== "pass" && (k === bub.hl.j || k === bub.hl.j + 1)) {
+              fill = bub.hl.type === "swap" ? "#e33a32" : "#e5a526";
+            }
+            g.fillStyle = fill;
+            g.fillRect(x, y, colW, h);
+            g.strokeStyle = "rgba(255,255,255,0.35)";
+            g.lineWidth = 1;
+            g.strokeRect(x + 0.5, y + 0.5, colW, h);
+            if (bub.maxIdx === k) {
+              g.strokeStyle = "#ffb52b"; g.lineWidth = 2.5;
+              g.strokeRect(x - 3, y - 3, colW + 6, h + 6);
+            }
+            if (colW >= 17) {
+              g.fillStyle = "rgba(255,255,255,0.9)";
+              g.font = `700 ${Math.round(PF(W, 12))}px ${MONO}`;
+              g.textAlign = "center";
+              g.fillText(a[k], x + colW / 2, y - 6);
+            }
+            if (colW >= 20) {
+              g.fillStyle = "rgba(255,255,255,0.5)";
+              g.font = `${Math.round(PF(W, 10))}px ${MONO}`;
+              g.textAlign = "center";
+              g.fillText(k, x + colW / 2, mT + plotH + 18);
+            }
+          }
+
+          g.strokeStyle = "rgba(255,255,255,0.4)";
+          g.lineWidth = 1;
+          g.beginPath(); g.moveTo(mL, mT + plotH + 0.5); g.lineTo(W - mR, mT + plotH + 0.5); g.stroke();
+
+          if (bub.hl.type !== "pass" && bub.hl.j >= 0 && bub.hl.j < n - 1) {
+            g.fillStyle = "#ffb52b";
+            for (const k of [bub.hl.j, bub.hl.j + 1]) {
+              const x = mL + k * bw + gap / 2;
+              g.beginPath();
+              g.moveTo(x + colW / 2, mT + plotH + 5);
+              g.lineTo(x + colW / 2 - 6, mT + plotH + 15);
+              g.lineTo(x + colW / 2 + 6, mT + plotH + 15);
+              g.closePath(); g.fill();
+            }
+          }
+        }
+
+        function syncBub() {
+          const { n, cmp, swp, sortedCount, done } = bub;
+          $("bub-n-output").textContent = n;
+          $("bub-speed-output").textContent = `${bub.speed}×`;
+          $("bub-cmp-output").textContent = cmp;
+          $("bub-swap-output").textContent = swp;
+          $("bub-sorted-output").textContent = `${sortedCount} / ${n}`;
+          $("bub-check-output").textContent = `= ${(n * (n - 1)) / 2} 次`;
+          $("bub-canvas-status").textContent = `n = ${n} · 比较 ${cmp} · 交换 ${swp}`;
+          if (bub.done || bub.hl.type === "pass") {
+            $("bub-pair-output").textContent = bub.done ? "完成 ✓" : "—";
+          } else {
+            const j = bub.hl.j;
+            $("bub-pair-output").textContent =
+              `a[${j}]=${bub.a[j]} vs a[${j + 1}]=${bub.a[j + 1]} · ${bub.hl.type === "swap" ? "逆序 → 交换" : "有序 → 不动"}`;
+          }
+          $("bub-status-output").textContent = bub.status;
+        }
+
+        // ---------- 直觉区：O(n²) 增长（浅色白卡画布） ----------
+        const cv2 = $("bub-complex");
+        const g2 = cv2.getContext("2d", { willReadFrequently: true });
+        let comW = 0, comH = 0, DPR2 = 1;
+        const COM_MAX = 120; // 滑杆 60 的两倍
+        const com = { n: 20 };
+
+        function fitComplex() {
+          DPR2 = Math.min(window.devicePixelRatio || 1, 2);
+          const r = cv2.getBoundingClientRect();
+          comW = Math.max(1, r.width);
+          comH = Math.max(1, r.height);
+          cv2.width = Math.round(comW * DPR2);
+          cv2.height = Math.round(comH * DPR2);
+          g2.setTransform(DPR2, 0, 0, DPR2, 0, 0);
+        }
+
+        function drawComplex() {
+          g2.clearRect(0, 0, comW, comH);
+          const mT = 66, mB = 50, mL = 56, mR = 20;
+          const plotW = comW - mL - mR;
+          const plotH = comH - mT - mB;
+          const maxCount = (COM_MAX * (COM_MAX - 1)) / 2;
+
+          g2.fillStyle = "#07182d";
+          g2.font = `700 ${Math.round(PF(comW, 14))}px ${MONO}`;
+          g2.textAlign = "left";
+          g2.fillText("最坏比较次数 n(n−1)/2 随规模增长", mL, 28);
+          g2.font = `${Math.round(PF(comW, 11))}px ${MONO}`;
+          g2.fillStyle = "#6b6659";
+          g2.fillText("（黄色 = 当前 n · 红柱随 n 拖动）", mL, mT - 8);
+
+          g2.strokeStyle = "#d7d3c6"; g2.lineWidth = 1;
+          for (const f of [0.25, 0.5, 0.75]) {
+            const gy = mT + plotH * (1 - f);
+            g2.beginPath(); g2.moveTo(mL, gy); g2.lineTo(comW - mR, gy); g2.stroke();
+            g2.fillStyle = "#9b968a";
+            g2.font = `${Math.round(PF(comW, 10))}px ${MONO}`;
+            g2.textAlign = "right";
+            g2.fillText(`${Math.round(f * maxCount)}`, mL - 8, gy + 4);
+          }
+
+          const labels = ["n/2", "n", "2n"];
+          const ns = [Math.floor(com.n / 2), com.n, com.n * 2];
+          const bw = plotW / 3.2;
+          for (let i = 0; i < 3; i++) {
+            const c = ns[i];
+            const h = Math.max(2, plotH * ((c * (c - 1)) / 2) / maxCount);
+            const x = mL + plotW * (0.22 + 0.28 * i) - bw / 2;
+            const y = mT + plotH - h;
+            const isNow = i === 1;
+            g2.fillStyle = isNow ? "#b41f24" : "#8ea9c2";
+            g2.fillRect(x, y, bw, h);
+            g2.fillStyle = isNow ? "#07182d" : "#5c6b7a";
+            g2.font = `700 ${Math.round(PF(comW, 13))}px ${MONO}`;
+            g2.textAlign = "center";
+            g2.fillText(`${labels[i]} (${c})`, x + bw / 2, y - 8);
+            g2.font = `${Math.round(PF(comW, 12))}px ${MONO}`;
+            g2.fillText(`${(c * (c - 1)) / 2}`, x + bw / 2, mT + plotH + 24);
+          }
+          g2.fillStyle = "#07182d";
+          g2.font = `${Math.round(PF(comW, 11))}px ${MONO}`;
+          g2.textAlign = "left";
+          g2.fillText("输入规模 n →", mL, comH - 10);
+        }
+
+        function syncComplex() {
+          const n = com.n;
+          const c1 = (n * (n - 1)) / 2;
+          const c2 = (2 * n * (2 * n - 1)) / 2;
+          $("bub-cn-output").textContent = n;
+          $("bub-cn-compare").textContent = `${c1} 次`;
+          $("bub-2n-compare").textContent = `${c2} 次`;
+          $("bub-ratio").textContent = `≈ ${(c2 / c1).toFixed(1)}×`;
+          drawComplex();
+        }
+
+        // ---------- 控件绑定 ----------
+        function syncPlayBtn() {
+          const paused = bub.phase === "paused";
+          $("bub-play").textContent = paused ? "▶ 播放" : "⏸ 暂停";
+          $("bub-play").setAttribute("aria-pressed", String(!paused));
+        }
+
+        $("bub-play").addEventListener("click", () => {
+          bub.phase = bub.phase === "paused" ? "running" : "paused";
+          bub.acc = 0;
+          syncPlayBtn();
+        });
+
+        // 单步必须「先执行 doStep、再置 phase=paused」——doStep 内部有
+        // !bub.done 守卫，若先暂停只是冻结，不会执行本步（shell-sort 教训）
+        $("bub-step").addEventListener("click", () => {
+          doStep();
+          bub.phase = "paused";
+          bub.acc = 0;
+          syncPlayBtn();
+        });
+
+        $("bub-shuffle").addEventListener("click", () => { resetBub(); });
+        $("bub-reset").addEventListener("click", () => { resetBub(); });
+
+        $("bub-n").addEventListener("input", () => {
+          bub.n = clamp(Math.round(+$("bub-n").value), 5, 40);
+          bub.phase = "running";
+          resetBub();
+          syncPlayBtn();
+        });
+
+        $("bub-speed").addEventListener("input", () => {
+          bub.speed = clamp(+$("bub-speed").value, 0.5, 8);
+          syncBub();
+        });
+
+        $("bub-optimize").addEventListener("change", () => {
+          bub.optimize = $("bub-optimize").checked;
+          resetBub();
+        });
+
+        document.querySelectorAll("[data-bub-n]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            bub.n = clamp(+btn.dataset.bubN, 5, 40);
+            $("bub-n").value = bub.n;
+            bub.phase = "running";
+            resetBub();
+            syncPlayBtn();
+          });
+        });
+
+        $("bub-cn").addEventListener("input", () => {
+          com.n = clamp(Math.round(+$("bub-cn").value), 10, 60);
+          syncComplex();
+        });
+
+        // ---------- 初始化 ----------
+        fitBub(); fitComplex();
+        window.addEventListener("resize", () => { fitBub(); fitComplex(); });
+        resetBub();
+        syncComplex();
+
+        window.SciScene = {
+          update(dt) {
+            tickBub(dt);
+            syncBub();
+            drawComplex();
+          },
+        };
+      })();
+    </script>
+</body>
+</html>

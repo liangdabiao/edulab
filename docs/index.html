@@ -35,6 +35,7 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
 .math .tag,.badge.math{background:rgba(248,113,113,.3);color:#fca5a5}
 .physics .tag,.badge.physics{background:rgba(232,121,249,.3);color:#f0abfc}
 .solid-geo .tag,.badge.solid-geo{background:rgba(14,165,233,.3);color:#7dd3fc}
+.sciviz .tag,.badge.sciviz{background:rgba(229,165,38,.3);color:#fbbf24}
 .chem{border-left:3px solid #6366f1}
 .it{border-left:3px solid #06b6d4}
 .bio{border-left:3px solid #34d399}
@@ -42,6 +43,7 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
 .math{border-left:3px solid #f87171}
 .physics{border-left:3px solid #e879f9}
 .solid-geo{border-left:3px solid #0ea5e9}
+.sciviz{border-left:3px solid #e5a526}
 .sub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding-left:12px;margin-top:8px}
 .sub-label{font-size:12px;color:#9ab0d0;font-weight:600;padding:4px 0 2px 12px}
 @media(max-width:600px){header{padding:24px 16px}header h1{font-size:22px}.grid{grid-template-columns:1fr}}
@@ -50,7 +52,7 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
 <body>
 
 <header style="position:relative">
-  <a href="https://github.com/liangdabiao/edulab-plus" target="_blank" style="position:absolute;top:16px;right:20px;display:flex;align-items:center;gap:6px;color:#9ab0d0;text-decoration:none;font-size:13px;padding:6px 14px;border:1px solid #243a5e;border-radius:8px;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='#6366f1';this.style.color='#e8eef8'" onmouseout="this.style.borderColor='#243a5e';this.style.color='#9ab0d0'">
+  <a href="https://github.com/liangdabiao/edulab" target="_blank" style="position:absolute;top:16px;right:20px;display:flex;align-items:center;gap:6px;color:#9ab0d0;text-decoration:none;font-size:13px;padding:6px 14px;border:1px solid #243a5e;border-radius:8px;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='#6366f1';this.style.color='#e8eef8'" onmouseout="this.style.borderColor='#243a5e';this.style.color='#9ab0d0'">
     <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
     GitHub
   </a>
@@ -58,6 +60,7 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
   <p>步进式知识点讲解 · Canvas 2D 动画场景 · 侧栏面板 · 步进器控制</p>
   <div class="stats">
     <div class="stat"><div class="num" id="totalCount">0</div><div class="label">课程总数</div></div>
+    <div class="stat"><div class="num" id="scivizCount">0</div><div class="label">科学可视化</div></div>
     <div class="stat"><div class="num">6</div><div class="label">学科分类</div></div>
   </div>
 </header>
@@ -82,14 +85,21 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
       💻 信息技术
       <span class="badge it">算法 · 编程 · 数据 · 网络 · AI</span>
     </div>
-    <div class="grid" id="it"></div>
+    <div class="sub-label">🔢 算法与数据结构</div>
+    <div class="sub-grid" id="it-algo"></div>
+    <div class="sub-label" style="margin-top:12px">⌨️ 编程语言</div>
+    <div class="sub-grid" id="it-prog"></div>
+    <div class="sub-label" style="margin-top:12px">📊 数据与 AI</div>
+    <div class="sub-grid" id="it-data"></div>
+    <div class="sub-label" style="margin-top:12px">🔌 硬件 · 网络 · 设计</div>
+    <div class="sub-grid" id="it-other"></div>
   </div>
 
   <!-- ===== 生物 ===== -->
   <div class="section">
     <div class="section-title">
       🧬 生物
-      <span class="badge bio">分子与细胞 · 遗传 · 免疫 · PCR · 循环系统</span>
+      <span class="badge bio">分子与细胞 · 遗传 · 免疫 · 生理</span>
     </div>
     <div class="grid" id="bio"></div>
   </div>
@@ -116,7 +126,7 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
   <div class="section">
     <div class="section-title">
       ⚛ 物理
-      <span class="badge physics">力学 · 电磁学</span>
+      <span class="badge physics">力学 · 电磁学 · 相对论 · 原子</span>
     </div>
     <div class="grid" id="physics"></div>
   </div>
@@ -130,6 +140,15 @@ header p{color:#9ab0d0;margin-top:8px;font-size:14px}
     <div class="grid" id="solid-geo"></div>
   </div>
 
+  <!-- ===== 科学可视化 · 科普 ===== -->
+  <div class="section">
+    <div class="section-title">
+      🔬 科学可视化 · 科普
+      <span class="badge sciviz">单文件互动科学实验</span>
+    </div>
+    <div class="grid" id="sciviz"></div>
+  </div>
+
 </div>
 
 <script>
@@ -140,89 +159,124 @@ const DATA = [
   {cat:"chem-reaction", title:"铁与硫酸铜", file:"reaction-fe-cuso4.html", tag:"置换", desc:"铁钉置换硫酸铜中的铜，表面析出红色铜"},
   {cat:"chem-reaction", title:"锌与盐酸", file:"reaction-zn-hcl.html", tag:"置换", desc:"锌粒与稀盐酸反应产生氢气"},
   {cat:"chem-reaction", title:"钠与水", file:"reaction-na-water.html", tag:"反应", desc:"钠与水剧烈反应，产生氢气并熔化"},
-  {cat:"chem-reaction", title:"铜还原", file:"reaction-cu-reduction.html", tag:"还原", desc:"氧化铜被还原为铜单质"},
+  {cat:"chem-reaction", title:"木炭还原氧化铜", file:"reaction-cu-reduction.html", tag:"还原", desc:"氧化铜被还原为铜单质"},
   {cat:"chem-reaction", title:"铁生锈", file:"reaction-iron-rusting.html", tag:"氧化", desc:"铁在潮湿空气中缓慢氧化生锈"},
-  {cat:"chem-reaction", title:"氧化还原配平", file:"redox-balancing-tutorial.html", tag:"配平", desc:"化合价升降法配平氧化还原方程式"},
 
   // ---- 化学 教程 ----
+  {cat:"chem-tutorial", title:"氧化还原方程式配平", file:"redox-balancing-tutorial.html", tag:"配平", desc:"化合价升降法 · 电子守恒 · 双线桥"},
   {cat:"chem-tutorial", title:"氧化还原配平", file:"tutorial-redox-balancing.html", tag:"教程", desc:"化合价升降法 · 电子守恒 · 双线桥"},
-  {cat:"chem-tutorial", title:"金属活动性", file:"tutorial-metal-activity.html", tag:"教程", desc:"金属活动性顺序及其应用"},
-  {cat:"chem-tutorial", title:"电解质", file:"tutorial-electrolyte.html", tag:"教程", desc:"电解质与非电解质的区别"},
-  {cat:"chem-tutorial", title:"镁条燃烧微观过程", file:"tutorial-镁条燃烧.html", tag:"微观", desc:"镁条燃烧发出剧烈白光的微观过程"},
+  {cat:"chem-tutorial", title:"金属活动性顺序", file:"tutorial-metal-activity.html", tag:"教程", desc:"金属活动性顺序及其应用"},
+  {cat:"chem-tutorial", title:"电解质的电离", file:"tutorial-electrolyte.html", tag:"教程", desc:"电解质与非电解质的区别"},
+  {cat:"chem-tutorial", title:"碱的共性", file:"solution-base-properties.html", tag:"化学", desc:"碱的通性与反应规律"},
+  {cat:"chem-tutorial", title:"一氧化碳与血红蛋白", file:"solution-co-hemoglobin.html", tag:"应用", desc:"CO 与血红蛋白的竞争结合机制"},
+  {cat:"chem-tutorial", title:"镁条燃烧·微观过程", file:"tutorial-镁条燃烧.html", tag:"微观", desc:"镁条燃烧发出剧烈白光的微观过程"},
   {cat:"chem-tutorial", title:"过氧化氢分解", file:"tutorial-过氧化氢分解.html", tag:"微观", desc:"过氧化氢在二氧化锰催化下的分解过程"},
 
-  // ---- 信息技术 ----
-  {cat:"it", title:"冒泡排序", file:"tutorial-bubble_sort.html", tag:"算法", desc:"相邻元素两两比较，大的往后冒泡"},
-  {cat:"it", title:"选择排序", file:"tutorial-selection_sort.html", tag:"算法", desc:"每次选出最小元素放到前面"},
-  {cat:"it", title:"插入排序", file:"tutorial-insertion_sort.html", tag:"算法", desc:"将元素插入到已排好序的序列中"},
-  {cat:"it", title:"二分查找", file:"tutorial-binary_search.html", tag:"算法", desc:"在有序数组中快速定位目标值"},
-  {cat:"it", title:"算法复杂度", file:"tutorial-algorithm_complexity.html", tag:"算法", desc:"时间与空间复杂度分析方法"},
-  {cat:"it", title:"流程图基础", file:"tutorial-flowchart_basics.html", tag:"编程", desc:"流程图基本符号与画法"},
-  {cat:"it", title:"Python 基础", file:"tutorial-python_basics.html", tag:"编程", desc:"变量、数据类型、控制结构"},
-  {cat:"it", title:"Scratch 基础", file:"tutorial-scratch_basics.html", tag:"编程", desc:"图形化编程入门"},
-  {cat:"it", title:"C++ 基础", file:"tutorial-cpp_basics.html", tag:"编程", desc:"C++ 基本语法与编程思想"},
-  {cat:"it", title:"Excel 数据处理", file:"tutorial-excel_data.html", tag:"数据", desc:"表格设计、公式、图表与数据分析"},
-  {cat:"it", title:"数据库入门", file:"tutorial-database_intro.html", tag:"数据", desc:"关系数据库概念与 SQL 基础"},
-  {cat:"it", title:"机器学习概念", file:"tutorial-ml_concepts.html", tag:"AI", desc:"机器学习基本概念与算法分类"},
-  {cat:"it", title:"语音识别", file:"tutorial-voice_recognition.html", tag:"AI", desc:"语音识别技术原理与应用"},
-  {cat:"it", title:"图像识别", file:"tutorial-image_recognition.html", tag:"AI", desc:"卷积神经网络与图像分类"},
-  {cat:"it", title:"计算机组成", file:"tutorial-computer_architecture.html", tag:"硬件", desc:"冯·诺依曼结构与硬件组成"},
-  {cat:"it", title:"网络基础", file:"tutorial-network_basics.html", tag:"网络", desc:"TCP/IP 协议与网络拓扑"},
-  {cat:"it", title:"设计流程", file:"tutorial-design_process.html", tag:"设计", desc:"通用技术设计的一般过程"},
-  {cat:"it", title:"材料与工具", file:"tutorial-materials_tools.html", tag:"设计", desc:"常见材料性能与工具使用"},
-  {cat:"it", title:"电子控制", file:"tutorial-electronic_control.html", tag:"设计", desc:"传感器、控制器与执行器"},
+  // ---- 信息技术 算法 ----
+  {cat:"it-algo", title:"冒泡排序", file:"tutorial-bubble_sort.html", tag:"算法", desc:"相邻元素两两比较，大的往后冒泡"},
+  {cat:"it-algo", title:"冒泡排序", file:"bub.html", tag:"可视化", desc:"相邻比较 · 依次冒泡 · O(n²)"},
+  {cat:"it-algo", title:"选择排序", file:"tutorial-selection_sort.html", tag:"算法", desc:"每次选出最小元素放到前面"},
+  {cat:"it-algo", title:"插入排序", file:"tutorial-insertion_sort.html", tag:"算法", desc:"将元素插入到已排好序的序列中"},
+  {cat:"it-algo", title:"希尔排序", file:"solution-shell-sort.html", tag:"算法", desc:"插入排序的升级版 · 间隔序列 · O(n^{4/3})"},
+  {cat:"it-algo", title:"希尔排序", file:"shell-sort.html", tag:"可视化", desc:"间隔分组 · 组内插入 · 逐步缩小"},
+  {cat:"it-algo", title:"二分查找", file:"tutorial-binary_search.html", tag:"算法", desc:"在有序数组中快速定位目标值"},
+  {cat:"it-algo", title:"算法复杂度", file:"tutorial-algorithm_complexity.html", tag:"算法", desc:"时间与空间复杂度分析方法"},
+
+  // ---- 信息技术 编程 ----
+  {cat:"it-prog", title:"流程图基础", file:"tutorial-flowchart_basics.html", tag:"编程", desc:"流程图基本符号与画法"},
+  {cat:"it-prog", title:"Python 基础", file:"tutorial-python_basics.html", tag:"编程", desc:"变量、数据类型、控制结构"},
+  {cat:"it-prog", title:"Scratch 基础", file:"tutorial-scratch_basics.html", tag:"编程", desc:"图形化编程入门"},
+  {cat:"it-prog", title:"C++ 基础", file:"tutorial-cpp_basics.html", tag:"编程", desc:"C++ 基本语法与编程思想"},
+
+  // ---- 信息技术 数据与 AI ----
+  {cat:"it-data", title:"Excel 数据处理", file:"tutorial-excel_data.html", tag:"数据", desc:"表格设计、公式、图表与数据分析"},
+  {cat:"it-data", title:"数据库入门", file:"tutorial-database_intro.html", tag:"数据", desc:"关系数据库概念与 SQL 基础"},
+  {cat:"it-data", title:"机器学习概念", file:"tutorial-ml_concepts.html", tag:"AI", desc:"机器学习基本概念与算法分类"},
+  {cat:"it-data", title:"语音识别", file:"tutorial-voice_recognition.html", tag:"AI", desc:"语音识别技术原理与应用"},
+  {cat:"it-data", title:"图像识别", file:"tutorial-image_recognition.html", tag:"AI", desc:"卷积神经网络与图像分类"},
+
+  // ---- 信息技术 硬件/网络/设计 ----
+  {cat:"it-other", title:"计算机组成", file:"tutorial-computer_architecture.html", tag:"硬件", desc:"冯·诺依曼结构与硬件组成"},
+  {cat:"it-other", title:"网络基础", file:"tutorial-network_basics.html", tag:"网络", desc:"TCP/IP 协议与网络拓扑"},
+  {cat:"it-other", title:"设计流程", file:"tutorial-design_process.html", tag:"设计", desc:"通用技术设计的一般过程"},
+  {cat:"it-other", title:"材料与工具", file:"tutorial-materials_tools.html", tag:"设计", desc:"常见材料性能与工具使用"},
+  {cat:"it-other", title:"电子控制", file:"tutorial-electronic_control.html", tag:"设计", desc:"传感器、控制器与执行器"},
 
   // ---- 生物 ----
   {cat:"bio", title:"细胞结构", file:"tutorial-cell_structure.html", tag:"微观", desc:"动植物细胞结构与细胞器功能"},
-  {cat:"bio", title:"循环系统", file:"tutorial-circulatory_system.html", tag:"人体", desc:"心脏结构与血液循环途径"},
-  {cat:"bio", title:"免疫系统", file:"tutorial-immune_system.html", tag:"稳态", desc:"特异性免疫与非特异性免疫"},
+  {cat:"bio", title:"人体生理—循环与呼吸", file:"tutorial-circulatory_system.html", tag:"人体", desc:"心脏双泵 · 血液循环 · 气体交换"},
+  {cat:"bio", title:"免疫调节", file:"tutorial-immune_system.html", tag:"稳态", desc:"三道防线 · 特异性免疫 · 二次免疫"},
   {cat:"bio", title:"孟德尔遗传", file:"tutorial-mendel_genetics.html", tag:"遗传", desc:"分离定律与自由组合定律"},
   {cat:"bio", title:"PCR 技术", file:"tutorial-pcr_technique.html", tag:"生物技术", desc:"聚合酶链式反应原理与过程"},
+  {cat:"bio", title:"DNA 半保留复制", file:"solution-dna-replication.html", tag:"分子", desc:"DNA 双螺旋解开 · 互补配对 · 半保留复制"},
 
   // ---- 地理 ----
   {cat:"geo", title:"自然地理基础", file:"tutorial-physical_geo.html", tag:"自然", desc:"地球运动 · 大气环流 · 水循环 · 板块构造"},
   {cat:"geo", title:"人口与城市", file:"tutorial-population.html", tag:"人文", desc:"人口金字塔 · 城市结构模型 · 区位分析"},
-  {cat:"geo", title:"中国地理", file:"tutorial-china_geo.html", tag:"区域", desc:"地形阶梯 · 气候分区 · 城市与交通"},
-  {cat:"geo", title:"GIS 技术", file:"tutorial-gis_tech.html", tag:"技术", desc:"遥感 · GPS · GIS 图层叠加"},
+  {cat:"geo", title:"地理信息技术", file:"tutorial-gis_tech.html", tag:"技术", desc:"遥感 · GPS · GIS 图层叠加"},
 
   // ---- 数学 ----
   {cat:"math", title:"二次函数", file:"solution-quadratic.html", tag:"函数", desc:"二次函数图像与性质"},
-  {cat:"math", title:"向量加法", file:"solution-vector-addition.html", tag:"向量", desc:"二维向量的加法与几何意义"},
+  {cat:"math", title:"向量加法", file:"solution-vector-addition.html", tag:"向量", desc:"平行四边形法则 · 几何意义"},
   {cat:"math", title:"正态分布", file:"solution-normal-distribution.html", tag:"统计", desc:"正态分布曲线与性质"},
   {cat:"math", title:"集合逻辑", file:"solution-logic.html", tag:"逻辑", desc:"集合运算与逻辑推理"},
+  {cat:"math", title:"爱因斯坦证明勾股", file:"solution-einstein-pythagoras.html", tag:"几何", desc:"爱因斯坦的相似三角形证法"},
   {cat:"math", title:"Garfield 勾股证明", file:"solution-garfield-proof.html", tag:"几何", desc:"Garfield 梯形证法"},
-  {cat:"math", title:"Einstein 勾股证明", file:"solution-einstein-pythagoras.html", tag:"几何", desc:"爱因斯坦的相似三角形证法"},
   {cat:"math", title:"Garfield 勾股定理", file:"solution-garfield-pythagoras.html", tag:"几何", desc:"Garfield 对勾股定理的证明"},
 
   // ---- 物理 ----
   {cat:"physics", title:"抛体运动", file:"solution-physics-projectile.html", tag:"力学", desc:"平抛运动分解与轨迹分析"},
-  {cat:"physics", title:"洛伦兹力", file:"solution-lorentz-force.html", tag:"电磁", desc:"电荷在磁场中的受力与运动"},
-  {cat:"physics", title:"狭义相对论", file:"solution-sr-minkowski.html", tag:"相对论", desc:"闵可夫斯基时空图 · 光锥 · 洛伦兹变换 · 时间膨胀"},
+  {cat:"physics", title:"洛伦兹力", file:"solution-lorentz-force.html", tag:"电磁", desc:"电荷在磁场中的受力与运动 F = q(v × B)"},
+  {cat:"physics", title:"α粒子散射实验", file:"solution-rutherford.html", tag:"原子", desc:"α 粒子散射与卢瑟福原子核式结构"},
+  {cat:"physics", title:"狭义相对论·闵可夫斯基", file:"solution-sr-minkowski.html", tag:"相对论", desc:"时空图 · 光锥 · 洛伦兹变换 · 时间膨胀"},
 
   // ---- 立体几何 ----
   {cat:"solid-geo", title:"正四棱锥线面角", file:"lesson-pyramid.html", tag:"3D", desc:"Three.js 交互 · 线面角求解 (MathJax)"},
-  {cat:"solid-geo", title:"空间角的正弦和余弦", file:"solution-space-angles.html", tag:"典型题", desc:"正方体中线面角正弦 + 异面直线余弦 ← 方向余弦统一视角"},
+  {cat:"solid-geo", title:"正方体空间角", file:"solution-space-angles.html", tag:"典型题", desc:"线面角正弦 + 异面直线余弦 ← 方向余弦统一视角"},
+
+  // ---- 科学可视化 · 科普 ----
+  {cat:"sciviz", title:"冒泡排序", file:"bub.html", tag:"算法", desc:"相邻比较 · 依次冒泡 · O(n²)"},
+  {cat:"sciviz", title:"希尔排序", file:"shell-sort.html", tag:"算法", desc:"间隔分组 · 组内插入 · 逐步缩小"},
+  {cat:"sciviz", title:"循环与呼吸", file:"cardio.html", tag:"生物", desc:"心脏双泵 · 血流 · 气体交换"},
+  {cat:"sciviz", title:"DNA 复制", file:"dna-replication.html", tag:"生物", desc:"双螺旋解开 · 互补配对 · 半保留复制"},
+  {cat:"sciviz", title:"免疫调节", file:"imm.html", tag:"生物", desc:"三道防线 · 特异性免疫 · 二次免疫"},
+  {cat:"sciviz", title:"勾股定理", file:"grf.html", tag:"数学", desc:"美国总统 Garfield 的梯形证明"},
+  {cat:"sciviz", title:"镁条燃烧", file:"mg-burn.html", tag:"化学", desc:"电子搬家记 · 微观过程"},
+  {cat:"sciviz", title:"氧化还原配平", file:"redox-balance.html", tag:"化学", desc:"化合价升降法 · 电子守恒 · 互动配平"},
+  {cat:"sciviz", title:"铝热反应", file:"thermite-reaction.html", tag:"化学", desc:"铝置换铁 · 高温熔融 · 焊接应用"},
+  {cat:"sciviz", title:"厄尔尼诺", file:"enso.html", tag:"地理", desc:"暖水东移 · 温跃层 · 上升流 · 76 年序列"},
+  {cat:"sciviz", title:"狭义相对论·时间膨胀", file:"sr.html", tag:"物理", desc:"动得越快 · 时间越慢 · 闵可夫斯基时空"},
+  {cat:"sciviz", title:"相对论质量", file:"ms.html", tag:"物理", desc:"动得越快 · 质量越大 · E = mc²"},
 ];
 
 // Render
 const containers = {
   "chem-reaction": "chem-reaction",
   "chem-tutorial": "chem-tutorial",
-  "it": "it",
+  "it-algo": "it-algo",
+  "it-prog": "it-prog",
+  "it-data": "it-data",
+  "it-other": "it-other",
   "bio": "bio",
   "geo": "geo",
   "math": "math",
   "physics": "physics",
   "solid-geo": "solid-geo",
+  "sciviz": "sciviz",
 };
 
 document.getElementById("totalCount").textContent = DATA.length;
+document.getElementById("scivizCount").textContent = DATA.filter(d => d.cat === "sciviz").length;
 
 for (const item of DATA) {
   const el = document.getElementById(containers[item.cat]);
   if (!el) continue;
+  // determine card color class
+  let colorClass = item.cat;
+  if (item.cat === "chem-reaction" || item.cat === "chem-tutorial") colorClass = "chem";
+  else if (item.cat.startsWith("it-")) colorClass = "it";
   const card = document.createElement("a");
-  card.className = `card ${item.cat === "chem-reaction" || item.cat === "chem-tutorial" ? "chem" : item.cat}`;
+  card.className = `card ${colorClass}`;
   card.href = item.file;
   card.innerHTML = `
     <div class="tag">${item.tag}</div>

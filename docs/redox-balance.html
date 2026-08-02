@@ -1,0 +1,1875 @@
+<!doctype html>
+<!--
+  edu-sci-viz · 单文件互动科普页模板
+  ============================================================
+  用法：把本文件复制到工作目录，然后按 SKILL.md 的 8 步流程替换四处内容：
+    1. <title> 与 hero 文案（大标题/lead/CTA/说明）
+    2. 分节叙事 HTML（直觉模型 → 正式定义 → 边界说明 → 来源）
+    3. hero 里的实验台 lab-shell（画布 + 控制区）
+    4. 底部「场景模块」<script>（用你的主题替换「光的折射」）
+  保留：<head> 设计系统 <style>、通用运行时 <script>、importmap。
+  本模板内置「光的折射」作为可运行示例（2D Canvas，零网络依赖）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="氧化还原方程式配平：用化合价升降法让升高的总数等于降低的总数，四组经典反应演示与动手配平。" />
+    <meta name="theme-color" content="#07182d" />
+    <title>氧化还原配平 | 互动科学实验</title>
+
+    <style>
+      /* ==========================================================
+         编辑部科学手册风 · 设计系统（edu-sci-viz 模板）
+         新主题请保留本块，不要另造风格。
+         ========================================================== */
+      :root {
+        color-scheme: light;
+        --paper: #f3efe5;
+        --paper-2: #ebe4d6;
+        --ink: #111315;
+        --muted: #625f59;
+        --navy: #07182d;
+        --navy-2: #0b2440;
+        --red: #b41f24;
+        --red-bright: #e33a32;
+        --saffron: #e5a526;
+        --blue-gray: #91a5b8;
+        --rule: rgba(17, 19, 21, 0.34);
+        --light-rule: rgba(243, 239, 229, 0.26);
+        --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+        --sans: "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --max: 1480px;
+        --gutter: clamp(20px, 4.2vw, 72px);
+        --radius: 8px;
+        --shadow: 0 24px 70px rgba(23, 15, 5, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(98, 75, 43, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 100% 36px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+      }
+
+      button, input, output { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; }
+      canvas { display: block; }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--red);
+        transform: translateY(-150%);
+        transition: transform 160ms ease;
+      }
+      .skip-link:focus { transform: translateY(0); }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        height: 3px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--red-bright);
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 76px;
+        padding: 0 var(--gutter);
+        border-bottom: 1px solid var(--red);
+        background: rgba(243, 239, 229, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-self: start;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 42px;
+        height: 12px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        content: "";
+        transform: translateY(-50%);
+      }
+      .brand-mark::before {
+        left: 0;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--red);
+        border-radius: 50%;
+      }
+      .brand-mark::after {
+        right: 0;
+        left: 10px;
+        height: 1px;
+        background: var(--red);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(20px, 3vw, 48px);
+      }
+      nav a {
+        position: relative;
+        padding: 25px 0 21px;
+        font-family: var(--serif);
+        font-size: 15px;
+        text-decoration: none;
+      }
+      nav a::after {
+        position: absolute;
+        right: 0;
+        bottom: 17px;
+        left: 0;
+        height: 1px;
+        content: "";
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 180ms ease;
+      }
+      nav a:hover::after,
+      nav a:focus-visible::after { transform: scaleX(1); }
+
+      .quiet-button {
+        justify-self: end;
+        padding: 8px 12px;
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 13px;
+      }
+      .quiet-button:hover,
+      .quiet-button:focus-visible {
+        color: var(--red);
+        border-color: var(--red);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(450px, 0.84fr) minmax(700px, 1.55fr);
+        gap: clamp(36px, 4vw, 64px);
+        align-items: center;
+        min-height: auto;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(30px, 3vw, 46px) var(--gutter) clamp(42px, 5vw, 72px);
+      }
+
+      .hero-copy { position: relative; padding-left: 30px; }
+      .hero-copy::before {
+        position: absolute;
+        top: 48px;
+        bottom: 210px;
+        left: 0;
+        width: 1px;
+        content: "";
+        background: var(--red);
+      }
+      .hero-copy::after {
+        position: absolute;
+        bottom: 204px;
+        left: -4px;
+        width: 7px;
+        height: 7px;
+        content: "";
+        border: 1px solid var(--red);
+        border-radius: 50%;
+        background: var(--paper);
+      }
+
+      .figure-no,
+      .section-index {
+        margin: 0 0 28px;
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 30px;
+        font-family: var(--serif);
+        /* 陷阱：h1 是 nowrap，字号上限必须保证最长一行放得进左列（约 450px 文字列）。
+           68px 上限 ≈ 每行最多 6 个汉字；行更长的主题，在场景样式里覆盖
+           .scene .hero h1 { white-space: normal } 让标题折行，防止溢出压到右侧实验区。 */
+        font-size: clamp(48px, 3.8vw, 68px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+        white-space: nowrap;
+      }
+      h1::first-line { letter-spacing: -0.07em; }
+
+      .hero-lead {
+        max-width: 440px;
+        margin-bottom: 34px;
+        font-family: var(--serif);
+        font-size: clamp(18px, 1.5vw, 24px);
+        line-height: 1.7;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        gap: 44px;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 245px;
+        padding: 17px 22px;
+        color: #fff;
+        background: var(--red);
+        font-family: var(--serif);
+        font-size: 20px;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(180, 31, 36, 0.18);
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .primary-action:hover,
+      .primary-action:focus-visible {
+        background: #94161b;
+        transform: translateY(-2px);
+      }
+      .primary-action svg {
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+      }
+
+      .hero-note {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      .lab-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        min-width: 0;
+        min-height: 650px;
+        overflow: hidden;
+        color: #f6f1e7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--radius);
+        background: var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .lab-canvas-wrap {
+        position: relative;
+        height: 650px;
+        min-width: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(27, 66, 104, 0.32), transparent 42%),
+          linear-gradient(rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.08) 1px, transparent 1px),
+          var(--navy);
+        background-size: auto, 34px 34px, 34px 34px, auto;
+      }
+
+      .canvas-caption {
+        position: absolute;
+        right: 22px;
+        bottom: 16px;
+        left: 22px;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        pointer-events: none;
+      }
+
+      .lab-controls {
+        padding: 24px 19px 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 17, 33, 0.88);
+      }
+      .lab-controls h2 {
+        margin-bottom: 18px;
+        font-family: var(--serif);
+        font-size: 17px;
+        letter-spacing: 0.04em;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 17px 0 6px;
+        font-size: 12px;
+      }
+      .control-row span { color: rgba(255, 255, 255, 0.7); }
+      .control-row i { margin-left: 3px; font-family: Georgia, serif; }
+      .control-row output {
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--red-bright);
+        cursor: ew-resize;
+      }
+
+      .lab-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .lab-actions button {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 8px;
+        color: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 3px;
+        background: transparent;
+        font-size: 11px;
+      }
+      .lab-actions button:hover,
+      .lab-actions button:focus-visible {
+        color: #fff;
+        border-color: #fff;
+      }
+      .lab-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+      .lab-actions .accent-button {
+        border-color: var(--red-bright);
+        background: var(--red-bright);
+      }
+
+      .section-pad {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: clamp(80px, 9vw, 150px) var(--gutter);
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+        margin-bottom: 58px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .section-heading .section-index {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 44px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .section-heading h2 {
+        margin-bottom: 12px;
+        font-family: var(--serif);
+        font-size: clamp(36px, 4.2vw, 68px);
+        line-height: 1.1;
+        letter-spacing: -0.045em;
+      }
+      .section-heading p:last-child {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .sources {
+        max-width: none;
+        color: #f4efe6;
+        background: var(--navy);
+      }
+      .sources > * {
+        max-width: calc(var(--max) - 2 * var(--gutter));
+        margin-right: auto;
+        margin-left: auto;
+      }
+      .light-heading { border-color: var(--light-rule); }
+      .light-heading p:last-child { color: rgba(255, 255, 255, 0.6); }
+
+      .intuition-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+        gap: clamp(34px, 5vw, 80px);
+        align-items: center;
+      }
+
+      .canvas-panel {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        border: 1px solid var(--light-rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(142, 173, 199, 0.07) 1px, transparent 1px),
+          #091d34;
+        background-size: 30px 30px;
+      }
+
+      .canvas-key {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        display: flex;
+        gap: 20px;
+        padding: 8px 10px;
+        color: rgba(255, 255, 255, 0.62);
+        background: rgba(7, 24, 45, 0.76);
+        font-size: 10px;
+      }
+      .canvas-key span { display: inline-flex; gap: 7px; align-items: center; }
+      .canvas-key i { display: inline-block; width: 20px; }
+      .key-line { height: 1px; background: var(--red-bright); }
+      .key-fill { height: 8px; background: rgba(227, 58, 50, 0.25); }
+
+      .intuition-copy { align-self: center; }
+      .intuition-copy > p { margin-top: 28px; }
+      .intuition-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.9; }
+
+      .segmented {
+        display: inline-flex;
+        width: 100%;
+        padding: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .segmented button {
+        flex: 1;
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.68);
+        border: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .segmented button:hover,
+      .segmented button:focus-visible { color: #fff; }
+      .segmented button.is-active { color: #fff; background: var(--red); }
+
+      .metric-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 32px 0;
+        border-top: 1px solid var(--light-rule);
+        border-bottom: 1px solid var(--light-rule);
+      }
+      .metric-pair div { padding: 18px 0; }
+      .metric-pair div + div { padding-left: 22px; border-left: 1px solid var(--light-rule); }
+      .metric-pair span { display: block; color: rgba(255, 255, 255, 0.58); font-size: 11px; }
+      .metric-pair strong { font-family: var(--serif); font-size: 32px; font-weight: 500; }
+
+      .method-note {
+        padding-top: 18px;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--light-rule);
+        font-size: 12px;
+      }
+
+      .definition-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.7fr) minmax(420px, 1.15fr);
+        gap: clamp(30px, 4vw, 64px);
+        align-items: start;
+      }
+      .definition-grid h3 { margin-bottom: 16px; font-family: var(--serif); font-size: 28px; }
+      .definition-copy > p { font-family: var(--serif); font-size: 18px; }
+
+      .formula-box {
+        margin: 36px 0;
+        padding: 28px;
+        border: 1px solid var(--red);
+      }
+      .formula-box > span,
+      .limits-grid span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+      .formula-box .formula {
+        margin: 18px 0;
+        font-family: "Times New Roman", serif;
+        font-size: clamp(30px, 3vw, 46px);
+      }
+      .formula-box p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .fact-line { padding-left: 16px; border-left: 3px solid var(--red); }
+
+      .distinction-rail {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .distinction-rail article {
+        min-width: 0;
+        padding: 36px clamp(22px, 3vw, 48px);
+        border-right: 1px solid var(--rule);
+      }
+      .distinction-rail article:last-child { border-right: 0; }
+      .distinction-rail article > span {
+        color: var(--red);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+      .distinction-rail h3 { margin: 14px 0 18px; font-family: var(--serif); font-size: clamp(25px, 2.1vw, 34px); }
+      .distinction-rail p { color: #363431; }
+
+      .limits-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+      }
+      .limits-grid article { padding: 32px clamp(22px, 3vw, 42px); border-right: 1px solid var(--rule); }
+      .limits-grid article:last-child { border-right: 0; }
+      .limits-grid .confirmed { color: #fff; background: var(--red); }
+      .limits-grid .confirmed span { color: rgba(255, 255, 255, 0.72); }
+      .limits-grid h3 { margin: 10px 0 16px; font-family: var(--serif); font-size: 28px; }
+      .limits-grid p { margin: 0; font-size: 14px; }
+
+      .source-table { border-top: 1px solid var(--light-rule); }
+      .source-row {
+        display: grid;
+        grid-template-columns: 130px minmax(320px, 1fr) minmax(260px, 0.8fr);
+        gap: 22px;
+        align-items: center;
+        min-height: 72px;
+        padding: 16px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        border-bottom: 1px solid var(--light-rule);
+        text-decoration: none;
+        transition: color 150ms ease, background 150ms ease;
+      }
+      a.source-row:hover,
+      a.source-row:focus-visible {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .source-row span:first-child {
+        color: var(--saffron);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .source-row strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+      .source-row span:last-child { font-size: 12px; }
+      .source-head { min-height: 42px; color: rgba(255, 255, 255, 0.4); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .source-head span { color: inherit !important; }
+      .source-policy {
+        max-width: 950px !important;
+        margin-top: 36px !important;
+        margin-left: 0 !important;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100px;
+        padding: 0 var(--gutter);
+        color: #524f4a;
+        border-top: 1px solid var(--red);
+        background: var(--paper);
+        font-size: 12px;
+      }
+      footer a { color: var(--red); text-decoration: none; }
+
+      :focus-visible { outline: 2px solid var(--saffron); outline-offset: 3px; }
+
+      @media (max-width: 1240px) {
+        .site-header { grid-template-columns: 1fr auto; }
+        .site-header nav { display: none; }
+        .quiet-button { display: none; }
+        .hero { grid-template-columns: 1fr; min-height: auto; }
+        .hero-copy { max-width: 700px; }
+        .hero-copy::before { bottom: 185px; }
+        .hero-copy::after { bottom: 179px; }
+        .lab-shell { min-height: 620px; }
+        .lab-canvas-wrap { height: 620px; }
+        .definition-grid { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 900px) {
+        .site-header { min-height: 64px; }
+        .brand { font-size: 14px; }
+        .hero { padding-top: 54px; }
+        h1 { font-size: clamp(54px, 14vw, 78px); }
+        .lab-shell { grid-template-columns: 1fr; }
+        .lab-controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          border-left: 0;
+        }
+        .lab-controls h2 { grid-column: 1 / -1; }
+        .lab-actions { align-self: end; }
+        .distinction-rail,
+        .limits-grid { grid-template-columns: 1fr; }
+        .distinction-rail article,
+        .limits-grid article {
+          border-right: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+        .distinction-rail article:last-child,
+        .limits-grid article:last-child { border-bottom: 0; }
+        .intuition-layout { grid-template-columns: 1fr; }
+        .definition-grid { grid-template-columns: 1fr; }
+        .source-row { grid-template-columns: 100px minmax(0, 1fr); }
+        .source-row span:last-child { grid-column: 2; }
+      }
+
+      @media (max-width: 620px) {
+        :root { --gutter: 18px; }
+        body { background-size: 100% 28px; }
+        .site-header { padding: 0 16px; }
+        .brand span:last-child { max-width: 150px; line-height: 1.25; }
+        .hero { gap: 40px; padding-top: 38px; }
+        .hero-copy { padding-left: 22px; }
+        .hero-copy::before { top: 40px; }
+        .figure-no { margin-bottom: 20px; }
+        .hero-lead { font-size: 17px; }
+        .primary-action { min-width: 215px; font-size: 18px; }
+        .lab-shell { min-height: 0; margin: 0 -8px; }
+        .lab-canvas-wrap { height: 460px; min-height: 0; }
+        .lab-controls { grid-template-columns: 1fr; padding: 20px 14px; }
+        .section-pad { padding-top: 84px; padding-bottom: 84px; }
+        .section-heading { grid-template-columns: 48px 1fr; gap: 12px; margin-bottom: 36px; padding-bottom: 20px; }
+        .section-heading .section-index { font-size: 30px; }
+        .section-heading h2 { font-size: 36px; }
+        .distinction-rail article { padding: 30px 18px; }
+        .metric-pair strong { font-size: 27px; }
+        .definition-copy > p { font-size: 16px; }
+        .formula-box { padding: 22px 17px; }
+        .formula-box .formula { font-size: 30px; }
+        .limits-grid article { padding: 28px 20px; }
+        .source-head { display: none; }
+        .source-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; min-height: 96px; padding: 14px 4px; }
+        .source-row strong { font-size: 14px; }
+        .source-row span:last-child { font-size: 11px; }
+        footer { flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; min-height: 130px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+
+    <!-- ========== 场景专属样式：氧化还原配平（新主题请整体替换本块） ========== -->
+    <style>
+      .redox-scene .hero-lead { max-width: 460px; }
+      .redox-scene #redox-canvas { width: 100%; height: 650px; }
+      .redox-scene .redox-copy p { max-width: 760px; margin-bottom: 18px; font-size: 16px; line-height: 1.75; }
+      .redox-scene .redox-copy strong { color: var(--red); font-weight: 700; }
+      .redox-scene .redox-steps {
+        margin: 8px 0 20px;
+        padding-left: 22px;
+        max-width: 760px;
+        font-size: 16px;
+        line-height: 1.85;
+      }
+      .redox-scene .redox-steps li { margin-bottom: 10px; }
+      .redox-scene .redox-steps strong { color: var(--red); font-weight: 700; }
+      .redox-scene .segmented {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin: 6px 0 4px;
+      }
+      .redox-scene .segmented.is-mode { grid-template-columns: repeat(2, 1fr); }
+      .redox-scene .segmented button {
+        padding: 8px 2px;
+        color: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 4px;
+        background: transparent;
+        font-size: 11px;
+        line-height: 1.35;
+        transition: border 160ms ease, color 160ms ease, background 160ms ease;
+      }
+      .redox-scene .segmented button:hover,
+      .redox-scene .segmented button:focus-visible { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+      .redox-scene .segmented button.is-active {
+        color: var(--navy);
+        background: var(--saffron);
+        border-color: var(--saffron);
+        font-weight: 700;
+      }
+      .redox-scene .panel-label {
+        margin: 14px 0 0;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+      }
+      .redox-scene .redox-steppers { margin: 6px 0 2px; }
+      .redox-scene .rx-sep { text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.4); padding: 1px 0; }
+      .redox-scene .redox-step-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0 8px;
+        padding: 2px 0;
+      }
+      .redox-scene .redox-step-row .rx-name {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: #e8f1fa;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .redox-scene .stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        justify-self: end;
+      }
+      .redox-scene .stepper button {
+        width: 22px; height: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        font-size: 13px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .redox-scene .stepper button:hover { background: rgba(255, 255, 255, 0.16); }
+      .redox-scene .stepper output {
+        min-width: 18px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--saffron);
+      }
+      .redox-scene .redox-demo-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin: 8px 0 4px;
+      }
+      .redox-scene .redox-demo-controls button {
+        padding: 7px 4px;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .redox-scene .redox-demo-controls button:hover { background: rgba(255, 255, 255, 0.14); }
+      .redox-scene .redox-readout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 18px;
+        margin: 14px 0 4px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+      }
+      .redox-scene .redox-readout span { color: rgba(255, 255, 255, 0.62); }
+      .redox-scene .redox-readout output { display: block; margin-top: 2px; color: #fff; font-family: var(--mono); line-height: 1.45; }
+      .redox-scene .redox-readout output.ok { color: #7fd6a0; }
+      .redox-scene .redox-readout output.bad { color: var(--red-bright); }
+      .redox-scene .redox-readout .rx-wide { grid-column: 1 / -1; }
+      .redox-scene .redox-readout .rx-wide output { color: var(--saffron); font-size: 12px; }
+      @media (max-width: 900px) { .redox-scene .lab-controls { display: block; } }
+      @media (max-width: 620px) { .redox-scene #redox-canvas { height: 560px; } .redox-scene .lab-canvas-wrap { height: 560px; } }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span>科学可视化实验室</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#redox-intuition">直觉</a>
+        <a href="#redox-method">方法</a>
+        <a href="#redox-limits">边界</a>
+        <a href="#redox-sources">来源</a>
+      </nav>
+      <button class="quiet-button" id="pause-btn" type="button" aria-pressed="false">⏸ 暂停</button>
+    </header>
+
+    <main id="main" class="redox-scene">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="figure-no">FIG. 05 / CHEMISTRY LAB</p>
+          <h1>电子搬家，<br />一笔配平</h1>
+          <p class="hero-lead">
+            氧化还原反应里电子在物质之间流动：有物质被氧化，就有物质被还原。
+            化合价升降法，让"升高的总数"等于"降低的总数"，系数自然就平了。
+          </p>
+          <a class="primary-action" href="#redox-intuition">
+            开始配平
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" /></svg>
+          </a>
+          <p class="hero-note">
+            四组经典反应逐个演示 · 演示与配平两种模式<br />
+            升降总数必须相等——这是氧化还原配平的唯一判据。
+          </p>
+        </div>
+
+        <div class="lab-shell" aria-label="氧化还原配平交互实验">
+          <div class="lab-canvas-wrap">
+            <canvas id="redox-canvas" aria-label="方程式配平与升降变化演示"></canvas>
+            <div class="canvas-caption">
+              <span>化合价升降法 · 实时守恒检查</span>
+              <span id="redox-canvas-status">就绪</span>
+            </div>
+          </div>
+
+          <aside class="lab-controls" aria-label="配平控制台">
+            <h2>反应台</h2>
+
+            <span class="panel-label">选择反应</span>
+            <div class="segmented" role="group" aria-label="选择反应">
+              <button data-redox-rx="fe2o3" type="button" class="is-active">Fe₂O₃<br />+CO</button>
+              <button data-redox-rx="cu-hno3" type="button">Cu<br />+HNO₃</button>
+              <button data-redox-rx="kmno4-hcl" type="button">KMnO₄<br />+HCl</button>
+              <button data-redox-rx="h2s-so2" type="button">H₂S<br />+SO₂</button>
+            </div>
+
+            <span class="panel-label">模式</span>
+            <div class="segmented is-mode" role="group" aria-label="演示或配平">
+              <button data-redox-mode="demo" type="button" class="is-active">▶ 方法演示</button>
+              <button data-redox-mode="practice" type="button">✎ 动手配平</button>
+            </div>
+
+            <div id="redox-demo-panel">
+              <span class="panel-label">五步演示</span>
+              <div class="redox-demo-controls">
+                <button id="rx-prev" type="button">⏮ 上一步</button>
+                <button id="rx-next" type="button">下一步 ▸</button>
+                <button id="rx-replay" type="button">↻ 重播</button>
+                <button id="rx-auto" type="button" aria-pressed="false">☐ 自动</button>
+              </div>
+            </div>
+
+            <div id="redox-practice-panel" hidden>
+              <span class="panel-label">填入系数（0–9）</span>
+              <div class="redox-steppers" id="rx-steppers"></div>
+              <div class="redox-demo-controls">
+                <button id="rx-fill" type="button">✓ 填入答案</button>
+                <button id="rx-clear" type="button">↻ 全归 1</button>
+              </div>
+            </div>
+
+            <div class="redox-readout" id="rx-readout" aria-live="polite"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section-pad" id="redox-intuition" aria-labelledby="redox-intuition-title">
+        <div class="section-heading">
+          <p class="section-index">01</p>
+          <div>
+            <h2 id="redox-intuition-title">直觉模型：电子在搬家</h2>
+            <p>燃烧、生锈、漂白、电池放电，都是同一件事——电子从一种原子搬到另一种原子。</p>
+          </div>
+        </div>
+        <div class="redox-copy">
+          <p>
+            丢掉电子的原子，化合价升高，叫"被氧化"；捡到电子的原子，化合价降低，叫"被还原"。
+            两个动作永远同时发生——有借必有还，氧化还原就是电子的一次"过手"。这也是反应命名的由来：
+            早期的"氧化"特指与氧结合，后来化学家意识到真正发生的是电子转移。
+          </p>
+          <p>
+            化学家没法一个个数电子，就用<strong>化合价（氧化数）</strong>记账。把它想成原子随身带着的
+            "电子账本"：反应前后价态升了，说明它把电子交出去了；降了，说明它把电子收进来了。
+            电子不会凭空消失，所以<strong>升高的总数必须等于降低的总数</strong>——这就是配平的唯一判据，
+            也是化合价升降法的全部依据。
+          </p>
+          <p>
+            下面四个反应依次展示了单变价、多变价、作酸参与、归中这几种常见情形：
+            先在演示模式里看完五步，再切到配平模式亲手试。
+          </p>
+        </div>
+      </section>
+
+      <section class="section-pad" id="redox-method" aria-labelledby="redox-method-title">
+        <div class="section-heading">
+          <p class="section-index">02</p>
+          <div>
+            <h2 id="redox-method-title">正式定义：化合价升降法五步</h2>
+            <p>把"电子守恒"落成一套可执行的配平流程，教科书与竞赛通用的标准方法。</p>
+          </div>
+        </div>
+        <div class="redox-copy">
+          <ol class="redox-steps">
+            <li><strong>标变价</strong>——标出变价元素在反应前后的化合价，先找出谁升谁降。</li>
+            <li><strong>列变化</strong>——算出每个变价物种"一个分子/原子"升或降多少。</li>
+            <li><strong>求最小公倍数</strong>——让升降总量相等的最小整数，就是电子转移总数。</li>
+            <li><strong>配系数</strong>——用最小公倍数除以各升降值得到初步系数，先配氧化剂与还原剂，再用观察法补齐其余物种。</li>
+            <li><strong>查守恒</strong>——逐一检查每个原子左右相等，并确认总升 = 总降。</li>
+          </ol>
+          <p>
+            三个注意点：① 系数要化成最简整数比；② 同一元素既作氧化剂又作还原剂（如反应三中的 HCl）时，
+            只有"被氧化/被还原"的那部分计入升降，其余按观察法补齐；③ 生成物为偶数个原子（如 Cl₂）时，
+            若初步系数出现小数，整体同乘一个整数。
+          </p>
+        </div>
+      </section>
+
+      <section class="limits section-pad" id="redox-limits" aria-labelledby="redox-limits-title">
+        <div class="section-heading">
+          <p class="section-index">03</p>
+          <div>
+            <h2 id="redox-limits-title">这个方法简化了什么</h2>
+            <p>化合价是记账工具，不是分子里真实的电荷。</p>
+          </div>
+        </div>
+        <div class="limits-grid">
+          <article>
+            <span>边界 1</span>
+            <h3>只适用于氧化还原反应</h3>
+            <p>
+              复分解、酸碱中和这类无电子转移的反应，所有元素化合价都不变，升降法无从谈起
+              （升降都是 0，套不上公式）。先判断是否氧化还原，再决定用哪种配平法。
+            </p>
+          </article>
+          <article>
+            <span>边界 2</span>
+            <h3>化合价 ≠ 真实电荷</h3>
+            <p>
+              离子化合物里化合价接近真实电荷；共价分子（如 CO₂ 中碳 +4、H₂S 中硫 -2）里的氧化数是
+              按电负性"形式分配"出来的记账值，不代表原子真带着这么多电荷。
+            </p>
+          </article>
+          <article>
+            <span>边界 3</span>
+            <h3>配平数量，不说明机理</h3>
+            <p>
+              升降法只保证原子个数与电子数量守恒，并不描述电子从哪个轨道来、经过什么中间物种。
+              机理需要反应动力学与中间体证据，那是另一套学问。
+            </p>
+          </article>
+          <article>
+            <span>边界 4</span>
+            <h3>复杂反应要换方法</h3>
+            <p>
+              有机物常需先算碳的"平均氧化数"，会掩盖不同碳原子价态的差异；多步或离子体系反应，
+              更常用的反而是半反应（离子-电子）法。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="sources section-pad" id="redox-sources" aria-labelledby="redox-sources-title">
+        <div class="section-heading light-heading">
+          <p class="section-index">04</p>
+          <div>
+            <h2 id="redox-sources-title">来源与核验路径</h2>
+            <p>方法表述、化合价取值与反应式系数以下列资料为准。</p>
+          </div>
+        </div>
+        <div class="source-table" role="table" aria-label="资料来源">
+          <div class="source-row source-head" role="row">
+            <span role="columnheader">类型</span>
+            <span role="columnheader">资料</span>
+            <span role="columnheader">用于核验</span>
+          </div>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Oxidation_state" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Oxidation state</strong>
+            <span role="cell">氧化数定义、取值规则与升降法表述</span>
+          </a>
+          <a class="source-row" role="row" href="https://chem.libretexts.org/Bookshelves/General_Chemistry" target="_blank" rel="noreferrer">
+            <span role="cell">教学</span>
+            <strong role="cell">LibreTexts · Balancing Redox Equations</strong>
+            <span role="cell">化合价升降法配平步骤与实例</span>
+          </a>
+          <a class="source-row" role="row" href="https://en.wikipedia.org/wiki/Redox" target="_blank" rel="noreferrer">
+            <span role="cell">百科</span>
+            <strong role="cell">Wikipedia · Redox</strong>
+            <span role="cell">氧化还原定义、电子转移与常见反应式</span>
+          </a>
+        </div>
+        <p class="source-policy">
+          四个演示反应（Fe₂O₃+CO、Cu+HNO₃、KMnO₄+HCl、H₂S+SO₂）的系数经手工按五步法核验；
+          化合价为常见教材取值（H +1、O -2、K +1、Cl -1、Mn +7 等）。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>科学可视化实验室 · edu-sci-viz</span>
+      <span>视觉演示只帮助建立直觉，数值与结论以各场景来源为准</span>
+      <a href="#top">回到顶部 ↑</a>
+    </footer>
+
+    <!--
+      Three.js 走 CDN importmap。纯 2D 场景（如本示例）无需引入；
+      3D 场景在「场景模块」里 `import * as THREE from "three"` 即可，浏览器会自动按需加载。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script>
+      // ============================================================
+      // 通用运行时（edu-sci-viz 模板，新主题请保留本块）
+      // 职责：阅读进度条、暂停/继续开关、统一 requestAnimationFrame 渲染循环。
+      // 场景模块只需在 window.SciScene 上暴露 update(dt)，本循环每帧调用。
+      // ============================================================
+      (function () {
+        // 阅读进度
+        const bar = document.getElementById("progress-bar");
+        if (bar) {
+          const update = () => {
+            const doc = document.documentElement;
+            const max = doc.scrollHeight - window.innerHeight;
+            bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+          };
+          window.addEventListener("scroll", update, { passive: true });
+          window.addEventListener("resize", update);
+          update();
+        }
+
+        // 暂停/继续：只停自动运动，不破坏滑杆与 3D 拖动
+        window.__sciPaused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const pauseBtn = document.getElementById("pause-btn");
+        if (pauseBtn) {
+          const sync = () => {
+            pauseBtn.textContent = window.__sciPaused ? "▶ 继续" : "⏸ 暂停";
+            pauseBtn.setAttribute("aria-pressed", String(window.__sciPaused));
+          };
+          pauseBtn.addEventListener("click", () => {
+            window.__sciPaused = !window.__sciPaused;
+            sync();
+          });
+          sync();
+        }
+
+        // 渲染循环：帧间隔封顶 50ms，避免切后台后跳变
+        let last = performance.now();
+        function frame(now) {
+          const dt = Math.min((now - last) / 1000, 0.05);
+          last = now;
+          if (window.SciScene && typeof window.SciScene.update === "function") {
+            try {
+              window.SciScene.update(dt);
+            } catch (err) {
+              console.error("[edu-sci-viz]", err);
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+    </script>
+
+    <script>
+      // ============================================================
+      // 场景模块：氧化还原配平 · 化合价升降法
+      // 约定：脚本顶层做初始化（找画布、绑按钮）；window.SciScene.update(dt)
+      // 每帧被通用运行时调用。检查 window.__sciPaused 以停止自动播放。
+      // ============================================================
+      (function () {
+        const canvas = document.getElementById("redox-canvas");
+        const $ = (s) => document.querySelector(s);
+        const ctx = canvas.getContext("2d");
+
+        const SANS = "'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif";
+        const SERIF = "'Songti SC','STSong','Noto Serif CJK SC',Georgia,serif";
+        const MONO = "Consolas,'Liberation Mono',monospace";
+
+        function setCanvasSize(canvas, width, height) {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const nw = Math.max(1, Math.floor(width * dpr));
+          const nh = Math.max(1, Math.floor(height * dpr));
+          if (canvas.width !== nw || canvas.height !== nh) { canvas.width = nw; canvas.height = nh; }
+          return dpr;
+        }
+        function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        function fmtNum(n) { return n > 0 ? "+" + n : String(n); }
+        function roundRect(ctx, x, y, w, h, r) {
+          const rr = Math.min(r, w / 2, h / 2);
+          ctx.beginPath();
+          ctx.moveTo(x + rr, y);
+          ctx.arcTo(x + w, y, x + w, y + h, rr);
+          ctx.arcTo(x + w, y + h, x, y + h, rr);
+          ctx.arcTo(x, y + h, x, y, rr);
+          ctx.arcTo(x, y, x + w, y, rr);
+          ctx.closePath();
+        }
+
+        const NAMES = {
+          "fe2o3":     { title: "Fe₂O₃ + CO → Fe + CO₂", sub: "高炉炼铁 · 氧化铁被一氧化碳还原" },
+          "cu-hno3":   { title: "Cu + HNO₃(稀) → Cu(NO₃)₂ + NO↑ + H₂O", sub: "铜与稀硝酸 · 氮被还原" },
+          "kmno4-hcl": { title: "KMnO₄ + HCl(浓) → KCl + MnCl₂ + Cl₂↑ + H₂O", sub: "高锰酸钾氧化浓盐酸" },
+          "h2s-so2":   { title: "H₂S + SO₂ → S↓ + H₂O", sub: "硫化氢与二氧化硫 · 归中反应" },
+        };
+
+        const RX = {
+          "fe2o3": {
+            species: [
+              { f: "Fe2O3", el: { Fe: 2, O: 3 }, side: 0 },
+              { f: "CO", el: { C: 1, O: 1 }, side: 0 },
+              { f: "Fe", el: { Fe: 1 }, side: 1 },
+              { f: "CO2", el: { C: 1, O: 2 }, side: 1 },
+            ],
+            nReact: 2,
+            correct: [1, 3, 2, 3],
+            changes: [
+              { el: "Fe", from: 3, to: 0, sp: 2, n: 1, leftSp: 0, rightSp: 2 },
+              { el: "C", from: 2, to: 4, sp: 3, n: 1, leftSp: 1, rightSp: 3 },
+            ],
+            lcmInputs: [
+              { f: "Fe₂O₃", delta: 6, dir: "降", from: "+3", to: "0", note: "2 个 Fe 各降 3" },
+              { f: "CO", delta: 2, dir: "升", from: "+2", to: "+4", note: "1 个 C 升 2" },
+            ],
+            lcm: 6,
+            prelim: "Fe₂O₃ ×1、CO ×3；再按原子守恒补齐 Fe ×2、CO₂ ×3。",
+            elems: ["Fe", "C", "O"],
+            steps: [
+              { t: "标变价", d: "Fe 由 +3 → 0（降 3）；C 由 +2 → +4（升 2）。只有这两种元素化合价在变。" },
+              { t: "列变化", d: "每个 Fe₂O₃ 分子含 2 个 Fe，各降 3 → 共降 6；每个 CO 分子中 C 升 2。" },
+              { t: "求最小公倍数", d: "降 6、升 2 → LCM(6,2) = 6。6 ÷ 6 = 1，6 ÷ 2 = 3。" },
+              { t: "配系数", d: "Fe₂O₃ ×1、CO ×3；由原子守恒补齐 Fe ×2、CO₂ ×3。" },
+              { t: "查守恒", d: "Fe 2=2 ✓ · C 3=3 ✓ · O 6=6 ✓ · 总升 6 = 总降 6 ✓ 配平完成。" },
+            ],
+          },
+          "cu-hno3": {
+            species: [
+              { f: "Cu", el: { Cu: 1 }, side: 0 },
+              { f: "HNO3", el: { H: 1, N: 1, O: 3 }, side: 0 },
+              { f: "Cu(NO3)2", el: { Cu: 1, N: 2, O: 6 }, side: 1 },
+              { f: "NO", el: { N: 1, O: 1 }, side: 1 },
+              { f: "H2O", el: { H: 2, O: 1 }, side: 1 },
+            ],
+            nReact: 2,
+            correct: [3, 8, 3, 2, 4],
+            changes: [
+              { el: "Cu", from: 0, to: 2, sp: 0, n: 1, leftSp: 0, rightSp: 2 },
+              { el: "N", from: 5, to: 2, sp: 3, n: 1, leftSp: 1, rightSp: 3 },
+            ],
+            lcmInputs: [
+              { f: "Cu", delta: 2, dir: "升", from: "0", to: "+2", note: "每个 Cu 原子升 2" },
+              { f: "HNO₃(氧化剂)", delta: 3, dir: "降", from: "+5", to: "+2", note: "生成 NO 的那部分 N 降 3" },
+            ],
+            lcm: 6,
+            prelim: "Cu ×3、被还原的 HNO₃ ×2 → NO ×2；另需 6 个 HNO₃ 作酸生成 3 个 Cu(NO₃)₂，HNO₃ 共 ×8，H₂O ×4。",
+            elems: ["Cu", "N", "O", "H"],
+            steps: [
+              { t: "标变价", d: "Cu 0 → +2（升 2）；HNO₃ 中 N +5 → NO 中 N +2（降 3）。Cu(NO₃)₂ 里的 N 仍是 +5，不参与升降。" },
+              { t: "列变化", d: "每个 Cu 原子升 2；每个被还原的 HNO₃ 分子降 3。" },
+              { t: "求最小公倍数", d: "升 2、降 3 → LCM(2,3) = 6。6 ÷ 2 = 3，6 ÷ 3 = 2。" },
+              { t: "配系数", d: "Cu ×3、被还原 HNO₃ ×2 → NO ×2；作酸 HNO₃ 补 6 个共 ×8，Cu(NO₃)₂ ×3，H 守恒得 H₂O ×4。" },
+              { t: "查守恒", d: "Cu 3=3 ✓ · N 8=8 ✓ · O 24=24 ✓ · H 8=8 ✓ · 总升 6 = 总降 6 ✓。" },
+            ],
+          },
+          "kmno4-hcl": {
+            species: [
+              { f: "KMnO4", el: { K: 1, Mn: 1, O: 4 }, side: 0 },
+              { f: "HCl", el: { H: 1, Cl: 1 }, side: 0 },
+              { f: "KCl", el: { K: 1, Cl: 1 }, side: 1 },
+              { f: "MnCl2", el: { Mn: 1, Cl: 2 }, side: 1 },
+              { f: "Cl2", el: { Cl: 2 }, side: 1 },
+              { f: "H2O", el: { H: 2, O: 1 }, side: 1 },
+            ],
+            nReact: 2,
+            correct: [2, 16, 2, 2, 5, 8],
+            changes: [
+              { el: "Mn", from: 7, to: 2, sp: 0, n: 1, leftSp: 0, rightSp: 3 },
+              { el: "Cl", from: -1, to: 0, sp: 4, n: 2, leftSp: 1, rightSp: 4 },
+            ],
+            lcmInputs: [
+              { f: "KMnO₄", delta: 5, dir: "降", from: "+7", to: "+2", note: "Mn 降 5" },
+              { f: "HCl(被氧化)", delta: 1, dir: "升", from: "-1", to: "0", note: "Cl⁻ 升 1" },
+            ],
+            lcm: 5,
+            prelim: "LCM(5,1)=5 → KMnO₄ ×1、被氧化 HCl ×5；Cl₂ 需偶数个 Cl，整体 ×2：KMnO₄ ×2、被氧化 HCl ×10 → Cl₂ ×5。",
+            elems: ["K", "Mn", "O", "Cl", "H"],
+            steps: [
+              { t: "标变价", d: "Mn +7 → +2（降 5）；Cl⁻(HCl) -1 → 0（升 1）。16 个 HCl 里只有 10 个被氧化，其余作酸。" },
+              { t: "列变化", d: "每个 KMnO₄ 分子降 5；每个被氧化的 HCl 分子升 1。" },
+              { t: "求最小公倍数", d: "LCM(5,1) = 5。但 Cl₂ 含偶数个 Cl，需让被氧化 HCl 为偶数 → 整体 ×2 取 10。" },
+              { t: "配系数", d: "KMnO₄ ×2、被氧化 HCl ×10 → Cl₂ ×5；K、Mn → KCl ×2、MnCl₂ ×2；作酸 HCl 共 ×16，H 守恒得 H₂O ×8。" },
+              { t: "查守恒", d: "K 2=2 ✓ · Mn 2=2 ✓ · Cl 16=16 ✓ · O 8=8 ✓ · H 16=16 ✓ · 总升 10 = 总降 10 ✓。" },
+            ],
+          },
+          "h2s-so2": {
+            species: [
+              { f: "H2S", el: { H: 2, S: 1 }, side: 0 },
+              { f: "SO2", el: { S: 1, O: 2 }, side: 0 },
+              { f: "H2O", el: { H: 2, O: 1 }, side: 1 },
+              { f: "S", el: { S: 1 }, side: 1 },
+            ],
+            nReact: 2,
+            correct: [2, 1, 2, 3],
+            changes: [
+              { el: "S", from: -2, to: 0, sp: 0, n: 1, leftSp: 0, rightSp: 3 },
+              { el: "S", from: 4, to: 0, sp: 1, n: 1, leftSp: 1, rightSp: 3 },
+            ],
+            lcmInputs: [
+              { f: "H₂S", delta: 2, dir: "升", from: "-2", to: "0", note: "S 升 2" },
+              { f: "SO₂", delta: 4, dir: "降", from: "+4", to: "0", note: "S 降 4" },
+            ],
+            lcm: 4,
+            prelim: "H₂S ×2、SO₂ ×1；S 原子 2+1 = 3 → S ×3；H 4 → H₂O ×2。",
+            elems: ["H", "S", "O"],
+            steps: [
+              { t: "标变价", d: "H₂S 中 S -2 → 0（升 2）；SO₂ 中 S +4 → 0（降 4）。两种硫汇成单质硫，属归中反应。" },
+              { t: "列变化", d: "每个 H₂S 分子升 2；每个 SO₂ 分子降 4。" },
+              { t: "求最小公倍数", d: "升 2、降 4 → LCM(2,4) = 4。4 ÷ 2 = 2，4 ÷ 4 = 1。" },
+              { t: "配系数", d: "H₂S ×2、SO₂ ×1；S 共 3 → S ×3；H 4 → H₂O ×2。" },
+              { t: "查守恒", d: "H 4=4 ✓ · S 3=3 ✓ · O 2=2 ✓ · 总升 4 = 总降 4 ✓。" },
+            ],
+          },
+        };
+
+        const state = { rxId: "fe2o3", mode: "demo", step: 0, auto: false, timer: 0, coefs: [] };
+        function rx() { return RX[state.rxId]; }
+
+        // ---- 守恒核算 ----
+        function valenceTotals(coefs) {
+          const r = rx();
+          let up = 0, down = 0;
+          for (const c of r.changes) {
+            const mag = coefs[c.sp] * c.n * Math.abs(c.to - c.from);
+            if (c.to > c.from) up += mag; else down += mag;
+          }
+          return { up, down };
+        }
+        function atomCounts(coefs) {
+          const map = {};
+          rx().species.forEach((sp, i) => {
+            const c = coefs[i];
+            for (const el in sp.el) {
+              map[el] = map[el] || { L: 0, R: 0 };
+              map[el][sp.side === 0 ? "L" : "R"] += c * sp.el[el];
+            }
+          });
+          return map;
+        }
+        function atomBalanced(coefs) {
+          const map = atomCounts(coefs);
+          for (const el in map) if (map[el].L !== map[el].R) return false;
+          return true;
+        }
+        function spChange(i) {
+          for (const c of rx().changes) if (c.leftSp === i || c.rightSp === i) return c;
+          return null;
+        }
+
+        // ---- 公式文本（下标）----
+        const SUBCH = "₀₁₂₃₄₅₆₇₈₉";
+        function toSub(f) { return String(f).replace(/[0-9]/g, (d) => SUBCH[+d]); }
+        function spTokens(sp) {
+          if (!sp._toks) sp._toks = Array.from(sp.f).map((ch) => ({ ch, sub: ch >= "0" && ch <= "9" }));
+          return sp._toks;
+        }
+        function fSize(size) { return Math.round(size); }
+        function spWidth(sp, size) {
+          const s = fSize(size);
+          const norm = `600 ${s}px ${SANS}`;
+          const sub = `600 ${Math.round(s * 0.62)}px ${SANS}`;
+          let w = 0;
+          for (const t of spTokens(sp)) { ctx.font = t.sub ? sub : norm; w += ctx.measureText(t.ch).width; }
+          return w;
+        }
+        function drawSpecies(x, y, sp, size, color) {
+          const s = fSize(size);
+          const norm = `600 ${s}px ${SANS}`;
+          const sub = `600 ${Math.round(s * 0.62)}px ${SANS}`;
+          ctx.fillStyle = color;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
+          let cx = x;
+          for (const t of spTokens(sp)) {
+            ctx.font = t.sub ? sub : norm;
+            ctx.fillText(t.ch, cx, t.sub ? y + s * 0.28 : y);
+            cx += ctx.measureText(t.ch).width;
+          }
+          return cx - x;
+        }
+
+        function layoutEquation(W, size) {
+          const r = rx();
+          const coefW = size * 0.8;
+          const plusW = size * 0.55;
+          const arrowW = size * 1.1;
+          const gap = size * 0.5;
+          const items = [];
+          let x = 0;
+          for (let i = 0; i < r.species.length; i++) {
+            if (i === r.nReact) { items.push({ kind: "arrow", w: arrowW }); x += arrowW + gap; }
+            else if (i > 0) { items.push({ kind: "plus", w: plusW }); x += plusW + gap; }
+            const w = coefW + spWidth(r.species[i], size);
+            items.push({ kind: "sp", i, w });
+            x += w + gap;
+          }
+          const total = x - gap;
+          let sx = (W - total) / 2;
+          const out = [];
+          for (const it of items) {
+            if (it.kind === "sp") out.push({ kind: "sp", i: it.i, x: sx, fX: sx + coefW });
+            else out.push({ kind: it.kind, x: sx });
+            sx += it.w + gap;
+          }
+          return out;
+        }
+        function measureLayout(size) {
+          const r = rx();
+          const coefW = size * 0.8, plusW = size * 0.55, arrowW = size * 1.1, gap = size * 0.5;
+          let total = 0;
+          for (let i = 0; i < r.species.length; i++) {
+            if (i === r.nReact) total += arrowW + gap;
+            else if (i > 0) total += plusW + gap;
+            total += coefW + spWidth(r.species[i], size) + gap;
+          }
+          return total - gap;
+        }
+        function fitSize(W) {
+          const base = 34;
+          const measured = measureLayout(base);
+          return Math.max(13, Math.min(base, (W - 56) * base / measured));
+        }
+
+        function drawEquation(W, y, size, coefs, opts) {
+          const layout = layoutEquation(W, size);
+          for (const it of layout) {
+            if (it.kind === "arrow") {
+              ctx.fillStyle = "rgba(255,255,255,0.85)";
+              ctx.font = `700 ${fSize(size)}px ${SANS}`;
+              ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+              ctx.fillText("→", it.x, y);
+            } else if (it.kind === "plus") {
+              ctx.fillStyle = "rgba(255,255,255,0.55)";
+              ctx.font = `600 ${fSize(size)}px ${SANS}`;
+              ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+              ctx.fillText("+", it.x, y);
+            } else {
+              const sp = rx().species[it.i];
+              if (opts.showCoef) {
+                ctx.fillStyle = opts.coefColor(it.i);
+                ctx.font = `700 ${fSize(size)}px ${MONO}`;
+                ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+                ctx.fillText(coefs === null ? "?" : String(coefs[it.i]), it.fX - 4, y);
+              }
+              drawSpecies(it.fX, y, sp, size, opts.spColor(it.i));
+            }
+          }
+          ctx.textAlign = "left";
+        }
+
+        function drawBadges(W, y, size) {
+          const r = rx();
+          const layout = layoutEquation(W, size);
+          ctx.font = `700 11px ${MONO}`;
+          const by = y + 16, bh = 20;
+          for (const it of layout) {
+            if (it.kind !== "sp") continue;
+            const sp = r.species[it.i];
+            const badges = [];
+            for (const c of r.changes) {
+              if (c.leftSp === it.i) badges.push({ el: c.el, st: c.from, up: c.to > c.from });
+              if (c.rightSp === it.i) badges.push({ el: c.el, st: c.to, up: c.to > c.from });
+            }
+            if (!badges.length) continue;
+            const cx = it.fX + spWidth(sp, size) / 2;
+            for (const bd of badges) {
+              const txt = bd.el + fmtNum(bd.st);
+              const tw = ctx.measureText(txt).width;
+              const bw = tw + 12;
+              ctx.fillStyle = bd.up ? "rgba(229,165,38,0.92)" : "rgba(255,122,107,0.92)";
+              roundRect(ctx, cx - bw / 2, by, bw, bh, 4); ctx.fill();
+              ctx.fillStyle = "#07182d";
+              ctx.textAlign = "center"; ctx.textBaseline = "middle";
+              ctx.fillText(txt, cx, by + bh / 2);
+            }
+          }
+          return by + bh;
+        }
+
+        // 画布纵向布局：上方「方程式卡」+ 下方「演示/核验卡」，间隙由卡片内边距吸收。
+        function layoutCards(W, H) {
+          const y0 = Math.max(H * 0.38, 148);
+          return {
+            y0,
+            cardX: 14, cardW: W - 28,
+            eqTop: 44, eqH: y0 - 62,
+            bandTop: y0 + 18, bandH: H - y0 - 38,
+          };
+        }
+        function drawCardRect(g, zone, label) {
+          const x = g.cardX, w = g.cardW;
+          const y = zone === "eq" ? g.eqTop : g.bandTop;
+          const h = zone === "eq" ? g.eqH : g.bandH;
+          roundRect(ctx, x, y, w, h, 10);
+          ctx.fillStyle = "rgba(255,255,255,0.035)"; ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = "rgba(255,255,255,0.42)";
+          ctx.font = `11px ${MONO}`;
+          ctx.textAlign = "left"; ctx.textBaseline = "top";
+          ctx.fillText(label, x + 12, y + 11);
+        }
+        function bandContent(g) {
+          const top = g.bandTop + 34;
+          const bot = g.bandTop + g.bandH - 30;
+          return { top, bot, ctr: (top + bot) / 2 };
+        }
+        function bandHint(g, text) {
+          ctx.fillStyle = "rgba(255,255,255,0.34)";
+          ctx.font = `11px ${MONO}`;
+          ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+          ctx.fillText(text, g.cardX + g.cardW / 2, g.bandTop + g.bandH - 18);
+        }
+        function wrapTextToLines(text, maxW) {
+          const lines = []; let line = "";
+          for (const ch of String(text)) {
+            const test = line + ch;
+            if (line && ctx.measureText(test).width > maxW) { lines.push(line); line = ch; }
+            else line = test;
+          }
+          if (line) lines.push(line);
+          return lines;
+        }
+        function wrapText(text, x, y, maxW, lh) {
+          ctx.textAlign = "left"; ctx.textBaseline = "top";
+          let yy = y;
+          for (const line of wrapTextToLines(text, maxW)) { ctx.fillText(line, x, yy); yy += lh; }
+        }
+        function drawChips(W, y0, items, maxW) {
+          const chipW = 104, chipH = 26, gap = 8;
+          const limit = maxW || (W - 10);
+          let x = 18, yy = y0;
+          ctx.font = `12px ${MONO}`; ctx.textBaseline = "middle";
+          for (const it of items) {
+            if (x + chipW > limit) { x = 18; yy += chipH + 6; }
+            ctx.fillStyle = it.ok ? "rgba(127,214,160,0.14)" : "rgba(255,122,107,0.16)";
+            ctx.strokeStyle = it.ok ? "rgba(127,214,160,0.6)" : "rgba(255,122,107,0.6)";
+            roundRect(ctx, x, yy, chipW, chipH, 6); ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
+            ctx.textAlign = "left";
+            ctx.fillStyle = it.ok ? "#7fd6a0" : "#ff7a6b";
+            ctx.fillText(it.label + (it.ok ? " ✓" : " ✗"), x + 8, yy + chipH / 2);
+            x += chipW + gap;
+          }
+          return yy + chipH;
+        }
+        function drawValenceBars(W, y, v) {
+          const maxV = Math.max(v.up, v.down, 1);
+          const scale = 54 / maxV;
+          const bx = W / 2;
+          const barW = 30;
+          const upH = v.up * scale, downH = v.down * scale;
+          ctx.fillStyle = "#e5a526";
+          ctx.fillRect(bx - barW / 2, y - upH, barW, upH);
+          ctx.fillStyle = "#ff7a6b";
+          ctx.fillRect(bx - barW / 2, y, barW, downH);
+          ctx.strokeStyle = "rgba(255,255,255,0.25)";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(bx - barW / 2 - 8, y + 0.5); ctx.lineTo(bx + barW / 2 + 8, y + 0.5); ctx.stroke();
+          ctx.font = `11px ${MONO}`;
+          ctx.textBaseline = "alphabetic";
+          ctx.fillStyle = "rgba(229,165,38,0.95)";
+          ctx.textAlign = "left";
+          ctx.fillText("总升 " + v.up, bx + barW / 2 + 8, y - upH + 4);
+          ctx.fillStyle = "rgba(255,122,107,0.95)";
+          ctx.fillText("总降 " + v.down, bx + barW / 2 + 8, y + downH - 2);
+          if (v.up === v.down) {
+            ctx.fillStyle = "#7fd6a0";
+            ctx.font = `700 13px ${SANS}`;
+            ctx.textAlign = "center";
+            ctx.fillText("升 = 降 ✓", bx, y + downH + 16);
+          }
+        }
+
+        function bandStep0(W, H, g, r) {
+          const rows = r.changes.map((c) => ({
+            up: c.to > c.from, el: c.el, from: c.from, to: c.to,
+            ls: r.species[c.leftSp].f, rs: r.species[c.rightSp].f,
+          }));
+          const bc = bandContent(g);
+          const bw = g.cardW - 40, bh = 62, gap = 16;
+          const total = rows.length * bh + (rows.length - 1) * gap;
+          let yy = bc.ctr - total / 2;
+          for (const row of rows) {
+            const color = row.up ? "#e5a526" : "#ff7a6b";
+            roundRect(ctx, (W - bw) / 2, yy, bw, bh, 8);
+            ctx.fillStyle = color; ctx.globalAlpha = 0.12; ctx.fill(); ctx.globalAlpha = 1;
+            ctx.strokeStyle = color; ctx.globalAlpha = 0.55; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+            ctx.textBaseline = "alphabetic";
+            ctx.fillStyle = color;
+            ctx.font = `700 18px ${SANS}`;
+            ctx.textAlign = "left";
+            ctx.fillText(`氧化态 ${row.up ? "升" : "降"}：${row.el}  ${fmtNum(row.from)} → ${fmtNum(row.to)}`, (W - bw) / 2 + 18, yy + 26);
+            ctx.fillStyle = "rgba(255,255,255,0.72)";
+            ctx.font = `13px ${MONO}`;
+            ctx.fillText(toSub(row.ls) + " → " + toSub(row.rs), (W - bw) / 2 + 18, yy + 50);
+            yy += bh + gap;
+          }
+        }
+        function bandStep1(W, H, g, r) {
+          const bc = bandContent(g);
+          const bw = g.cardW - 40, bh = 68, gap = 16;
+          const total = r.lcmInputs.length * bh + (r.lcmInputs.length - 1) * gap;
+          let yy = bc.ctr - total / 2;
+          for (const it of r.lcmInputs) {
+            const color = it.dir === "升" ? "#e5a526" : "#ff7a6b";
+            roundRect(ctx, (W - bw) / 2, yy, bw, bh, 8);
+            ctx.fillStyle = color; ctx.globalAlpha = 0.12; ctx.fill(); ctx.globalAlpha = 1;
+            ctx.strokeStyle = color; ctx.globalAlpha = 0.55; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+            ctx.textBaseline = "alphabetic";
+            ctx.fillStyle = color;
+            ctx.font = `700 18px ${SANS}`;
+            ctx.textAlign = "left";
+            ctx.fillText(`${it.f}　每分子${it.dir} ${it.delta}`, (W - bw) / 2 + 18, yy + 26);
+            ctx.fillStyle = "rgba(255,255,255,0.72)";
+            ctx.font = `13px ${MONO}`;
+            ctx.fillText(`${it.from} → ${it.to} · ${it.note}`, (W - bw) / 2 + 18, yy + 52);
+            yy += bh + gap;
+          }
+        }
+        function bandStep2(W, H, g, r) {
+          const bc = bandContent(g);
+          const parts = r.lcmInputs.map((it) => it.delta).join("、");
+          ctx.textBaseline = "middle"; ctx.textAlign = "center";
+          ctx.fillStyle = "#e5a526";
+          ctx.font = `700 30px ${MONO}`;
+          ctx.fillText(`LCM(${parts}) = ${r.lcm}`, W / 2, bc.ctr - 52);
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
+          ctx.font = `18px ${SANS}`;
+          ctx.fillText(r.lcmInputs.map((it) => `${r.lcm} ÷ ${it.delta} = ${r.lcm / it.delta}`).join("　·　"), W / 2, bc.ctr + 4);
+          ctx.fillStyle = "rgba(255,255,255,0.45)";
+          ctx.font = `13px ${SANS}`;
+          ctx.fillText("得到氧化剂与还原剂的初步系数", W / 2, bc.ctr + 44);
+        }
+        function bandStep3(W, H, g, r) {
+          const bc = bandContent(g);
+          const bw = g.cardW - 56;
+          ctx.fillStyle = "rgba(255,255,255,0.88)";
+          ctx.font = `17px ${SANS}`;
+          const lines = wrapTextToLines(r.prelim, bw);
+          wrapText(r.prelim, (W - bw) / 2, bc.ctr - (lines.length * 26) / 2, bw, 26);
+        }
+        function drawConservation(W, H, g, coefs, practice) {
+          const bc = bandContent(g);
+          const atoms = atomCounts(coefs);
+          const items = rx().elems.map((el) => {
+            const a = atoms[el];
+            return { label: a ? `${el} ${a.L}/${a.R}` : el, ok: !!(a && a.L === a.R) };
+          });
+          const yChips = drawChips(W, bc.top, items, g.cardX + g.cardW - 14);
+          const v = valenceTotals(coefs);
+          const barY = Math.max(yChips + 34, bc.top + 130);
+          drawValenceBars(W, barY, v);
+          const ok = atomBalanced(coefs) && v.up === v.down;
+          ctx.fillStyle = ok ? "#7fd6a0" : "rgba(255,255,255,0.5)";
+          ctx.font = `700 16px ${SANS}`;
+          ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+          ctx.fillText(
+            practice
+              ? (ok ? "配平成功 ✓ · 升 = 降，原子守恒" : "还差一点：让升、降相抵且每行原子左右相等")
+              : "原子守恒 · 升 = 降 · 配平完成 ✓",
+            W / 2, barY + 92
+          );
+        }
+        function bandStep4(W, H, g, r) {
+          drawConservation(W, H, g, r.correct, false);
+        }
+
+        const STEP_HINTS = [
+          "口诀：升失氧、降得还——电子过手，升降必相抵",
+          "以「一个分子 / 原子」为单位统计升或降",
+          "最小公倍数让 升 = 降；必要时同乘整数化整",
+          "先配氧化剂与还原剂，再按原子守恒补齐其余",
+          "每一行原子左右相等，且总升 = 总降",
+        ];
+
+        function drawDemo(W, H) {
+          const r = rx();
+          const name = NAMES[state.rxId];
+          ctx.fillStyle = "rgba(255,255,255,0.55)";
+          ctx.font = `11px ${MONO}`;
+          ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+          ctx.fillText(`${name.sub} · 第 ${state.step + 1}/5 步：${r.steps[state.step].t}`, 18, 24);
+
+          const g = layoutCards(W, H);
+          drawCardRect(g, "eq", "反应方程式 · 化合价升降法");
+          const size = fitSize(W);
+          const badgeH = state.step === 0 ? 30 : 0;
+          const yEq = g.eqTop + 28 + (g.eqH - 40 - badgeH) * 0.5 + 6;
+          drawEquation(W, yEq, size, state.step >= 3 ? r.correct : null, {
+            showCoef: true,
+            spColor: (i) => { const c = spChange(i); return c ? (c.to > c.from ? "#e5a526" : "#ff7a6b") : "#e8f1fa"; },
+            coefColor: () => "#e5a526",
+          });
+          if (state.step === 0) drawBadges(W, yEq, size);
+
+          drawCardRect(g, "band", `五步演示 · ${r.steps[state.step].t}`);
+          const bands = [bandStep0, bandStep1, bandStep2, bandStep3, bandStep4];
+          bands[state.step](W, H, g, r);
+          bandHint(g, STEP_HINTS[state.step]);
+        }
+        function drawPractice(W, H) {
+          const name = NAMES[state.rxId];
+          ctx.fillStyle = "rgba(255,255,255,0.55)";
+          ctx.font = `11px ${MONO}`;
+          ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+          ctx.fillText(`${name.sub} · 动手配平：让每行原子左右相等，且总升 = 总降`, 18, 24);
+
+          const g = layoutCards(W, H);
+          drawCardRect(g, "eq", "反应方程式 · 填写系数");
+          const size = fitSize(W);
+          const yEq = g.eqTop + 28 + (g.eqH - 40) * 0.5 + 6;
+          drawEquation(W, yEq, size, state.coefs, {
+            showCoef: true,
+            spColor: (i) => { const c = spChange(i); return c ? (c.to > c.from ? "#e5a526" : "#ff7a6b") : "#e8f1fa"; },
+            coefColor: (i) => (state.coefs[i] === rx().correct[i] ? "#7fd6a0" : "#e5a526"),
+          });
+
+          drawCardRect(g, "band", "守恒核验");
+          drawConservation(W, H, g, state.coefs, true);
+          bandHint(g, "绿色系数 = 已与答案一致");
+        }
+
+        function draw() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = setCanvasSize(canvas, rect.width, rect.height);
+          const W = rect.width, H = rect.height;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, W, H);
+          if (state.mode === "demo") drawDemo(W, H);
+          else drawPractice(W, H);
+        }
+
+        function refresh() {
+          const r = rx();
+          const ro = $("#rx-readout");
+          if (state.mode === "demo") {
+            const st = r.steps[state.step];
+            const step = state.step;
+            let extra = "";
+            if (step <= 1) {
+              const up = r.lcmInputs.filter((i) => i.dir === "升").map((i) => `${i.f} ${i.delta}`).join("、");
+              const down = r.lcmInputs.filter((i) => i.dir === "降").map((i) => `${i.f} ${i.delta}`).join("、");
+              extra = `<div><span>升</span><output>${up || "—"}</output></div><div><span>降</span><output>${down || "—"}</output></div>`;
+            } else {
+              const v = valenceTotals(r.correct);
+              extra = `<div><span>总升</span><output>${v.up}</output></div><div><span>总降</span><output>${v.down}</output></div>`;
+              if (step === 2) extra += `<div class="rx-wide"><span>最小公倍数</span><output>${r.lcm}</output></div>`;
+              if (step === 3) extra += `<div class="rx-wide"><span>初步系数</span><output>${esc(r.prelim)}</output></div>`;
+              if (step === 4) extra += `<div class="rx-wide"><span>结论</span><output class="ok">升 = 降 ✓ · 原子守恒 ✓ · 配平完成</output></div>`;
+            }
+            ro.innerHTML = `<div class="rx-wide"><span>第 ${step + 1}/5 步 · ${st.t}</span><output>${esc(st.d)}</output></div>` + extra;
+            $("#redox-canvas-status").textContent = `第 ${step + 1}/5 步 · ${st.t} · ${NAMES[state.rxId].title}`;
+          } else {
+            const coefs = state.coefs;
+            const atoms = atomCounts(coefs);
+            const v = valenceTotals(coefs);
+            let rows = "";
+            for (const el of rx().elems) {
+              const a = atoms[el];
+              const eq = !!(a && a.L === a.R);
+              rows += `<div><span>${el} ${a ? a.L : 0} = ${a ? a.R : 0}</span><output class="${eq ? "ok" : "bad"}">${eq ? "✓" : "✗"}</output></div>`;
+            }
+            const all = atomBalanced(coefs) && v.up === v.down;
+            ro.innerHTML =
+              rows +
+              `<div><span>总升</span><output>${v.up}</output></div>` +
+              `<div><span>总降</span><output>${v.down}</output></div>` +
+              `<div class="rx-wide"><span>状态</span><output class="${all ? "ok" : "bad"}">${all ? "配平成功 ✓" : "未平衡"}</output></div>`;
+            $("#redox-canvas-status").textContent = all ? "配平成功 ✓" : "还差一点：让升、降相抵且每行原子左右相等";
+          }
+        }
+
+        // ---- 控件构建与事件 ----
+        function buildSteppers() {
+          const r = rx();
+          const box = $("#rx-steppers");
+          box.innerHTML = "";
+          r.species.forEach((sp, i) => {
+            if (i === r.nReact) { const s = document.createElement("div"); s.className = "rx-sep"; s.textContent = "→"; box.appendChild(s); }
+            else if (i > 0) { const s = document.createElement("div"); s.className = "rx-sep"; s.textContent = "+"; box.appendChild(s); }
+            const row = document.createElement("div");
+            row.className = "redox-step-row";
+            const span = document.createElement("span");
+            span.className = "rx-name";
+            span.textContent = toSub(sp.f);
+            const st = document.createElement("span");
+            st.className = "stepper";
+            st.innerHTML =
+              `<button type="button" data-step-down="${i}" aria-label="${sp.f} 减一">−</button>` +
+              `<output data-step-out="${i}">${state.coefs[i]}</output>` +
+              `<button type="button" data-step-up="${i}" aria-label="${sp.f} 加一">+</button>`;
+            row.appendChild(span);
+            row.appendChild(st);
+            box.appendChild(row);
+          });
+        }
+        function syncSteppers() {
+          document.querySelectorAll("[data-step-out]").forEach((o) => {
+            o.textContent = state.coefs[Number(o.dataset.stepOut)];
+          });
+        }
+        function nextStep() {
+          if (state.step < 4) { state.step++; state.timer = 0; refresh(); draw(); return; }
+          state.auto = false;
+          const b = $("#rx-auto");
+          b.setAttribute("aria-pressed", "false");
+          b.textContent = "☐ 自动";
+          refresh(); draw();
+        }
+        function resetState() {
+          state.step = 0; state.auto = false; state.timer = 0;
+          const b = $("#rx-auto");
+          b.setAttribute("aria-pressed", "false");
+          b.textContent = "☐ 自动";
+          state.coefs = rx().species.map(() => 1);
+          buildSteppers();
+          refresh(); draw();
+        }
+        function update(dt) {
+          if (state.mode === "demo" && state.auto && state.step < 4 && !window.__sciPaused) {
+            state.timer -= dt;
+            if (state.timer <= 0) { state.timer = 1.7; nextStep(); }
+          }
+          draw();
+        }
+
+        document.querySelectorAll("[data-redox-rx]").forEach((b) => {
+          b.addEventListener("click", () => {
+            document.querySelectorAll("[data-redox-rx]").forEach((x) => x.classList.remove("is-active"));
+            b.classList.add("is-active");
+            state.rxId = b.dataset.redoxRx;
+            resetState();
+          });
+        });
+        document.querySelectorAll("[data-redox-mode]").forEach((b) => {
+          b.addEventListener("click", () => {
+            document.querySelectorAll("[data-redox-mode]").forEach((x) => x.classList.remove("is-active"));
+            b.classList.add("is-active");
+            state.mode = b.dataset.redoxMode;
+            $("#redox-demo-panel").hidden = state.mode !== "demo";
+            $("#redox-practice-panel").hidden = state.mode !== "practice";
+            resetState();
+          });
+        });
+        $("#rx-prev").addEventListener("click", () => { state.step = Math.max(0, state.step - 1); refresh(); draw(); });
+        $("#rx-next").addEventListener("click", nextStep);
+        $("#rx-replay").addEventListener("click", () => { state.step = 0; refresh(); draw(); });
+        $("#rx-auto").addEventListener("click", () => {
+          state.auto = !state.auto;
+          const b = $("#rx-auto");
+          b.setAttribute("aria-pressed", String(state.auto));
+          b.textContent = state.auto ? "☑ 自动" : "☐ 自动";
+          if (state.auto && state.step >= 4) state.step = 0;
+          state.timer = 0;
+          refresh(); draw();
+        });
+        $("#rx-fill").addEventListener("click", () => { state.coefs = rx().correct.slice(); syncSteppers(); refresh(); draw(); });
+        $("#rx-clear").addEventListener("click", () => { state.coefs = rx().species.map(() => 1); syncSteppers(); refresh(); draw(); });
+        $("#rx-steppers").addEventListener("click", (e) => {
+          const b = e.target.closest("button[data-step-up], button[data-step-down]");
+          if (!b) return;
+          const i = Number(b.dataset.stepUp !== undefined ? b.dataset.stepUp : b.dataset.stepDown);
+          const dir = b.hasAttribute("data-step-up") ? 1 : -1;
+          state.coefs[i] = Math.max(0, Math.min(9, state.coefs[i] + dir));
+          const o = document.querySelector(`[data-step-out="${i}"]`);
+          if (o) o.textContent = state.coefs[i];
+          refresh(); draw();
+        });
+
+        // ---- 初始化 ----
+        resetState();
+        new ResizeObserver(draw).observe(canvas);
+        window.SciScene = { update };
+      })();
+    </script>
+  </body>
+</html>
