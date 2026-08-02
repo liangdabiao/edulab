@@ -214,4 +214,7 @@
 
 [Apache-2.0](LICENSE)
 
-感谢 https://linux.do 社区
+## 感谢 
+https://linux.do 社区支持
+fork自 ： https://github.com/wy51ai/edulab
+参考： https://github.com/tjxj/sci-viz-lab
